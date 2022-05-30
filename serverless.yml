@@ -39,18 +39,6 @@ plugins:
   - serverless-step-functions
   - serverless-pseudo-parameters
 
-# package:
-#   individually: true
-#   exclude:
-#     - "**/*"
-#     - serverless.yaml
-
-# package:
-#   individually: true
-#   exclude:
-#     - Jenkinsfile
-#     - 'node_modules/**'
-#     - 'config/**'
 package:
   individually: true
   exclude:
@@ -60,7 +48,7 @@ package:
     - "*.*"
 
 layers:
-  commonWmsLibs:
+  commonNetsuitLibs:
     path: lambdaLayer/lib
     compatibleRuntimes:
       - nodejs14.x
