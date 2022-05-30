@@ -1,0 +1,21 @@
+{
+  "name": "omni-netsuite-layer",
+  "version": "1.0.0",
+  "description": "omni-netsuite-layer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "joi": "^17.6.0",
+    "netsuite-rest": "^1.0.9",
+    "node-suitetalk": "^0.0.5",
+    "nodemailer": "^6.7.5",
+    "oauth-1.0a": "^2.2.6",
+    "pg-promise": "^10.11.1",
+    "xmlbuilder2": "^3.0.2"
+  }
+}

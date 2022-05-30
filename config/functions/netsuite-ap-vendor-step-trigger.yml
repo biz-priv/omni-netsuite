@@ -1,0 +1,19 @@
+---
+function:
+  handler: src/netsuite_ap_vendor_step_trigger.handler
+  layers:
+    - { Ref: CommonWmsLibsLambdaLayer }
+  name: ${self:service}-netsuite-ap-vendor-step-trigger-${self:provider.stage}
+  description: Netsuite AP Vendor step function trigger api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  # events:
+  #   - schedule:
+  #       rate: cron(0 14 * * ? *) # UTC:- 2:00 PM
+  #   - schedule:
+  #       rate: cron(0 20 * * ? *) #  UTC:- 8:00 PM
+  package:
+    include:
+      - src/netsuite_ap_vendor_step_trigger.js
+      - node_modules/**
+  environment:
+    NETSUITE_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ap-vendor-state-machine-${self:provider.stage}
