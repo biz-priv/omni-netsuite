@@ -75,4 +75,4 @@ stepFunctions:
     netsuite-customer-state-machine: ${file(config/step-functions/netsuite-customer-state-machine.yml):stateMachine}
     netsuite-ap-state-machine: ${file(config/step-functions/netsuite-ap-state-machine.yml):stateMachine}
     netsuite-ap-vendor-state-machine: ${file(config/step-functions/netsuite-ap-vendor-state-machine.yml):stateMachine}
-    # netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
+    netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
