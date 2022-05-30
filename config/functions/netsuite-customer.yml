@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_customer.handler
   layers:
-    - { Ref: commonNetsuiteLibsLambdaLayer }
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-customer-${self:provider.stage}
   description: Netsuite customer AR api service - ${self:provider.stage}
   runtime: nodejs14.x

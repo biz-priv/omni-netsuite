@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_intercompany.handler
   layers:
-    - { Ref: commonNetsuiteLibsLambdaLayer }
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-intercompany-${self:provider.stage}
   description: Netsuite Intercompany api service - ${self:provider.stage}
   runtime: nodejs14.x
