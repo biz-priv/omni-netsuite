@@ -1,0 +1,26 @@
+{
+  "otm:Document": {
+    "otm:TransactionCode": "IU",
+    "otm:DocumentDefinitionGid": {
+      "otm:Gid": {
+        "otm:DomainName": "WDC",
+        "otm:Xid": "PROOF_OF_DELIVERY / BILL_OF_LADING"
+      }
+    },
+    "otm:DocumentOwner": {
+      "otm:DataQueryTypeGid": {
+        "otm:Gid": { "otm:Xid": "SHIPMENT" }
+      },
+      "otm:ObjectGid": {
+        "otm:Gid": {
+          "otm:DomainName": "WDC",
+          "otm:Xid": ""
+        }
+      }
+    },
+    "otm:DocumentContent": {
+      "otm:DocMimeType": "application/pdf",
+      "otm:DocContentBinary": "[pdf base64]"
+    }
+  }
+}
