@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_intercompany_step_trigger.handler
   layers:
-    - { Ref: commonNetsuiteLibsLambdaLayer }
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-intercompany-step-trigger-${self:provider.stage}
   description: Netsuite intercompany step trigger function - ${self:provider.stage}
   runtime: nodejs14.x

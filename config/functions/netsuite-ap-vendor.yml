@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_ap_vendor.handler
   layers:
-    - { Ref: commonNetsuiteLibsLambdaLayer }
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ap-vendor-${self:provider.stage}
   description: Netsuite AP vendor AR api service - ${self:provider.stage}
   runtime: nodejs14.x
