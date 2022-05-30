@@ -43,7 +43,7 @@ pipeline {
                     npm i
                     cd lambdaLayer/lib/nodejs
                     npm i
-                    cd ../..
+                    cd ../../..
                     serverless --version
                     sls deploy -s ${env.ENVIRONMENT}
                     """
