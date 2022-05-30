@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_currency.handler
   layers:
-    - { Ref: CommonWmsLibsLambdaLayer }
+    - { Ref: commonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-currency-${self:provider.stage}
   description: Netsuite Currency api service - ${self:provider.stage}
   runtime: nodejs14.x
@@ -11,7 +11,6 @@ function:
   package:
     include:
       - src/netsuite_currency.js
-      - node_modules/**
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}

@@ -2,17 +2,15 @@
 function:
   handler: src/wd_api.handler
   layers:
-    - { Ref: CommonWmsLibsLambdaLayer }
+    - { Ref: commonNetsuiteLibsLambdaLayer }
   name: ${self:service}-wd-${self:provider.stage}
   description: WD api service - ${self:provider.stage}
   runtime: nodejs14.x
   timeout: 500
-
   package:
     include:
       - src/wd_api.js
       - Helpers/**
-      - node_modules/**
   environment:
     REGION: ${self:provider.region}
     DBNAME: ${ssm:/omni-dw/${self:provider.stage}/db/name}

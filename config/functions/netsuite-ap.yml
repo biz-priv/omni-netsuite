@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite_ap.handler
   layers:
-    - { Ref: CommonWmsLibsLambdaLayer }
+    - { Ref: commonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ap-${self:provider.stage}
   description: Netsuite AP api service - ${self:provider.stage}
   runtime: nodejs14.x
@@ -12,7 +12,7 @@ function:
     include:
       - src/netsuite_ap.js
       - Helpers/**
-      - node_modules/**
+
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
