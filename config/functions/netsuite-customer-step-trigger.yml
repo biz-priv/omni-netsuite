@@ -12,6 +12,6 @@ function:
   package:
     include:
       - src/netsuite_customer_step_trigger.js
-      - node_modules/**
+
   environment:
     NETSUITE_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-customer-state-machine-${self:provider.stage}

@@ -14,6 +14,6 @@ function:
   package:
     include:
       - src/netsuite_ap_vendor_step_trigger.js
-      - node_modules/**
+
   environment:
     NETSUITE_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ap-vendor-state-machine-${self:provider.stage}

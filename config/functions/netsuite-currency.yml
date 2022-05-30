@@ -11,7 +11,7 @@ function:
   package:
     include:
       - src/netsuite_currency.js
-      - node_modules/**
+
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}

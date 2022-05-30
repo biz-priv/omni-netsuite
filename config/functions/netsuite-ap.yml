@@ -12,7 +12,7 @@ function:
     include:
       - src/netsuite_ap.js
       - Helpers/**
-      - node_modules/**
+
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}

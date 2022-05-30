@@ -14,6 +14,6 @@ function:
   package:
     include:
       - src/netsuite_intercompany_step_trigger.js
-      - node_modules/**
+
   environment:
     NETSUITE_INTERCOMPANY_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-intercompany-state-machine-${self:provider.stage}

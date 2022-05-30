@@ -39,20 +39,25 @@ plugins:
   - serverless-step-functions
   - serverless-pseudo-parameters
 
-package:
-  individually: true
-  exclude:
-    - "**/*"
-    - serverless.yaml
+# package:
+#   individually: true
+#   exclude:
+#     - "**/*"
+#     - serverless.yaml
 
 # package:
 #   individually: true
-#   excludeDevDependencies: false
 #   exclude:
-#     - "node_modules/**"
-#     - "config/**"
-#     - "src/**"
-#     - "*.*"
+#     - Jenkinsfile
+#     - 'node_modules/**'
+#     - 'config/**'
+package:
+  individually: true
+  exclude:
+    - "node_modules/**"
+    - "config/**"
+    - "src/**"
+    - "*.*"
 
 layers:
   commonWmsLibs:
@@ -61,7 +66,6 @@ layers:
       - nodejs14.x
     package:
       include:
-        - node_modules/**
 
 functions:
   wd-api: ${file(config/functions/wd-api.yml):function}

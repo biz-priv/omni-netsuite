@@ -12,7 +12,7 @@ function:
     include:
       - src/wd_api.js
       - Helpers/**
-      - node_modules/**
+
   environment:
     REGION: ${self:provider.region}
     DBNAME: ${ssm:/omni-dw/${self:provider.stage}/db/name}
