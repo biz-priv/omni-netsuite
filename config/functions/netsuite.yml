@@ -1,0 +1,36 @@
+---
+function:
+  handler: src/netsuite.handler
+  layers:
+    - { Ref: CommonWmsLibsLambdaLayer }
+  name: ${self:service}-netsuite-ar-${self:provider.stage}
+  description: Netsuite AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/netsuite.js
+      - Helpers/**
+      - node_modules/**
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    DBNAME: ${ssm:/omni-dw/${self:provider.stage}/db/name}
+    USER: ${ssm:/omni-dw/${self:provider.stage}/db/user~true}
+    HOST: ${ssm:/omni-dw/${self:provider.stage}/db/host~true}
+    PASS: ${ssm:/omni-dw/${self:provider.stage}/db/password~true}
+    PORT: ${ssm:/omni-dw/${self:provider.stage}/db/port}
+    NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
+    NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
+    NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
+    NETSUIT_AR_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerSecret}
+    NETSUIT_AR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKey}
+    NETSUIT_AR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecret}
+    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
+    NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
+    NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
+    NETSUIT_AR_ERROR_EMAIL_USER: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/user}
+    NETSUIT_AR_ERROR_EMAIL_PASS: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/pass}
+    NETSUIT_AR_ERROR_EMAIL_FROM: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/from}
+    NETSUIT_AR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/to}

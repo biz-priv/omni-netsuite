@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/netsuite_customer_step_trigger.handler
+  layers:
+    - { Ref: CommonWmsLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-step-trigger-${self:provider.stage}
+  description: Netsuite AR customer step function trigger api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  events:
+    # - schedule:
+    #     rate: cron(0 6 * * ? *) #  UTC:- 6:00 AM
+  package:
+    include:
+      - src/netsuite_customer_step_trigger.js
+      - node_modules/**
+  environment:
+    NETSUITE_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-customer-state-machine-${self:provider.stage}
