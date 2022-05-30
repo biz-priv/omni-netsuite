@@ -2,7 +2,7 @@
 function:
   handler: src/netsuite.handler
   layers:
-    - { Ref: CommonWmsLibsLambdaLayer }
+    - { Ref: commonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ar-${self:provider.stage}
   description: Netsuite AR api service - ${self:provider.stage}
   runtime: nodejs14.x
@@ -12,7 +12,6 @@ function:
     include:
       - src/netsuite.js
       - Helpers/**
-
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
