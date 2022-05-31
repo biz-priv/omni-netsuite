@@ -42,7 +42,7 @@ module.exports.handler = async (event, context, callback) => {
      */
     const orderData = await getDataGroupBy(connections);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("orderData", orderData.length, orderData[0]);
+    console.log("orderData", orderData.length);
     currentCount = orderData.length;
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
@@ -64,7 +64,6 @@ module.exports.handler = async (event, context, callback) => {
       );
       queryData += data.join("");
     }
-    console.log("queryData", queryData);
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {

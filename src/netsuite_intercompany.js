@@ -35,14 +35,6 @@ module.exports.handler = async (event, context, callback) => {
      * Get invoice internal ids from interface_ap and interface_ar
      */
     const invoiceData = await getData(connections);
-    // const invoiceData = [
-    //   {
-    //     file_nbr: "SHKG00812826",
-    //     invoice_type: "IN",
-    //     ap_internalid: "7800651",
-    //     ar_internalid: "7800672",
-    //   },
-    // ];
     console.log("invoiceData", invoiceData.length);
     currentCount = invoiceData.length;
 
@@ -69,8 +61,8 @@ function getConnection() {
   try {
     const dbUser = process.env.USER;
     const dbPassword = process.env.PASS;
-    // const dbHost = process.env.HOST;
-    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbHost = process.env.HOST;
+    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
     const dbPort = process.env.PORT;
     const dbName = process.env.DBNAME;
 
@@ -87,20 +79,38 @@ function getConnection() {
  */
 async function getData(connections) {
   try {
-    let query = `
-          select distinct b.file_nbr, a.invoice_type, a.internal_id as ap_internalid, c.internal_id as ar_internalid 
-          from interface_ap_master a  
-          join interface_ap b on a.source_system = b.source_system
-          and a.invoice_nbr = b.invoice_nbr and a.invoice_type = b.invoice_type and a.vendor_id = b.vendor_id 
-          join interface_ar c on a.source_system = c.source_system
-          and b.file_nbr = c.invoice_nbr and a.intercompany = c.intercompany 
-          where a.intercompany = 'Y' and a.internal_id is not null and c.internal_id is not null
-          and ((a.intercompany_processed = '' and c.intercompany_processed = '') 
-                or (a.intercompany_processed = 'F' and c.intercompany_processed_date < '${today}' 
-                    and c.intercompany_processed = 'F' and c.intercompany_processed_date < '${today}'
-                  )
-              ) limit ${totalCountPerLoop + 1};
-        `;
+    const query = `
+              select distinct
+              ar.source_system ,
+              ar.file_nbr ,
+              ar.ar_internal_id ,
+              ap.ap_internal_id,
+              ap.invoice_type
+              from
+              (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
+                where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                (intercompany_processed = 'F' and intercompany_processed_date < '2022-05-31'))
+              )ar
+              join
+              (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total  from
+                (
+                  select * from interface_ap
+                  where intercompany = 'Y'
+                )a
+                join (select * from interface_ap_master 
+                    where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                      (intercompany_processed = 'F' and intercompany_processed_date < '2022-05-31'))
+                )b
+                on a.source_system = b.source_system
+                and a.invoice_nbr = b.invoice_nbr
+                and a.invoice_type = b.invoice_type
+                and a.vendor_id = b.vendor_id
+              )ap
+              on ar.source_system = ap.source_system
+              and ar.file_nbr = ap.file_nbr
+              and ar.invoice_type = ap.invoice_type
+              and ar.unique_ref_nbr = ap.unique_ref_nbr
+    `;
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -119,15 +129,21 @@ async function getData(connections) {
  */
 async function updateAPandAr(connections, item, processed = "P") {
   try {
+    console.log(
+      "updateAPandAr",
+      "AP " + item.ap_internal_id,
+      "AR " + item.ar_internal_id,
+      processed
+    );
     const query = `UPDATE interface_ap_master set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
-                where internal_id = '${item.ap_internalid}';
+                where internal_id = '${item.ap_internal_id}';
                 
                 UPDATE interface_ar set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
-                where internal_id = '${item.ar_internalid}';
+                where internal_id = '${item.ar_internal_id}';
                 
               `;
     await connections.query(query);
@@ -149,21 +165,22 @@ async function mainProcess(connections, item) {
 }
 
 async function createInterCompanyInvoice(item) {
-  const apInvoiceId = item.ap_internalid;
-  const arInvoiceId = item.ar_internalid;
+  const apInvoiceId = item.ap_internal_id;
+  const arInvoiceId = item.ar_internal_id;
   const transactionType = item.invoice_type == "IN" ? "invoice" : "credit";
   try {
-    const url = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1&iid1=${arInvoiceId}&iid2=${apInvoiceId}&transactionType=${transactionType}`;
+    let baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
+    if (process.env.STAGE == "prod") {
+      baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
+    }
+    const url = `${baseUrl}&iid1=${arInvoiceId}&iid2=${apInvoiceId}&transactionType=${transactionType}`;
     const authHeader = getAuthorizationHeader(url);
-
     const headers = {
       ...authHeader,
       Accept: "application/json",
       "Content-Type": "application/json",
     };
     const res = await axios.get(url, { headers });
-    // console.log("res", res);
-    // console.log("res.data", res.data);
     if (res.data == "success") {
       return true;
     } else {
@@ -172,7 +189,6 @@ async function createInterCompanyInvoice(item) {
       };
     }
   } catch (error) {
-    // console.log(error.response.data);
     throw {
       customError: true,
       arInvoiceId,
@@ -228,8 +244,8 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
-        to: "kazi.ali@bizcloudexperts.com",
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com",
         subject: `Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
