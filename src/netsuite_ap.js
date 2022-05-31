@@ -29,6 +29,7 @@ let queryinvoiceType = "IN"; // IN / CM
 let queryOperator = "<=";
 let queryInvoiceId = null;
 let queryInvoiceNbr = null;
+let queryVendorId = null;
 
 module.exports.handler = async (event, context, callback) => {
   console.log("event", event);
@@ -54,6 +55,10 @@ module.exports.handler = async (event, context, callback) => {
     ? event.queryinvoiceType
     : "IN";
 
+  queryVendorId = event.hasOwnProperty("queryVendorId")
+    ? event.queryVendorId
+    : null;
+
   try {
     /**
      * Get connections
@@ -61,8 +66,10 @@ module.exports.handler = async (event, context, callback) => {
     const connections = getConnection();
 
     if (queryOperator == ">") {
-      totalCountPerLoop = 0;
+      // Update 500 line items per process
       console.log("> start");
+
+      totalCountPerLoop = 0;
       if (queryInvoiceId != null && queryInvoiceId.length > 0) {
         console.log(">if");
 
@@ -77,11 +84,9 @@ module.exports.handler = async (event, context, callback) => {
             invoiceDataList
           );
 
-          //after IN process end check for CM process
           if (lineItemPerProcess >= invoiceDataList.length) {
-            throw "Next CM Process or Stop";
+            throw "Next Process";
           } else {
-            // process rest of the data
             dbc.end();
             return {
               hasMoreData: "true",
@@ -90,23 +95,15 @@ module.exports.handler = async (event, context, callback) => {
               queryInvoiceId,
               queryInvoiceNbr,
               queryinvoiceType,
+              queryVendorId,
             };
           }
         } catch (error) {
           dbc.end();
-          if (queryinvoiceType == "IN") {
-            return {
-              hasMoreData: "true",
-              queryOperator,
-              queryInvoiceNbr: queryInvoiceNbr,
-              queryinvoiceType: "CM",
-            };
-          } else {
-            return {
-              hasMoreData: "true",
-              queryOperator,
-            };
-          }
+          return {
+            hasMoreData: "true",
+            queryOperator,
+          };
         }
       } else {
         console.log("> else");
@@ -114,62 +111,47 @@ module.exports.handler = async (event, context, callback) => {
         try {
           let invoiceDataList = [];
           let orderData = [];
-          if (queryInvoiceNbr == null && queryinvoiceType == "IN") {
-            try {
-              orderData = await getDataGroupBy(connections);
-              console.log("orderData", orderData.length);
-            } catch (error) {
-              dbc.end();
-              return { hasMoreData: "false" };
-            }
-            queryInvoiceNbr = orderData[0].invoice_nbr;
-          }
-
           try {
-            invoiceDataList = await getInvoiceNbrData(
-              connections,
-              queryInvoiceNbr,
-              true
-            );
-            console.log("invoiceDataList", invoiceDataList.length);
+            orderData = await getDataGroupBy(connections);
+            console.log("orderData", orderData.length);
           } catch (error) {
-            if (queryinvoiceType == "IN") {
-              dbc.end();
-              return {
-                hasMoreData: "true",
-                queryOperator,
-                queryInvoiceNbr: queryInvoiceNbr,
-                queryinvoiceType: "CM",
-              };
-            } else {
-              throw error;
-            }
+            dbc.end();
+            return { hasMoreData: "false" };
           }
-          const queryData = await mainProcess(
-            invoiceDataList[0],
-            invoiceDataList
+          queryInvoiceNbr = orderData[0].invoice_nbr;
+          queryVendorId = orderData[0].vendor_id;
+          invoiceDataList = await getInvoiceNbrData(
+            connections,
+            queryInvoiceNbr,
+            true
           );
-          console.log("queryData", queryData);
+          console.log("invoiceDataList", invoiceDataList.length);
+          /**
+           * set queryInvoiceId in this process and return update query
+           */
+          const queryData = await mainProcess(orderData[0], invoiceDataList);
+          // console.log("queryData", queryData);
           await updateInvoiceId(connections, queryData);
 
           /**
            * if items <= 501 process next invoice
            * or send data for next update process of same invoice.
            */
-          dbc.end();
-          if (invoiceDataList.length <= lineItemPerProcess) {
-            return {
-              hasMoreData: "true",
-              queryOperator,
-            };
+          if (
+            invoiceDataList.length <= lineItemPerProcess ||
+            queryInvoiceId == null
+          ) {
+            throw "Next Invoice";
           } else {
+            dbc.end();
             return {
               hasMoreData: "true",
               queryOperator,
               queryOffset: queryOffset + lineItemPerProcess + 1,
               queryInvoiceId,
               queryInvoiceNbr: queryInvoiceNbr,
-              queryinvoiceType,
+              queryinvoiceType: orderData[0].invoice_type,
+              queryVendorId,
             };
           }
         } catch (error) {
@@ -182,7 +164,7 @@ module.exports.handler = async (event, context, callback) => {
         }
       }
     } else {
-      //normal process
+      //Create the main invoice with 500 line items 1st
       /**
        * Get data from db
        */
@@ -254,92 +236,69 @@ module.exports.handler = async (event, context, callback) => {
 async function mainProcess(item, invoiceDataList) {
   let singleItem = null;
   try {
-    const itemId = item.invoice_nbr;
-    const vendorId = item.vendor_id;
-
     /**
      * get invoice obj from DB
      */
-    const dataById = invoiceDataList.filter((e) => {
-      return e.invoice_nbr == itemId && e.vendor_id == vendorId;
+    const dataList = invoiceDataList.filter((e) => {
+      return (
+        e.invoice_nbr == item.invoice_nbr &&
+        e.vendor_id == item.vendor_id &&
+        e.invoice_type == item.invoice_type
+      );
     });
-
-    /**
-     * group data by invoice_type IN/CM
-     */
-    const dataGroup = dataById.reduce(
-      (result, item) => ({
-        ...result,
-        [item["invoice_type"]]: [...(result[item["invoice_type"]] || []), item],
-      }),
-      {}
-    );
 
     let getUpdateQueryList = "";
 
-    for (let e of Object.keys(dataGroup)) {
-      /**
-       * set single item and customer data
-       */
-      singleItem = dataGroup[e][0];
+    /**
+     * set single item and customer data
+     */
+    singleItem = dataList[0];
 
-      let customerData = {
-        entityId: singleItem.vendor_id,
-        entityInternalId: singleItem.vendor_internal_id,
-        currency: singleItem.currency,
-        currencyInternalId: singleItem.currency_internal_id,
-      };
+    const vendorData = {
+      entityId: singleItem.vendor_id,
+      entityInternalId: singleItem.vendor_internal_id,
+      currency: singleItem.currency,
+      currencyInternalId: singleItem.currency_internal_id,
+    };
 
-      /**
-       * Make Json to Xml payload
-       */
-      const xmlPayload = makeJsonToXml(
-        JSON.parse(JSON.stringify(payload)),
-        dataGroup[e],
-        customerData
-      );
-      try {
-        /**
-         * create invoice
-         */
-        const invoiceId = await createInvoice(
-          xmlPayload,
-          singleItem.invoice_type
-        );
+    /**
+     * Make Json to Xml payload
+     */
+    const xmlPayload = makeJsonToXml(
+      JSON.parse(JSON.stringify(payload)),
+      dataList,
+      vendorData
+    );
+    /**
+     * create invoice
+     */
+    const invoiceId = await createInvoice(xmlPayload, singleItem.invoice_type);
 
-        if (queryOperator == ">") {
-          queryInvoiceId = invoiceId;
-        }
-
-        /**
-         * update invoice id
-         */
-        const getQuery = await getUpdateQuery(singleItem, invoiceId);
-        getUpdateQueryList += getQuery;
-      } catch (error) {
-        getUpdateQueryList += await invoiceErrorHandler(singleItem, error);
-      }
+    if (queryOperator == ">") {
+      queryInvoiceId = invoiceId;
     }
+
+    /**
+     * update invoice id
+     */
+    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    getUpdateQueryList += getQuery;
+
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
-      await invoiceErrorHandler(singleItem, error);
+      try {
+        getQuery = await getUpdateQuery(singleItem, null, false);
+        const checkError = await checkSameError(singleItem, error);
+        if (!checkError) {
+          await recordErrorResponse(singleItem, error);
+        }
+        return getQuery;
+      } catch (error) {
+        await recordErrorResponse(singleItem, error);
+        return getQuery;
+      }
     }
-  }
-}
-
-async function invoiceErrorHandler(singleItem, error) {
-  let getQuery = "";
-  try {
-    getQuery = await getUpdateQuery(singleItem, null, false);
-    const checkError = await checkSameError(singleItem, error);
-    if (!checkError) {
-      await recordErrorResponse(singleItem, error);
-    }
-    return getQuery;
-  } catch (error) {
-    await recordErrorResponse(singleItem, error);
-    return getQuery;
   }
 }
 
@@ -368,7 +327,8 @@ async function getDataGroupBy(connections) {
   try {
     let query = "";
     if (queryOperator == "<=") {
-      query = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc FROM interface_ap_master iam
+      query = `SELECT iam.invoice_nbr, iam.vendor_id, iam.invoice_type, count(ia.*) as tc
+               FROM interface_ap_master iam
                   LEFT JOIN interface_ap ia ON 
                   iam.invoice_nbr = ia.invoice_nbr and 
                   iam.invoice_type = ia.invoice_type and 
@@ -388,11 +348,11 @@ async function getDataGroupBy(connections) {
                       GROUP BY iamp.invoice_nbr, iamp.invoice_type, iamp.vendor_id
                       having tc > ${lineItemPerProcess}
                   )
-                  GROUP BY iam.invoice_nbr, iam.vendor_id having tc <= ${lineItemPerProcess} limit ${
+                  GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type having tc <= ${lineItemPerProcess} limit ${
         totalCountPerLoop + 1
       }`;
     } else {
-      query = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc FROM interface_ap_master iam
+      query = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type FROM interface_ap_master iam
                 LEFT JOIN interface_ap ia ON 
                 iam.invoice_nbr = ia.invoice_nbr and 
                 iam.invoice_type = ia.invoice_type and 
@@ -419,7 +379,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
       left join interface_ap_master iam on ia.invoice_nbr = iam.invoice_nbr and ia.invoice_type = iam.invoice_type 
       and ia.vendor_id = iam.vendor_id `;
     if (isBigData) {
-      query += ` where ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type ='${queryinvoiceType}' 
+      query += ` where ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
     } else {
       query += ` where ia.invoice_nbr in (${invoice_nbr.join(",")})`;
@@ -469,7 +429,7 @@ function getOAuthKeys(configuration) {
   return res;
 }
 
-function makeJsonToXml(payload, data, customerData) {
+function makeJsonToXml(payload, data, vendorData) {
   try {
     const auth = getOAuthKeys(userConfig);
 
@@ -511,7 +471,7 @@ function makeJsonToXml(payload, data, customerData) {
     };
 
     let recode = payload["soap:Envelope"]["soap:Body"]["add"]["record"];
-    recode["q1:entity"]["@internalId"] = customerData.entityInternalId; //This is internal ID for the customer.
+    recode["q1:entity"]["@internalId"] = vendorData.entityInternalId; //This is internal ID for the customer.
     recode["q1:tranId"] = singleItem.invoice_nbr; //invoice ID
     recode["q1:tranDate"] = dateFormat(singleItem.invoice_date); //invoice date
 
@@ -519,7 +479,7 @@ function makeJsonToXml(payload, data, customerData) {
     recode["q1:department"]["@internalId"] = hardcode.department.head;
     recode["q1:location"]["@internalId"] = hardcode.location.head;
     recode["q1:subsidiary"]["@internalId"] = singleItem.subsidiary;
-    recode["q1:currency"]["@internalId"] = customerData.currencyInternalId;
+    recode["q1:currency"]["@internalId"] = vendorData.currencyInternalId;
 
     recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
     recode["q1:memo"] = ""; // (leave out for worldtrak)
@@ -842,17 +802,13 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
       JSON.parse(JSON.stringify(lineItemPayload)),
       data
     );
-    const res = await axios.post(
-      process.env.NETSUIT_AR_API_ENDPOINT,
-      lineItemXml,
-      {
-        headers: {
-          Accept: "text/xml",
-          "Content-Type": "text/xml; charset=utf-8",
-          SOAPAction: "update",
-        },
-      }
-    );
+    await axios.post(process.env.NETSUIT_AR_API_ENDPOINT, lineItemXml, {
+      headers: {
+        Accept: "text/xml",
+        "Content-Type": "text/xml; charset=utf-8",
+        SOAPAction: "update",
+      },
+    });
   } catch (error) {}
 }
 
@@ -996,6 +952,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com",
         to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
