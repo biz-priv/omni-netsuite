@@ -1,0 +1,22 @@
+---
+stateMachine:
+  name: ${self:service}-netsuite-ap-state-machine-${self:provider.stage}
+  definition:
+    Comment: "State machine to create netsuit ap invoice"
+    StartAt: PublishEvents
+    States:
+      PublishEvents:
+        Type: Task
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-ap-${self:provider.stage}"
+        Next: EndChoice
+      EndChoice:
+        Type: Choice
+        Choices:
+          - Variable: $.hasMoreData
+            StringEquals: "false"
+            Next: SuccessState
+          - Variable: $.hasMoreData
+            StringEquals: "true"
+            Next: PublishEvents
+      SuccessState:
+        Type: Succeed

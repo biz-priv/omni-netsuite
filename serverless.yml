@@ -1,0 +1,80 @@
+service: omni-netsuite-services
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  versionFunctions: true
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  timeout: 30
+  memorySize: 256
+  deploymentBucket: ${ssm:/omni-dw/${self:provider.stage}/sls/deployment/bucket}
+  role: ${ssm:/omni-dw/${self:provider.stage}/lambda/role}
+  # apiName: ${self:service}-api-${self:provider.stage}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/omni-dw/${self:provider.stage}/lambda/sgId}
+    subnetIds:
+      - ${ssm:/omni-dw/${self:provider.stage}/lambda/subnetA}
+  stackTags:
+    Application: OmniNetsuite
+    CreateBy: BizCloudExperts
+    Version: "1.0"
+    Environment: ${self:provider.stage}
+
+# custom:
+#   prod:
+#     domainName: api.omnilogistics.com
+#     certificateName: api.omnilogistics.com
+#   apiKeys: ${file(config/${self:provider.stage}ApiKeys.yaml):keys}
+
+#   standardResponseHeaders:
+#     "Access-Control-Allow-Origin": "'*'"
+#     "Access-Control-Allow-Credentials": "'true'"
+#     "Access-Control-Allow-Headers": "'*'"
+
+plugins:
+  - serverless-offline
+  - serverless-prune-plugin
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+
+package:
+  individually: true
+  exclude:
+    - "node_modules/**"
+    - Jenkinsfile
+    - "config/**"
+    - "Helpers/**"
+    - "src/**"
+    - "*.*"
+
+layers:
+  commonNetsuiteLibs:
+    path: lambdaLayer/lib
+    compatibleRuntimes:
+      - nodejs14.x
+    package:
+      include:
+
+functions:
+  wd-api: ${file(config/functions/wd-api.yml):function}
+  netsuite: ${file(config/functions/netsuite.yml):function}
+  netsuite-customer: ${file(config/functions/netsuite-customer.yml):function}
+  netsuite-customer-step-trigger: ${file(config/functions/netsuite-customer-step-trigger.yml):function}
+  netsuite-ap: ${file(config/functions/netsuite-ap.yml):function}
+  netsuite-ap-vendor: ${file(config/functions/netsuite-ap-vendor.yml):function}
+  netsuite-ap-vendor-step-trigger: ${file(config/functions/netsuite-ap-vendor-step-trigger.yml):function}
+
+  netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
+  # netsuite-intercompany-step-trigger: ${file(config/functions/netsuite-intercompany-step-trigger.yml):function}
+
+  netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
+
+stepFunctions:
+  stateMachines:
+    netsuite-ar-state-machine: ${file(config/step-functions/netsuite-ar-state-machine.yml):stateMachine}
+    netsuite-customer-state-machine: ${file(config/step-functions/netsuite-customer-state-machine.yml):stateMachine}
+    netsuite-ap-state-machine: ${file(config/step-functions/netsuite-ap-state-machine.yml):stateMachine}
+    netsuite-ap-vendor-state-machine: ${file(config/step-functions/netsuite-ap-vendor-state-machine.yml):stateMachine}
+    netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}

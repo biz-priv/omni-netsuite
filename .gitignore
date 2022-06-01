@@ -1,0 +1,7 @@
+.serverless
+node_modules/
+yarn.lock
+Events
+doc
+lambdaLayer/lib/nodejs/yarn.lock
+.DS_Store

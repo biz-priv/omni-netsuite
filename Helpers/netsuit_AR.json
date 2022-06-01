@@ -1,0 +1,117 @@
+{
+  "soap:Envelope": {
+    "@xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
+    "@xmlns:soap": "http://schemas.xmlsoap.org/soap/envelope/",
+    "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+    "soap:Header": {
+      "tokenPassport": {
+        "@xmlns": "urn:messages_2021_2.platform.webservices.netsuite.com",
+        "account": {
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "1238234_SB1"
+        },
+        "consumerKey": {
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "****************************************************************"
+        },
+        "token": {
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "****************************************************************"
+        },
+        "nonce": {
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "1186538273"
+        },
+        "timestamp": {
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "1641942840"
+        },
+        "signature": {
+          "@algorithm": "HMAC_SHA256",
+          "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+          "#": "********************************************"
+        }
+      }
+    },
+    "soap:Body": {
+      "add": {
+        "@xmlns": "urn:messages_2021_2.platform.webservices.netsuite.com",
+        "record": {
+          "@xsi:type": "q1:Invoice",
+          "@xmlns:q1": "urn:sales_2021_2.transactions.webservices.netsuite.com",
+          "q1:entity": { "@internalId": "" },
+          "q1:tranDate": "",
+          "q1:tranId": "",
+          "q1:department": { "@internalId": "" },
+          "q1:class": { "@internalId": "" },
+          "q1:location": { "@internalId": "" },
+          "q1:subsidiary": { "@internalId": "" },
+          "q1:currency": { "@internalId": "" },
+          "q1:otherRefNum": "",
+          "q1:memo": "",
+          "q1:itemList": {
+            "q1:item": {
+              "q1:item": { "@internalId": "" },
+              "q1:description": {},
+              "q1:amount": "",
+              "q1:rate": "",
+              "q1:department": { "@internalId": "" },
+              "q1:class": { "@internalId": "" },
+              "q1:location": { "@externalId": "" },
+              "q1:customFieldList": {
+                "customField": [
+                  {
+                    "@internalId": "760",
+                    "@xsi:type": "StringCustomFieldRef",
+                    "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                    "value": ""
+                  },
+                  {
+                    "@internalId": "1166",
+                    "@xsi:type": "StringCustomFieldRef",
+                    "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                    "value": ""
+                  },
+                  {
+                    "@internalId": "1167",
+                    "@xsi:type": "StringCustomFieldRef",
+                    "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                    "value": ""
+                  }
+                ]
+              }
+            }
+          },
+          "q1:customFieldList": {
+            "customField": [
+              {
+                "@internalId": "1745",
+                "@xsi:type": "DateCustomFieldRef",
+                "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                "value": ""
+              },
+              {
+                "@internalId": "1730",
+                "@xsi:type": "StringCustomFieldRef",
+                "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                "value": ""
+              },
+              {
+                "@internalId": "1744",
+                "@xsi:type": "StringCustomFieldRef",
+                "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                "value": ""
+              },
+              {
+                "@internalId": "2327",
+                "@xsi:type": "SelectCustomFieldRef",
+                "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+                "value": { "@typeId": "752", "@internalId": "" }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
