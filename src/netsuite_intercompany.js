@@ -18,14 +18,11 @@ const userConfig = {
   },
 };
 const today = getCustomDate();
-let totalCountPerLoop = 15;
+const totalCountPerLoop = 15;
 
 module.exports.handler = async (event, context, callback) => {
   let hasMoreData = "false";
   let currentCount = 0;
-  totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
-    ? event.totalCountPerLoop
-    : totalCountPerLoop;
   try {
     /**
      * Get connections
@@ -49,7 +46,7 @@ module.exports.handler = async (event, context, callback) => {
     } else {
       hasMoreData = "false";
     }
-
+    dbc.end();
     return { hasMoreData };
   } catch (error) {
     dbc.end();
@@ -89,7 +86,7 @@ async function getData(connections) {
               from
               (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
                 where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                (intercompany_processed = 'F' and intercompany_processed_date < '2022-05-31'))
+                (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
               )ar
               join
               (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total  from
@@ -99,7 +96,7 @@ async function getData(connections) {
                 )a
                 join (select * from interface_ap_master 
                     where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                      (intercompany_processed = 'F' and intercompany_processed_date < '2022-05-31'))
+                      (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
                 )b
                 on a.source_system = b.source_system
                 and a.invoice_nbr = b.invoice_nbr
@@ -110,8 +107,8 @@ async function getData(connections) {
               and ar.file_nbr = ap.file_nbr
               and ar.invoice_type = ap.invoice_type
               and ar.unique_ref_nbr = ap.unique_ref_nbr
+              limit ${totalCountPerLoop + 1}
     `;
-
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -244,7 +241,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
         // to: "kazi.ali@bizcloudexperts.com",
         subject: `Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
