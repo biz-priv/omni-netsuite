@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const axios = require("axios");
 const pgp = require("pg-promise");
 const nodemailer = require("nodemailer");
-const payload = require("../../Helpers/netsuit_AR.json");
+const payload = require("../Helpers/netsuit_AR.json");
 
 const userConfig = {
   account: process.env.NETSUIT_AR_ACCOUNT,
