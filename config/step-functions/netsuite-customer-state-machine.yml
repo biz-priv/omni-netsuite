@@ -20,3 +20,6 @@ stateMachine:
             Next: PublishEvents
       SuccessState:
         Type: Succeed
+  events:
+    - schedule:
+        rate: cron(0 6 * * ? *) #  UTC:- 6:00 AM
