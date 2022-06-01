@@ -93,7 +93,8 @@ async function mainProcess(item, invoiceDataList) {
       return (
         e.invoice_nbr == item.invoice_nbr &&
         e.customer_id == item.customer_id &&
-        e.invoice_type == item.invoice_type
+        e.invoice_type == item.invoice_type &&
+        e.gc_code == item.gc_code
       );
     });
 
@@ -167,7 +168,7 @@ function getConnection() {
 
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr,customer_id,invoice_type FROM ${arDbName} where
+    const query = `SELECT distinct invoice_nbr,customer_id,invoice_type,gc_code FROM ${arDbName} where
     (internal_id is null and processed != 'F' and customer_internal_id != '') or
     (customer_internal_id != '' and processed ='F' and processed_date < '${today}')
     limit ${totalCountPerLoop + 1}`;
