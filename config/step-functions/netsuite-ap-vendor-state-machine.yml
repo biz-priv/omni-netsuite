@@ -1,6 +1,11 @@
 ---
 stateMachine:
   name: ${self:service}-netsuite-ap-vendor-state-machine-${self:provider.stage}
+  # events:
+  #   - schedule:
+  #       rate: cron(0 14 * * ? *) # UTC:- 2:00 PM
+  #   - schedule:
+  #       rate: cron(0 20 * * ? *) #  UTC:- 8:00 PM
   definition:
     Comment: "State machine to update netsuit vendor internal details"
     StartAt: PublishEvents

@@ -58,17 +58,11 @@ layers:
       include:
 
 functions:
-  wd-api: ${file(config/functions/wd-api.yml):function}
   netsuite: ${file(config/functions/netsuite.yml):function}
   netsuite-customer: ${file(config/functions/netsuite-customer.yml):function}
-  netsuite-customer-step-trigger: ${file(config/functions/netsuite-customer-step-trigger.yml):function}
   netsuite-ap: ${file(config/functions/netsuite-ap.yml):function}
   netsuite-ap-vendor: ${file(config/functions/netsuite-ap-vendor.yml):function}
-  netsuite-ap-vendor-step-trigger: ${file(config/functions/netsuite-ap-vendor-step-trigger.yml):function}
-
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
-  # netsuite-intercompany-step-trigger: ${file(config/functions/netsuite-intercompany-step-trigger.yml):function}
-
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
 stepFunctions:

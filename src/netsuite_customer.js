@@ -22,7 +22,6 @@ const userConfig = {
 let totalCountPerLoop = 10;
 const today = getCustomDate();
 
-const arDbName = "interface_ar";
 module.exports.handler = async (event, context, callback) => {
   let hasMoreData = "false";
   let currentCount = 0;
@@ -104,7 +103,6 @@ function getConnection() {
     const dbUser = process.env.USER;
     const dbPassword = process.env.PASS;
     const dbHost = process.env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
     const dbPort = process.env.PORT;
     const dbName = process.env.DBNAME;
 
@@ -118,9 +116,8 @@ function getConnection() {
 
 async function getCustomerData(connections) {
   try {
-    const query = `SELECT distinct customer_id FROM ${arDbName} where intercompany = 'N' and 
-                    ((customer_internal_id = '' and processed_date is null) or
-                     (customer_internal_id = '' and processed_date < '${today}')) 
+    const query = `SELECT distinct customer_id FROM interface_ar where (customer_internal_id = '' and processed_date is null) or
+                    (customer_internal_id = '' and processed_date < '${today}')
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -135,7 +132,7 @@ async function getCustomerData(connections) {
 
 async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
+    const query = `SELECT * FROM interface_ar where customer_id = '${cus_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -148,11 +145,15 @@ async function getDataByCustomerId(connections, cus_id) {
 
 async function putCustomer(connections, customerData, customer_id) {
   try {
-    let query = `INSERT INTO netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
-                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','');`;
-    query += `UPDATE ${arDbName} SET 
-                    processed = '', 
+    let query = `INSERT INTO netsuit_customer
+                  (customer_id, customer_internal_id, curr_cd, currency_internal_id)
+                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}',
+                          '${customerData.currency}', '${customerData.currencyInternalId}');`;
+
+    query += `UPDATE interface_ar SET 
                     customer_internal_id = '${customerData.entityInternalId}', 
+                    currency_internal_id = '${customerData.currencyInternalId}', 
+                    processed = 'P', 
                     processed_date = '${today}' 
                     WHERE customer_id = '${customer_id}' ;`;
     await connections.query(query);
@@ -170,7 +171,7 @@ function getcustomer(entityId) {
       .then((/**/) => {
         // Set search preferences
         const searchPreferences = new Search.SearchPreferences();
-        searchPreferences.pageSize = 50;
+        searchPreferences.pageSize = 5;
         service.setSearchPreferences(searchPreferences);
 
         // Create basic search
@@ -187,20 +188,13 @@ function getcustomer(entityId) {
       })
       .then((result, raw, soapHeader) => {
         if (result && result?.searchResult?.recordList?.record.length > 0) {
-          const recordList = result.searchResult.recordList.record;
-          let record = recordList.filter((e) => e.entityId == entityId);
-          if (record.length > 0) {
-            record = record[0];
-            resolve({
-              entityId: record.entityId,
-              entityInternalId: record["$attributes"].internalId,
-            });
-          } else {
-            reject({
-              customError: true,
-              msg: `Customer not found. (vendor_id: ${entityId})`,
-            });
-          }
+          const record = result.searchResult.recordList.record[0];
+          resolve({
+            entityId: record.entityId,
+            entityInternalId: record["$attributes"].internalId,
+            currency: record.currency.name,
+            currencyInternalId: record.currency["$attributes"].internalId,
+          });
         } else {
           reject({
             customError: true,
@@ -219,7 +213,7 @@ function getcustomer(entityId) {
 
 async function updateFailedRecords(connections, cus_id) {
   try {
-    let query = `UPDATE ${arDbName}  
+    let query = `UPDATE interface_ar  
                   SET processed = 'F',
                   processed_date = '${today}' 
                   WHERE customer_id = '${cus_id}'`;
@@ -276,9 +270,7 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
         subject: `Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>

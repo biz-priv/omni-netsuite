@@ -521,13 +521,13 @@ function makeJsonToXml(payload, data, vendorData) {
                 "@internalId": "760",
                 "@xsi:type": "StringCustomFieldRef",
                 "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-                value: e.housebill_nbr,
+                value: e.housebill_nbr ?? "",
               },
               {
                 "@internalId": "1167",
                 "@xsi:type": "StringCustomFieldRef",
                 "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-                value: e.sales_person,
+                value: e.sales_person ?? "",
               },
               {
                 "@internalId": "1727",
@@ -545,7 +545,7 @@ function makeJsonToXml(payload, data, vendorData) {
                 "@internalId": "1168",
                 "@xsi:type": "StringCustomFieldRef",
                 "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-                value: e.ref_nbr,
+                value: e.ref_nbr ?? "",
               },
               {
                 "@internalId": "2510", //prod:- 2510 dev:- 2506
@@ -570,7 +570,7 @@ function makeJsonToXml(payload, data, vendorData) {
         "@internalId": "1730",
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-        value: singleItem.file_nbr,
+        value: singleItem.file_nbr ?? "",
       },
       {
         "@internalId": "1744",
@@ -686,13 +686,13 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               "@internalId": "760",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.housebill_nbr,
+              value: e.housebill_nbr ?? "",
             },
             {
               "@internalId": "1167",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.sales_person,
+              value: e.sales_person ?? "",
             },
             {
               "@internalId": "1727",
@@ -710,7 +710,7 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               "@internalId": "1168",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.ref_nbr,
+              value: e.ref_nbr ?? "",
             },
           ],
         },
@@ -953,7 +953,7 @@ function sendMail(data) {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
         // to: "kazi.ali@bizcloudexperts.com",
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
         subject: `Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
