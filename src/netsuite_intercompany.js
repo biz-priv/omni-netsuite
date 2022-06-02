@@ -77,37 +77,28 @@ function getConnection() {
 async function getData(connections) {
   try {
     const query = `
-              select distinct
-              ar.source_system ,
-              ar.file_nbr ,
-              ar.ar_internal_id ,
-              ap.ap_internal_id,
-              ap.invoice_type
-              from
-              (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
-                where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
-              )ar
-              join
-              (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total  from
-                (
-                  select * from interface_ap
-                  where intercompany = 'Y'
-                )a
-                join (select * from interface_ap_master 
-                    where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                      (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
-                )b
-                on a.source_system = b.source_system
-                and a.invoice_nbr = b.invoice_nbr
-                and a.invoice_type = b.invoice_type
-                and a.vendor_id = b.vendor_id
-              )ap
-              on ar.source_system = ap.source_system
-              and ar.file_nbr = ap.file_nbr
-              and ar.invoice_type = ap.invoice_type
-              and ar.unique_ref_nbr = ap.unique_ref_nbr
-              limit ${totalCountPerLoop + 1}
+          select distinct ar.source_system , ar.file_nbr , ar.ar_internal_id , ap.ap_internal_id, ap.invoice_type
+          from (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
+                  where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                  (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
+          )ar
+          join
+            (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total 
+            from ( select * from interface_ap where intercompany = 'Y' )a
+          join (select * from interface_ap_master where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                        (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
+          )b
+            on a.source_system = b.source_system
+            and a.file_nbr = b.file_nbr
+            and a.invoice_nbr = b.invoice_nbr
+            and a.invoice_type = b.invoice_type
+            and a.vendor_id = b.vendor_id
+          )ap
+            on ar.source_system = ap.source_system
+            and ar.file_nbr = ap.file_nbr
+            and ar.invoice_type = ap.invoice_type
+            and ar.unique_ref_nbr = ap.unique_ref_nbr
+          limit ${totalCountPerLoop + 1}
     `;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
