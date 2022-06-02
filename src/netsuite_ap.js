@@ -353,37 +353,37 @@ async function getDataGroupBy(connections) {
       //   totalCountPerLoop + 1
       // }`;
       query = `SELECT iam.invoice_nbr, iam.vendor_id, iam.invoice_type, count(ia.*) as tc, ia.gc_code
-      FROM interface_ap_master iam
-              LEFT JOIN (select distinct invoice_nbr, invoice_type, vendor_id,gc_code,file_nbr from interface_ap ) ia ON
-              iam.invoice_nbr = ia.invoice_nbr and 
-              iam.invoice_type = ia.invoice_type and 
-              iam.vendor_id = ia.vendor_id  
-              WHERE (
-                    (iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
-                OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
-            ) 
-            and iam.invoice_nbr not in (
-                SELECT iamp.invoice_nbr FROM interface_ap_master iamp
-                LEFT JOIN interface_ap iap ON 
-                iamp.invoice_nbr = iap.invoice_nbr and 
-                iamp.invoice_type = iap.invoice_type and 
-                iamp.vendor_id = iap.vendor_id  
-                WHERE (iamp.internal_id is null and iamp.processed != 'F' and iamp.vendor_internal_id !='')
-                OR (iamp.vendor_internal_id !='' and iamp.processed ='F' and iamp.processed_date < '${today}')
-                GROUP BY iamp.invoice_nbr, iamp.invoice_type, iamp.vendor_id
-                having tc > ${lineItemPerProcess}
-            )
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type , ia.gc_code having tc <= ${lineItemPerProcess}
-        limit ${totalCountPerLoop + 1}`;
+                FROM interface_ap_master iam
+                        LEFT JOIN (select distinct invoice_nbr, invoice_type, vendor_id,gc_code,file_nbr from interface_ap ) ia ON
+                        iam.invoice_nbr = ia.invoice_nbr and 
+                        iam.invoice_type = ia.invoice_type and 
+                        iam.vendor_id = ia.vendor_id  
+                        WHERE (
+                              (iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
+                          OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
+                      ) 
+                      and iam.invoice_nbr not in (
+                          SELECT iamp.invoice_nbr FROM interface_ap_master iamp
+                          LEFT JOIN interface_ap iap ON 
+                          iamp.invoice_nbr = iap.invoice_nbr and 
+                          iamp.invoice_type = iap.invoice_type and 
+                          iamp.vendor_id = iap.vendor_id  
+                          WHERE (iamp.internal_id is null and iamp.processed != 'F' and iamp.vendor_internal_id !='')
+                          OR (iamp.vendor_internal_id !='' and iamp.processed ='F' and iamp.processed_date < '${today}')
+                          GROUP BY iamp.invoice_nbr, iamp.invoice_type, iamp.vendor_id
+                          having tc > ${lineItemPerProcess}
+                      )
+                  GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type , ia.gc_code having tc <= ${lineItemPerProcess}
+                  limit ${totalCountPerLoop + 1}`;
     } else {
-      query = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type FROM interface_ap_master iam
+      query = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code FROM interface_ap_master iam
                 LEFT JOIN interface_ap ia ON 
                 iam.invoice_nbr = ia.invoice_nbr and 
                 iam.invoice_type = ia.invoice_type and 
                 iam.vendor_id = ia.vendor_id
                 WHERE (iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
-                GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type having tc > ${lineItemPerProcess} limit ${
+                GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code having tc > ${lineItemPerProcess} limit ${
         totalCountPerLoop + 1
       }`;
     }
@@ -401,7 +401,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
   try {
     let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
       left join interface_ap_master iam on ia.invoice_nbr = iam.invoice_nbr and ia.invoice_type = iam.invoice_type 
-      and ia.vendor_id = iam.vendor_id `;
+      and ia.vendor_id = iam.vendor_id and ia.gc_code = iam.gc_code  `;
     if (isBigData) {
       query += ` where ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
@@ -852,8 +852,8 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
-    query += `  processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
-              and vendor_id = '${item.vendor_id}'; `;
+    query += ` processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
+              and vendor_id = '${item.vendor_id}' and gc_code = '${item.gc_code}';`;
 
     return query;
   } catch (error) {}
