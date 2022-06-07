@@ -116,13 +116,19 @@ function getConnection() {
 
 async function getVendorData(connections) {
   try {
-    const query = `SELECT distinct vendor_id, intercompany ,gc_code 
-                    FROM interface_ap_master 
-                    where (intercompany = 'N' or gc_code = 'OTS') 
-                    and ((vendor_internal_id = '' and processed_date is null) or
-                          (vendor_internal_id = '' and processed_date < '${today}')
-                        )
+    // const query = `SELECT distinct vendor_id, intercompany ,gc_code
+    //                 FROM interface_ap_master
+    //                 where (intercompany = 'N' or gc_code = 'OTS')
+    //                 and ((vendor_internal_id = '' and processed_date is null) or
+    //                       (vendor_internal_id = '' and processed_date < '${today}')
+    //                     )
+    //                 limit ${totalCountPerLoop + 1}`;
+
+    const query = `SELECT distinct vendor_id FROM interface_ap_master 
+                    where (vendor_internal_id = '' and processed_date is null) or
+                          (vendor_internal_id = '' and processed_date < '2022-06-06')
                     limit ${totalCountPerLoop + 1}`;
+
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found";
