@@ -118,11 +118,15 @@ function getConnection() {
 
 async function getCustomerData(connections) {
   try {
+    // const query = `SELECT distinct customer_id FROM ${arDbName}
+    //                 where (intercompany = 'N' or gc_code = 'OTS')
+    //                 and ((customer_internal_id = '' and processed_date is null) or
+    //                       (customer_internal_id = '' and processed_date < '${today}')
+    //                     )
+    //                 limit ${totalCountPerLoop + 1}`;
     const query = `SELECT distinct customer_id FROM ${arDbName} 
-                    where (intercompany = 'N' or gc_code = 'OTS') 
-                    and ((customer_internal_id = '' and processed_date is null) or
+                    where (customer_internal_id = '' and processed_date is null) or
                           (customer_internal_id = '' and processed_date < '${today}')
-                        ) 
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
