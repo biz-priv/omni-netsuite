@@ -69,11 +69,13 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
+      await startNetsuitInvoiceStep();
       hasMoreData = "false";
     }
 
     return { hasMoreData };
   } catch (error) {
+    await startNetsuitInvoiceStep();
     return { hasMoreData: "false" };
   }
 };
@@ -686,4 +688,28 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startNetsuitInvoiceStep() {
+  return new Promise((resolve, reject) => {
+    try {
+      const params = {
+        stateMachineArn:
+          "arn:aws:states:us-east-1:332281781429:stateMachine:omni-netsuite-services-netsuite-ap-vendor-state-machine-dev",
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit AP api trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit AP Vendor started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }
