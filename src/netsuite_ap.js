@@ -116,6 +116,7 @@ module.exports.handler = async (event, context, callback) => {
             console.log("orderData", orderData.length);
           } catch (error) {
             dbc.end();
+            await startNetsuitInvoiceStep();
             return { hasMoreData: "false" };
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
@@ -224,6 +225,7 @@ module.exports.handler = async (event, context, callback) => {
     }
   } catch (error) {
     dbc.end();
+    await startNetsuitInvoiceStep();
     return { hasMoreData: "false" };
   }
 };
@@ -1025,4 +1027,28 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startNetsuitInvoiceStep() {
+  return new Promise((resolve, reject) => {
+    try {
+      const params = {
+        stateMachineArn:
+          "arn:aws:states:us-east-1:332281781429:stateMachine:omni-netsuite-services-netsuite-intercompany-state-machine-dev",
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit Intercompany trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit Intercompany started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }

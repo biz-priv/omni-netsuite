@@ -3,6 +3,7 @@ const { create, convert } = require("xmlbuilder2");
 const crypto = require("crypto");
 const axios = require("axios");
 const pgp = require("pg-promise");
+const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const payload = require("../Helpers/netsuit_AR.json");
 
@@ -72,9 +73,10 @@ module.exports.handler = async (event, context, callback) => {
       await startNetsuitInvoiceStep();
       hasMoreData = "false";
     }
-
+    dbc.end();
     return { hasMoreData };
   } catch (error) {
+    dbc.end();
     await startNetsuitInvoiceStep();
     return { hasMoreData: "false" };
   }
