@@ -155,7 +155,7 @@ async function mainProcess(connections, item) {
 async function createInterCompanyInvoice(item) {
   const apInvoiceId = item.ap_internal_id;
   const arInvoiceId = item.ar_internal_id;
-  const transactionType = item.invoice_type == "IN" ? "invoice" : "credit";
+  const transactionType = item.invoice_type == "IN" ? "invoice" : "creditmemo";
   try {
     let baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
     if (process.env.STAGE == "prod") {
