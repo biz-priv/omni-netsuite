@@ -4,6 +4,7 @@ const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
+const { getConnection } = require("../Helpers/helper");
 
 const userConfig = {
   account: process.env.NETSUIT_AR_ACCOUNT,
@@ -53,22 +54,6 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData: "false" };
   }
 };
-
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
-  }
-}
 
 /**
  * get data
@@ -159,7 +144,7 @@ async function createInterCompanyInvoice(item) {
   try {
     let baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
     if (process.env.STAGE == "prod") {
-      baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
+      baseUrl = `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
     }
     const url = `${baseUrl}&iid1=${arInvoiceId}&iid2=${apInvoiceId}&transactionType=${transactionType}`;
     const authHeader = getAuthorizationHeader(url);

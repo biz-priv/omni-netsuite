@@ -2,28 +2,20 @@ const AWS = require("aws-sdk");
 const pgp = require("pg-promise");
 const nodemailer = require("nodemailer");
 const NetSuite = require("node-suitetalk");
+const { getConfig, getConnection } = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
 
-const userConfig = {
-  account: process.env.NETSUIT_AR_ACCOUNT,
-  apiVersion: "2021_2",
-  accountSpecificUrl: true,
-  token: {
-    consumer_key: process.env.NETSUIT_AR_CONSUMER_KEY,
-    consumer_secret: process.env.NETSUIT_AR_CONSUMER_SECRET,
-    token_key: process.env.NETSUIT_AR_TOKEN_KEY,
-    token_secret: process.env.NETSUIT_AR_TOKEN_SECRET,
-  },
-  wsdlPath: process.env.NETSUIT_AR_WDSLPATH,
-};
+let userConfig = "";
 
 let totalCountPerLoop = 10;
 const today = getCustomDate();
 
 const arDbName = "interface_ar";
+const source_system = "WT";
 module.exports.handler = async (event, context, callback) => {
+  userConfig = getConfig(source_system, process.env);
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -99,34 +91,12 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const dbc = pgp({ capSQL: true });
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
-  }
-}
-
 async function getCustomerData(connections) {
   try {
-    // const query = `SELECT distinct customer_id FROM ${arDbName}
-    //                 where (intercompany = 'N' or gc_code = 'OTS')
-    //                 and ((customer_internal_id = '' and processed_date is null) or
-    //                       (customer_internal_id = '' and processed_date < '${today}')
-    //                     )
-    //                 limit ${totalCountPerLoop + 1}`;
     const query = `SELECT distinct customer_id FROM ${arDbName} 
-                    where (customer_internal_id = '' and processed_date is null) or
-                          (customer_internal_id = '' and processed_date < '${today}')
+                    where ((customer_internal_id = '' and processed_date is null) or
+                            (customer_internal_id = '' and processed_date < '${today}'))
+                          and source_system = '${source_system}'
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -160,7 +130,7 @@ async function putCustomer(connections, customerData, customer_id) {
                     processed = '', 
                     customer_internal_id = '${customerData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' ;`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}';`;
     await connections.query(query);
   } catch (error) {
     throw "Customer Update Failed";
@@ -228,7 +198,7 @@ async function updateFailedRecords(connections, cus_id) {
     let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}'`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}'`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
@@ -282,10 +252,10 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         // to: "kazi.ali@bizcloudexperts.com",
-        subject: `Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">

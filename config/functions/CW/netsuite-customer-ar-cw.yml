@@ -1,0 +1,16 @@
+---
+function:
+  handler: src/CW/netsuite_customer_ar_cw.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-ar-cw-${self:provider.stage}
+  description: CW Netsuite customer AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/CW/netsuite_customer_ar_cw.js
+      - Helpers/**
+  environment:
+    NETSUITE_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-cw-state-machine-${self:provider.stage}
