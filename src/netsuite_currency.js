@@ -1,6 +1,7 @@
 const pgp = require("pg-promise");
 const { Record } = require("node-suitetalk");
 const NetSuite = require("node-suitetalk");
+const { getConnection } = require("../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 
@@ -41,23 +42,6 @@ async function loadCurrency(connections, internalId) {
   if (currData != null) {
     await createCurrencyData(connections, currData);
     await loadCurrency(connections, internalId + 1);
-  }
-}
-
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const dbc = pgp({ capSQL: true });
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
   }
 }
 

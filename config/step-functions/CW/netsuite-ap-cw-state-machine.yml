@@ -1,13 +1,13 @@
 ---
 stateMachine:
-  name: ${self:service}-netsuite-ar-state-machine-${self:provider.stage}
+  name: ${self:service}-netsuite-ap-cw-state-machine-${self:provider.stage}
   definition:
-    Comment: "State machine to create netsuit ar invoice"
+    Comment: "State machine to create netsuit AP CW invoice"
     StartAt: PublishEvents
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-ar-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-ap-cw-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice

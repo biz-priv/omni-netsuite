@@ -1,0 +1,16 @@
+---
+function:
+  handler: src/CW/netsuite_vendor_ap_cw.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-vendor-ap-cw-${self:provider.stage}
+  description: CW Netsuite AP vendor AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/CW/netsuite_vendor_ap_cw.js
+      - Helpers/**
+  environment:
+    NETSUITE_AP_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ap-cw-state-machine-${self:provider.stage}
