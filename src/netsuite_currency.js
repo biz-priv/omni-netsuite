@@ -24,7 +24,7 @@ module.exports.handler = async (event, context, callback) => {
      * Get connections
      */
     let internalId = 1;
-    const connections = getConnection();
+    const connections = getConnection(process.env, dbc);
     const lastCreatedCurrency = await getCurrencyData(connections);
 
     if (lastCreatedCurrency && lastCreatedCurrency.length > 0) {

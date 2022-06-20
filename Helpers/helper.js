@@ -28,7 +28,7 @@ function getConfig(source_system, env) {
   return data[source_system];
 }
 
-function getConnection(env) {
+function getConnection(env, dbc) {
   try {
     const dbUser = env.USER;
     const dbPassword = env.PASS;
