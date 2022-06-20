@@ -1,4 +1,5 @@
 const pgp = require("pg-promise");
+const dbc = pgp({ capSQL: true });
 const { Record } = require("node-suitetalk");
 const NetSuite = require("node-suitetalk");
 const { getConnection } = require("../Helpers/helper");
