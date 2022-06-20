@@ -1,5 +1,6 @@
 const AWS = require("aws-sdk");
 const pgp = require("pg-promise");
+const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const NetSuite = require("node-suitetalk");
 const { getConfig, getConnection } = require("../../Helpers/helper");
