@@ -3,26 +3,20 @@ const { create, convert } = require("xmlbuilder2");
 const crypto = require("crypto");
 const axios = require("axios");
 const pgp = require("pg-promise");
+const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
-const payload = require("../Helpers/netsuit_AR.json");
+const payload = require("../../Helpers/netsuit_AR.json");
+const { getConfig, getConnection } = require("../../Helpers/helper");
 
-const userConfig = {
-  account: process.env.NETSUIT_AR_ACCOUNT,
-  apiVersion: "2021_2",
-  accountSpecificUrl: true,
-  token: {
-    consumer_key: process.env.NETSUIT_AR_CONSUMER_KEY,
-    consumer_secret: process.env.NETSUIT_AR_CONSUMER_SECRET,
-    token_key: process.env.NETSUIT_AR_TOKEN_KEY,
-    token_secret: process.env.NETSUIT_AR_TOKEN_SECRET,
-  },
-  wsdlPath: process.env.NETSUIT_AR_WDSLPATH,
-};
+let userConfig = "";
 
+const arDbName = "interface_ar";
+const source_system = "WT";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
 
 module.exports.handler = async (event, context, callback) => {
+  userConfig = getConfig(source_system, process.env);
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -33,7 +27,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection();
+    const connections = getConnection(process.env, dbc);
 
     /**
      * Get data from db
@@ -69,9 +63,10 @@ module.exports.handler = async (event, context, callback) => {
     } else {
       hasMoreData = "false";
     }
-
+    dbc.end();
     return { hasMoreData };
   } catch (error) {
+    dbc.end();
     return { hasMoreData: "false" };
   }
 };
@@ -84,27 +79,16 @@ module.exports.handler = async (event, context, callback) => {
 async function mainProcess(item, invoiceDataList) {
   let singleItem = null;
   try {
-    const itemId = item.invoice_nbr;
-
     /**
      * get invoice obj from DB
      */
-    const dataById = invoiceDataList.filter((e) => {
-      return e.invoice_nbr == itemId;
+    const dataList = invoiceDataList.filter((e) => {
+      return (
+        e.invoice_nbr == item.invoice_nbr && e.invoice_type == item.invoice_type
+      );
     });
 
-    singleItem = dataById[0];
-
-    /**
-     * group data by invoice_type IN/CM
-     */
-    const dataGroup = dataById.reduce(
-      (result, item) => ({
-        ...result,
-        [item["invoice_type"]]: [...(result[item["invoice_type"]] || []), item],
-      }),
-      {}
-    );
+    singleItem = dataList[0];
 
     /**
      * get customer from netsuit
@@ -117,38 +101,25 @@ async function mainProcess(item, invoiceDataList) {
     };
     let getUpdateQueryList = "";
 
-    for (let e of Object.keys(dataGroup)) {
-      singleItem = dataGroup[e][0];
+    /**
+     * Make Json to Xml payload
+     */
+    const xmlPayload = makeJsonToXml(
+      JSON.parse(JSON.stringify(payload)),
+      dataList,
+      customerData
+    );
 
-      /**
-       * get auth keys
-       */
-      const auth = getOAuthKeys(userConfig);
+    /**
+     * create Netsuit Invoice
+     */
+    const invoiceId = await createInvoice(xmlPayload, singleItem.invoice_type);
 
-      /**
-       * Make Json to Xml payload
-       */
-      const xmlPayload = makeJsonToXml(
-        payload,
-        auth,
-        dataGroup[e],
-        customerData
-      );
-
-      /**
-       * create Netsuit Invoice
-       */
-      const invoiceId = await createInvoice(
-        xmlPayload,
-        singleItem.invoice_type
-      );
-
-      /**
-       * update invoice id
-       */
-      const getQuery = await getUpdateQuery(singleItem, invoiceId);
-      getUpdateQueryList += getQuery;
-    }
+    /**
+     * update invoice id
+     */
+    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    getUpdateQueryList += getQuery;
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
@@ -168,28 +139,13 @@ async function mainProcess(item, invoiceDataList) {
   }
 }
 
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const dbc = pgp({ capSQL: true });
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
-  }
-}
-
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr FROM interface_ar where (internal_id is null and processed != 'F' and
-                      customer_internal_id != '') or (customer_internal_id != '' and processed ='F' and processed_date < '${today}') limit ${
-      totalCountPerLoop + 1
-    }`;
+    const query = `SELECT distinct invoice_nbr,invoice_type FROM ${arDbName} where
+    ((internal_id is null and processed != 'F' and customer_internal_id != '') or
+     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+    and source_system = '${source_system}'
+    limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -203,12 +159,8 @@ async function getDataGroupBy(connections) {
 
 async function getInvoiceNbrData(connections, invoice_nbr) {
   try {
-    const query = `select
-    a.source_system,a.id,a.file_nbr,a.customer_id,a.subsidiary,a.master_bill_nbr,a.invoice_nbr,a.invoice_date,a.ready_date,a.period,a.housebill_nbr,
-    a.customer_po,a.business_segment,a.invoice_type,a.handling_stn,a.controlling_stn,a.finalized_date,a.charge_cd,a.charge_cd_desc,charge_cd_internal_id,
-    a.curr_cd,a.rate,a.total,a.sales_person,a.posted_date,a.email,a.processed,a.load_create_date ,a.load_update_date,
-    a.customer_internal_id,a.currency_internal_id
-    from interface_ar a where a.invoice_nbr in (${invoice_nbr.join(",")})`;
+    const query = `select * from ${arDbName} where source_system = '${source_system}' 
+    and invoice_nbr in (${invoice_nbr.join(",")})`;
 
     const result = await connections.query(query);
     if (!result || result.length == 0 || !result[0].customer_id) {
@@ -253,11 +205,14 @@ function getOAuthKeys(configuration) {
   return res;
 }
 
-function makeJsonToXml(payload, auth, data, customerData) {
+function makeJsonToXml(payload, data, customerData) {
   try {
-    const hardcode = getHardcodeData();
-
+    /**
+     * get auth keys
+     */
+    const auth = getOAuthKeys(userConfig);
     const singleItem = data[0];
+    const hardcode = getHardcodeData();
     payload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
         "@xmlns": "urn:messages_2018_2.platform.webservices.netsuite.com",
@@ -327,25 +282,25 @@ function makeJsonToXml(payload, auth, data, customerData) {
               "@internalId": "760",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.housebill_nbr,
+              value: e.housebill_nbr ?? "",
             },
             {
               "@internalId": "1167",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.sales_person,
+              value: e.sales_person ?? "",
             },
             {
               "@internalId": "1727",
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: e.master_bill_nbr,
+              value: e.master_bill_nbr ?? "",
             },
             {
               "@internalId": "1166",
               "@xsi:type": "SelectCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: { "@externalId": e.controlling_stn },
+              value: { "@externalId": e.controlling_stn } ?? "",
             },
             {
               "@internalId": "1164",
@@ -369,7 +324,7 @@ function makeJsonToXml(payload, auth, data, customerData) {
         "@internalId": "1730",
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-        value: singleItem.file_nbr,
+        value: singleItem.file_nbr ?? "",
       },
       {
         "@internalId": "1744",
@@ -459,7 +414,6 @@ async function createInvoice(soapPayload, type) {
       throw error;
     } else {
       throw {
-        // customError: false,
         msg: "Netsuit AR Api Failed",
       };
     }
@@ -473,13 +427,15 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
       item.invoice_nbr,
       invoiceId
     );
-    let query = `UPDATE interface_ar `;
+    let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
-    query += `  processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'; `;
+    query += `processed_date = '${today}' 
+              WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
+              and invoice_type = '${item.invoice_type}' ;`;
 
     return query;
   } catch (error) {}
@@ -498,54 +454,17 @@ async function updateInvoiceId(connections, query) {
   }
 }
 
-function getHardcodeData(source_system = "WT") {
-  try {
-    const data = {
-      WT: {
-        source_system: "3",
-        class: {
-          head: "9",
-          line: { International: 3, Domestic: 2, Warehouse: 16 },
-        },
-        department: { head: "15", line: "1" },
-        location: { head: "18", line: "EXT ID: Take from DB" },
-      },
-      CW: {
-        source_system: "1",
-        class: {
-          head: "9",
-          line: { International: 3, Domestic: 2, Warehouse: 16 },
-        },
-        department: { head: "15", line: "1" },
-        location: { head: "18", line: "EXT ID: Take from DB" },
-      },
-      EE: {
-        source_system: "4",
-        class: {
-          head: "9",
-          line: { International: 3, Domestic: 2, Warehouse: 16 },
-        },
-        department: { head: "15", line: "1" },
-        location: { head: "18", line: "EXT ID: Take from DB" },
-      },
-      M1: {
-        source_system: "2",
-        class: {
-          head: "9",
-          line: { International: 3, Domestic: 2, Warehouse: 16 },
-        },
-        department: { head: "15", line: "1" },
-        location: { head: "18", line: "EXT ID: Take from DB" },
-      },
-    };
-    if (data.hasOwnProperty(source_system)) {
-      return data[source_system];
-    } else {
-      throw "source_system not exists";
-    }
-  } catch (error) {
-    throw "source_system not exists";
-  }
+function getHardcodeData() {
+  const data = {
+    source_system: "3",
+    class: {
+      head: "9",
+      line: { International: 3, Domestic: 2, Warehouse: 16 },
+    },
+    department: { head: "15", line: "1" },
+    location: { head: "18", line: "EXT ID: Take from DB" },
+  };
+  return data;
 }
 
 async function recordErrorResponse(item, error) {
@@ -602,7 +521,9 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        subject: `Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        // to: "kazi.ali@bizcloudexperts.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">

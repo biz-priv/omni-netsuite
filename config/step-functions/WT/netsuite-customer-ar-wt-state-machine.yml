@@ -1,13 +1,16 @@
 ---
 stateMachine:
-  name: ${self:service}-netsuite-intercompany-state-machine-${self:provider.stage}
+  name: ${self:service}-netsuite-customer-ar-wt-state-machine-${self:provider.stage}
+  events:
+    - schedule:
+        rate: cron(0 6 * * ? *) #  UTC:- 6:00 AM
   definition:
-    Comment: "State machine to update netsuite intercompany invoices"
+    Comment: "State machine to update netsuit customer AR WT internal details"
     StartAt: PublishEvents
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-intercompany-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-customer-ar-wt-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice

@@ -4,6 +4,7 @@ const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
+const { getConnection } = require("../Helpers/helper");
 
 const userConfig = {
   account: process.env.NETSUIT_AR_ACCOUNT,
@@ -27,7 +28,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection();
+    const connections = getConnection(process.env, dbc);
     /**
      * Get invoice internal ids from interface_ap and interface_ar
      */
@@ -54,22 +55,6 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
-  }
-}
-
 /**
  * get data
  * @param {*} connections
@@ -77,37 +62,28 @@ function getConnection() {
 async function getData(connections) {
   try {
     const query = `
-              select distinct
-              ar.source_system ,
-              ar.file_nbr ,
-              ar.ar_internal_id ,
-              ap.ap_internal_id,
-              ap.invoice_type
-              from
-              (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
-                where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
-              )ar
-              join
-              (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total  from
-                (
-                  select * from interface_ap
-                  where intercompany = 'Y'
-                )a
-                join (select * from interface_ap_master 
-                    where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
-                      (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
-                )b
-                on a.source_system = b.source_system
-                and a.invoice_nbr = b.invoice_nbr
-                and a.invoice_type = b.invoice_type
-                and a.vendor_id = b.vendor_id
-              )ap
-              on ar.source_system = ap.source_system
-              and ar.file_nbr = ap.file_nbr
-              and ar.invoice_type = ap.invoice_type
-              and ar.unique_ref_nbr = ap.unique_ref_nbr
-              limit ${totalCountPerLoop + 1}
+          select distinct ar.source_system , ar.file_nbr , ar.ar_internal_id , ap.ap_internal_id, ap.invoice_type
+          from (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
+                  where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                  (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
+          )ar
+          join
+            (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total 
+            from ( select * from interface_ap where intercompany = 'Y' )a
+          join (select * from interface_ap_master where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                        (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
+          )b
+            on a.source_system = b.source_system
+            and a.file_nbr = b.file_nbr
+            and a.invoice_nbr = b.invoice_nbr
+            and a.invoice_type = b.invoice_type
+            and a.vendor_id = b.vendor_id
+          )ap
+            on ar.source_system = ap.source_system
+            and ar.file_nbr = ap.file_nbr
+            and ar.invoice_type = ap.invoice_type
+            and ar.unique_ref_nbr = ap.unique_ref_nbr
+          limit ${totalCountPerLoop + 1}
     `;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -164,11 +140,11 @@ async function mainProcess(connections, item) {
 async function createInterCompanyInvoice(item) {
   const apInvoiceId = item.ap_internal_id;
   const arInvoiceId = item.ar_internal_id;
-  const transactionType = item.invoice_type == "IN" ? "invoice" : "credit";
+  const transactionType = item.invoice_type == "IN" ? "invoice" : "creditmemo";
   try {
     let baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
     if (process.env.STAGE == "prod") {
-      baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
+      baseUrl = `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
     }
     const url = `${baseUrl}&iid1=${arInvoiceId}&iid2=${apInvoiceId}&transactionType=${transactionType}`;
     const authHeader = getAuthorizationHeader(url);

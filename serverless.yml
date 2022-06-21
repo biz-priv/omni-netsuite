@@ -21,6 +21,31 @@ provider:
     CreateBy: BizCloudExperts
     Version: "1.0"
     Environment: ${self:provider.stage}
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    DBNAME: ${ssm:/omni-dw/${self:provider.stage}/db/name}
+    USER: ${ssm:/omni-dw/${self:provider.stage}/db/user~true}
+    HOST: ${ssm:/omni-dw/${self:provider.stage}/db/host~true}
+    PASS: ${ssm:/omni-dw/${self:provider.stage}/db/password~true}
+    PORT: ${ssm:/omni-dw/${self:provider.stage}/db/port}
+    NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
+    NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
+    NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
+    NETSUIT_AR_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerSecret}
+    NETSUIT_AR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKey}
+    NETSUIT_AR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecret}
+    NETSUIT_CW_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyCW}
+    NETSUIT_CW_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretCW}
+    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
+    NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
+    NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
+    NETSUIT_AR_ERROR_EMAIL_USER: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/user}
+    NETSUIT_AR_ERROR_EMAIL_PASS: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/pass}
+    NETSUIT_AR_ERROR_EMAIL_FROM: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/from}
+    NETSUIT_AR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/to}
+    NETSUIT_AP_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/errorEmail/to}
+    NETSUIT_AP_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/dynamo/errorTable}
 
 # custom:
 #   prod:
@@ -54,21 +79,27 @@ layers:
     path: lambdaLayer/lib
     compatibleRuntimes:
       - nodejs14.x
-    package:
-      include:
 
 functions:
-  netsuite: ${file(config/functions/netsuite.yml):function}
-  netsuite-customer: ${file(config/functions/netsuite-customer.yml):function}
-  netsuite-ap: ${file(config/functions/netsuite-ap.yml):function}
-  netsuite-ap-vendor: ${file(config/functions/netsuite-ap-vendor.yml):function}
+  netsuite-ar-wt: ${file(config/functions/WT/netsuite-ar-wt.yml):function}
+  netsuite-customer-ar-wt: ${file(config/functions/WT/netsuite-customer-ar-wt.yml):function}
+
+  netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
+  netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
+  netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
+  netsuite-vendor-ap-cw: ${file(config/functions/CW/netsuite-vendor-ap-cw.yml):function}
+
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
 stepFunctions:
   stateMachines:
-    netsuite-ar-state-machine: ${file(config/step-functions/netsuite-ar-state-machine.yml):stateMachine}
-    netsuite-customer-state-machine: ${file(config/step-functions/netsuite-customer-state-machine.yml):stateMachine}
-    netsuite-ap-state-machine: ${file(config/step-functions/netsuite-ap-state-machine.yml):stateMachine}
-    netsuite-ap-vendor-state-machine: ${file(config/step-functions/netsuite-ap-vendor-state-machine.yml):stateMachine}
+    netsuite-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-ar-wt-state-machine.yml):stateMachine}
+    netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+
+    netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
+    netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
+    netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}

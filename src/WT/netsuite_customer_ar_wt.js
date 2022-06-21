@@ -1,28 +1,22 @@
 const AWS = require("aws-sdk");
 const pgp = require("pg-promise");
+const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const NetSuite = require("node-suitetalk");
+const { getConfig, getConnection } = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
 
-const userConfig = {
-  account: process.env.NETSUIT_AR_ACCOUNT,
-  apiVersion: "2021_2",
-  accountSpecificUrl: true,
-  token: {
-    consumer_key: process.env.NETSUIT_AR_CONSUMER_KEY,
-    consumer_secret: process.env.NETSUIT_AR_CONSUMER_SECRET,
-    token_key: process.env.NETSUIT_AR_TOKEN_KEY,
-    token_secret: process.env.NETSUIT_AR_TOKEN_SECRET,
-  },
-  wsdlPath: process.env.NETSUIT_AR_WDSLPATH,
-};
+let userConfig = "";
 
 let totalCountPerLoop = 10;
 const today = getCustomDate();
 
+const arDbName = "interface_ar";
+const source_system = "WT";
 module.exports.handler = async (event, context, callback) => {
+  userConfig = getConfig(source_system, process.env);
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -32,7 +26,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection();
+    const connections = getConnection(process.env, dbc);
 
     /**
      * Get data from db
@@ -98,26 +92,12 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
-function getConnection() {
-  try {
-    const dbUser = process.env.USER;
-    const dbPassword = process.env.PASS;
-    const dbHost = process.env.HOST;
-    const dbPort = process.env.PORT;
-    const dbName = process.env.DBNAME;
-
-    const dbc = pgp({ capSQL: true });
-    const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
-  } catch (error) {
-    throw "DB Connection Error";
-  }
-}
-
 async function getCustomerData(connections) {
   try {
-    const query = `SELECT distinct customer_id FROM interface_ar where (customer_internal_id = '' and processed_date is null) or
-                    (customer_internal_id = '' and processed_date < '${today}')
+    const query = `SELECT distinct customer_id FROM ${arDbName} 
+                    where ((customer_internal_id = '' and processed_date is null) or
+                            (customer_internal_id = '' and processed_date < '${today}'))
+                          and source_system = '${source_system}'
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -132,7 +112,7 @@ async function getCustomerData(connections) {
 
 async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT * FROM interface_ar where customer_id = '${cus_id}' limit 1`;
+    const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -145,17 +125,13 @@ async function getDataByCustomerId(connections, cus_id) {
 
 async function putCustomer(connections, customerData, customer_id) {
   try {
-    let query = `INSERT INTO netsuit_customer
-                  (customer_id, customer_internal_id, curr_cd, currency_internal_id)
-                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}',
-                          '${customerData.currency}', '${customerData.currencyInternalId}');`;
-
-    query += `UPDATE interface_ar SET 
+    let query = `INSERT INTO netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
+                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','');`;
+    query += `UPDATE ${arDbName} SET 
+                    processed = '', 
                     customer_internal_id = '${customerData.entityInternalId}', 
-                    currency_internal_id = '${customerData.currencyInternalId}', 
-                    processed = 'P', 
                     processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' ;`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}';`;
     await connections.query(query);
   } catch (error) {
     throw "Customer Update Failed";
@@ -171,7 +147,7 @@ function getcustomer(entityId) {
       .then((/**/) => {
         // Set search preferences
         const searchPreferences = new Search.SearchPreferences();
-        searchPreferences.pageSize = 5;
+        searchPreferences.pageSize = 50;
         service.setSearchPreferences(searchPreferences);
 
         // Create basic search
@@ -188,13 +164,20 @@ function getcustomer(entityId) {
       })
       .then((result, raw, soapHeader) => {
         if (result && result?.searchResult?.recordList?.record.length > 0) {
-          const record = result.searchResult.recordList.record[0];
-          resolve({
-            entityId: record.entityId,
-            entityInternalId: record["$attributes"].internalId,
-            currency: record.currency.name,
-            currencyInternalId: record.currency["$attributes"].internalId,
-          });
+          const recordList = result.searchResult.recordList.record;
+          let record = recordList.filter((e) => e.entityId == entityId);
+          if (record.length > 0) {
+            record = record[0];
+            resolve({
+              entityId: record.entityId,
+              entityInternalId: record["$attributes"].internalId,
+            });
+          } else {
+            reject({
+              customError: true,
+              msg: `Customer not found. (vendor_id: ${entityId})`,
+            });
+          }
         } else {
           reject({
             customError: true,
@@ -213,10 +196,10 @@ function getcustomer(entityId) {
 
 async function updateFailedRecords(connections, cus_id) {
   try {
-    let query = `UPDATE interface_ar  
+    let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}'`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}'`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
@@ -271,7 +254,9 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        subject: `Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com",
+        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">
