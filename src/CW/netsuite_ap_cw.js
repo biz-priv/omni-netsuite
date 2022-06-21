@@ -283,6 +283,7 @@ async function mainProcess(item, invoiceDataList) {
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
+      let getQuery = "";
       try {
         getQuery = await getUpdateQuery(singleItem, null, false);
         const checkError = await checkSameError(singleItem, error);
@@ -334,7 +335,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
     let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
       left join interface_ap_master iam on ia.invoice_nbr = iam.invoice_nbr and ia.invoice_type = iam.invoice_type 
       and ia.vendor_id = iam.vendor_id and ia.gc_code = iam.gc_code and ia.source_system = iam.source_system 
-      where ia.source_system = '${source_system}' `;
+      where ia.source_system = '${source_system}' and `;
     if (isBigData) {
       query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
