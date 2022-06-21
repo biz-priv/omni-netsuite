@@ -123,8 +123,9 @@ async function mainProcess(item, invoiceDataList) {
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
+      let getQuery = "";
       try {
-        const getQuery = await getUpdateQuery(singleItem, null, false);
+        getQuery = await getUpdateQuery(singleItem, null, false);
         const checkError = await checkSameError(singleItem, error);
         if (!checkError) {
           await recordErrorResponse(singleItem, error);
@@ -132,9 +133,8 @@ async function mainProcess(item, invoiceDataList) {
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
+        return getQuery;
       }
-    } else {
-      console.log("error", error);
     }
   }
 }
