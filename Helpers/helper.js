@@ -28,7 +28,7 @@ function getConfig(source_system, env) {
   return data[source_system];
 }
 
-function getConnection(env, dbc) {
+function getConnection(env) {
   try {
     const dbUser = env.USER;
     const dbPassword = env.PASS;
@@ -38,7 +38,7 @@ function getConnection(env, dbc) {
     const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-    return dbc(connectionString);
+    return connectionString;
   } catch (error) {
     throw "DB Connection Error";
   }

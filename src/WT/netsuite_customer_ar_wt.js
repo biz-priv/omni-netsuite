@@ -26,7 +26,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection(process.env, dbc);
+    const connections = dbc(getConnection(process.env));
 
     /**
      * Get data from db
