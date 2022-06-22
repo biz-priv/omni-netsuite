@@ -28,7 +28,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection(process.env, dbc);
+    const connections = dbc(getConnection(process.env));
     /**
      * Get invoice internal ids from interface_ap and interface_ar
      */
@@ -216,10 +216,10 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
         // to: "kazi.ali@bizcloudexperts.com",
-        subject: `Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        subject: `Netsuite Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">

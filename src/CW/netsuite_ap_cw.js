@@ -56,7 +56,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = getConnection(process.env, dbc);
+    const connections = dbc(getConnection(process.env));
 
     if (queryOperator == ">") {
       // Update 500 line items per process
@@ -211,8 +211,6 @@ module.exports.handler = async (event, context, callback) => {
       if (currentCount < totalCountPerLoop) {
         queryOperator = ">";
       }
-      console.log("1st step completed");
-
       dbc.end();
       return { hasMoreData: "true", queryOperator };
     }
