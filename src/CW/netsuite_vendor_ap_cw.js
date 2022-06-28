@@ -166,7 +166,9 @@ function getVendor(entityId) {
       .then((result, raw, soapHeader) => {
         if (result && result?.searchResult?.recordList?.record.length > 0) {
           const recordList = result.searchResult.recordList.record;
-          let record = recordList.filter((e) => e.entityId == entityId);
+          let record = recordList.filter(
+            (e) => e.entityId.toUpperCase() == entityId.toUpperCase()
+          );
           if (record.length > 0) {
             record = record[0];
             resolve({
