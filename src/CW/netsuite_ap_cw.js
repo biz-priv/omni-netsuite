@@ -309,7 +309,10 @@ async function getDataGroupBy(connections) {
         LEFT JOIN interface_ap ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
         iam.invoice_type = ia.invoice_type and 
-        iam.vendor_id = ia.vendor_id
+        iam.vendor_id = ia.vendor_id and 
+        iam.gc_code = ia.gc_code and 
+        iam.source_system = ia.source_system and 
+        iam.file_nbr = ia.file_nbr 
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
               )
@@ -331,8 +334,13 @@ async function getDataGroupBy(connections) {
 async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
   try {
     let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-      left join interface_ap_master iam on ia.invoice_nbr = iam.invoice_nbr and ia.invoice_type = iam.invoice_type 
-      and ia.vendor_id = iam.vendor_id and ia.gc_code = iam.gc_code and ia.source_system = iam.source_system 
+      left join interface_ap_master iam on 
+      ia.invoice_nbr = iam.invoice_nbr and
+      ia.invoice_type = iam.invoice_type and 
+      ia.vendor_id = iam.vendor_id and 
+      ia.gc_code = iam.gc_code and 
+      ia.source_system = iam.source_system and 
+      iam.file_nbr = ia.file_nbr 
       where ia.source_system = '${source_system}' and `;
     if (isBigData) {
       query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
@@ -887,8 +895,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
