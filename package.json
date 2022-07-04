@@ -8,17 +8,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bizcloud-experts/omni-datawarehouse-api-services.git"
+    "url": "git+https://github.com/bizcloud-experts/omni-netsuite.git"
   },
   "author": "BizCloud Experts",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/bizcloud-experts/omni-datawarehouse-api-services/issues"
+    "url": "https://github.com/bizcloud-experts/omni-netsuite/issues"
   },
-  "homepage": "https://github.com/bizcloud-experts/omni-datawarehouse-api-services#readme",
+  "homepage": "https://github.com/bizcloud-experts/omni-netsuite#readme",
   "dependencies": {
     "axios": "^0.27.2",
     "joi": "^17.6.0",
+    "json2csv": "^5.0.7",
+    "moment": "^2.29.3",
     "netsuite-rest": "^1.0.9",
     "node-suitetalk": "^0.0.5",
     "nodemailer": "^6.7.5",
