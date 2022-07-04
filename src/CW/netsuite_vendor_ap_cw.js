@@ -96,7 +96,7 @@ async function getVendorData(connections) {
     const query = `SELECT distinct vendor_id FROM interface_ap_master 
                     where ((vendor_internal_id = '' and processed_date is null) or
                             (vendor_internal_id = '' and processed_date < '${today}'))
-                          and source_system = '${source_system}'
+                          and source_system = '${source_system}' and intercompany = 'N'
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -111,7 +111,7 @@ async function getVendorData(connections) {
 
 async function getDataByVendorId(connections, vendor_id) {
   try {
-    const query = `SELECT * FROM interface_ap_master where source_system = '${source_system}' and 
+    const query = `SELECT * FROM interface_ap_master where source_system = '${source_system}' and intercompany = 'N' and 
                     vendor_id = '${vendor_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -131,7 +131,7 @@ async function putVendor(connections, vendorData, vendor_id) {
                     processed = '',
                     vendor_internal_id = '${vendorData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}';`;
+                    WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and intercompany = 'N';`;
     await connections.query(query);
   } catch (error) {
     throw "Vendor Update Failed";
@@ -202,7 +202,7 @@ async function updateFailedRecords(connections, vendor_id) {
     let query = `UPDATE interface_ap_master SET 
                   processed = 'F',
                   processed_date = '${today}' 
-                  WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}'`;
+                  WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and intercompany = 'N';`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
