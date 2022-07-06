@@ -98,7 +98,7 @@ async function getCustomerData(connections) {
     const query = `SELECT distinct customer_id FROM ${arDbName} 
                     where ((customer_internal_id = '' and processed_date is null) or
                             (customer_internal_id = '' and processed_date < '${today}'))
-                          and source_system = '${source_system}' and intercompany = 'N' 
+                          and source_system = '${source_system}' 
                     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -113,7 +113,7 @@ async function getCustomerData(connections) {
 
 async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT * FROM ${arDbName} where source_system = '${source_system}' and intercompany = 'N' 
+    const query = `SELECT * FROM ${arDbName} where source_system = '${source_system}' 
                     and customer_id = '${cus_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -133,7 +133,7 @@ async function putCustomer(connections, customerData, customer_id) {
                     processed = '', 
                     customer_internal_id = '${customerData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and intercompany = 'N';`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id = '';`;
     await connections.query(query);
   } catch (error) {
     throw "Customer Update Failed";
@@ -203,7 +203,7 @@ async function updateFailedRecords(connections, cus_id) {
     let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and intercompany = 'N'`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id = ''`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
