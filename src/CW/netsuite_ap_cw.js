@@ -305,7 +305,8 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `
-        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code FROM interface_ap_master iam
+        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
+        FROM interface_ap_master iam
         LEFT JOIN interface_ap ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
         iam.invoice_type = ia.invoice_type and 
@@ -316,6 +317,9 @@ async function getDataGroupBy(connections) {
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
               )
+              and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
+                    iam.intercompany='N'
+                  )
               and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
         having tc ${queryOperator} ${lineItemPerProcess} limit ${

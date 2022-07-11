@@ -150,6 +150,7 @@ async function getDataGroupBy(connections) {
     const query = `SELECT distinct invoice_nbr,customer_id,invoice_type, gc_code FROM ${arDbName} where
     ((internal_id is null and processed != 'F' and customer_internal_id != '') or
      (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+    and ((intercompany='Y' and pairing_available_flag ='Y') or intercompany='N')
     and source_system = '${source_system}' and invoice_nbr != ''
     limit ${totalCountPerLoop + 1}`;
 
