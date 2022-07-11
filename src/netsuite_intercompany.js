@@ -64,13 +64,13 @@ async function getData(connections) {
     const query = `
           select distinct ar.source_system , ar.file_nbr , ar.ar_internal_id , ap.ap_internal_id, ap.invoice_type
           from (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total from interface_ar ia
-                  where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+                  where intercompany = 'Y' and pairing_available_flag = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
                   (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
           )ar
           join
             (select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total 
-            from ( select * from interface_ap where intercompany = 'Y' )a
-          join (select * from interface_ap_master where intercompany = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
+            from ( select * from interface_ap where intercompany = 'Y' and pairing_available_flag = 'Y')a
+          join (select * from interface_ap_master where intercompany = 'Y' and pairing_available_flag = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
                         (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
           )b
             on a.source_system = b.source_system
