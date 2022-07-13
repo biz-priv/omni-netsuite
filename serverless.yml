@@ -83,6 +83,8 @@ layers:
 functions:
   netsuite-ar-wt: ${file(config/functions/WT/netsuite-ar-wt.yml):function}
   netsuite-customer-ar-wt: ${file(config/functions/WT/netsuite-customer-ar-wt.yml):function}
+  netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
+  netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
 
   netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
   netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
@@ -96,7 +98,9 @@ functions:
 stepFunctions:
   stateMachines:
     netsuite-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-ar-wt-state-machine.yml):stateMachine}
+    netsuite-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-ap-wt-state-machine.yml):stateMachine}
     netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
     netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
