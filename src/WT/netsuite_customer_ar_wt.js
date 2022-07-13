@@ -29,7 +29,7 @@ module.exports.handler = async (event, context, callback) => {
     const connections = dbc(getConnection(process.env));
 
     /**
-     * Get data from db
+     * Get data from  db
      */
     const customerList = await getCustomerData(connections);
 
