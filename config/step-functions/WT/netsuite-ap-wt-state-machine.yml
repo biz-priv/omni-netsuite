@@ -1,13 +1,13 @@
 ---
 stateMachine:
-  name: ${self:service}-netsuite-vendor-ap-cw-state-machine-${self:provider.stage}
+  name: ${self:service}-netsuite-ap-wt-state-machine-${self:provider.stage}
   definition:
-    Comment: "State machine to update netsuit AP CW vendor internal details"
+    Comment: "State machine to create netsuit AP WT invoice"
     StartAt: PublishEvents
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-vendor-ap-cw-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-ap-wt-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice
