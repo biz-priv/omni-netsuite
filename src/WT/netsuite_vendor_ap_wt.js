@@ -16,7 +16,12 @@ const source_system = "WT";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -91,6 +96,63 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   }
 };
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //WT AP vendor
+      const vendorArn = process.env.NETSUITE_AP_WT_VENDOR_STEP_ARN;
+      //WT AP
+      const wtApArn = process.env.NETSUITE_AP_WT_STEP_ARN;
+
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: vendorArn,
+          statusFilter: status,
+          maxResults: 1,
+        },
+        (err, data) => {
+          console.log(" vendorArn listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length > 0 &&
+            venExcList[0].status === status
+          ) {
+            console.log("vendorArn running");
+            resolve(true);
+          } else {
+            stepfunctions.listExecutions(
+              {
+                stateMachineArn: wtApArn,
+                statusFilter: status,
+                maxResults: 1,
+              },
+              (err, data) => {
+                console.log(" wtApArn listExecutions data", data);
+                const wtapExcList = data.executions;
+                if (
+                  err === null &&
+                  wtapExcList.length > 0 &&
+                  wtapExcList[0].status === status
+                ) {
+                  console.log("wtApArn running");
+                  resolve(true);
+                } else {
+                  resolve(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
+    }
+  });
+}
 
 async function getVendorData(connections) {
   try {
@@ -330,7 +392,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_AP_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_AP_WT_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
