@@ -14,7 +14,7 @@ stateMachine:
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-vendor-ap-cw-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-vendor-ap-wt-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice
