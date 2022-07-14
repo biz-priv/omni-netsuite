@@ -39,7 +39,6 @@ module.exports.handler = async (event, context, callback) => {
     const vendorList = await getVendorData(connections);
     console.log("vendorList", vendorList.length);
     currentCount = vendorList.length;
-    // return {};
 
     for (let i = 0; i < vendorList.length; i++) {
       const vendor_id = vendorList[i].vendor_id;
