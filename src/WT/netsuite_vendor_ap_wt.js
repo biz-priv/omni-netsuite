@@ -110,15 +110,15 @@ async function checkOldProcessIsRunning() {
         {
           stateMachineArn: vendorArn,
           statusFilter: status,
-          maxResults: 1,
+          maxResults: 2,
         },
         (err, data) => {
           console.log(" vendorArn listExecutions data", data);
           const venExcList = data.executions;
           if (
             err === null &&
-            venExcList.length > 0 &&
-            venExcList[0].status === status
+            venExcList.length == 2 &&
+            venExcList[1].status === status
           ) {
             console.log("vendorArn running");
             resolve(true);
