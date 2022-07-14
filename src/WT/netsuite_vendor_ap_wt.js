@@ -10,7 +10,7 @@ const Search = NetSuite.Search;
 
 let userConfig = "";
 
-let totalCountPerLoop = 50;
+let totalCountPerLoop = 10;
 const today = getCustomDate();
 const source_system = "WT";
 
