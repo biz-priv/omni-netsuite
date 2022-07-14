@@ -322,7 +322,6 @@ async function getDataGroupBy(connections) {
         having tc ${queryOperator} ${lineItemPerProcess} limit ${
       totalCountPerLoop + 1
     }`;
-    console.log("query", query);
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -400,9 +399,7 @@ function makeJsonToXml(payload, data, vendorData) {
     const auth = getOAuthKeys(userConfig);
 
     const singleItem = data[0];
-    const hardcode = getHardcodeData(
-      singleItem?.intercompany == "Y" ? true : false
-    );
+    const hardcode = getHardcodeData();
 
     payload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
@@ -825,14 +822,14 @@ async function updateInvoiceId(connections, query) {
  */
 function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "1",
+    source_system: "3",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 4, VAS: 5 },
     },
     department: {
       default: { head: "15", line: "2" },
-      intercompany: { head: "16", line: "2" },
+      intercompany: { head: "15", line: "1" },
     },
     location: { head: "18", line: "EXT ID: Take from DB" },
   };
