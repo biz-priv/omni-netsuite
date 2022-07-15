@@ -1,13 +1,13 @@
 ---
 stateMachine:
   name: ${self:service}-netsuite-vendor-ap-wt-state-machine-${self:provider.stage}
-  # events:
-  #   - schedule:
-  #       rate: cron(0 16 * * ? *) # GMT:- 4:00 pm / CST:- 11:00 AM / IST:- 9:30 pm
-  #   - schedule:
-  #       rate: cron(0 19 * * ? *) # GMT:- 7:00 pm / CST:- 02:00 PM / IST:- 12:30 am
-  #   - schedule:
-  #       rate: cron(0 21 * * ? *) # GMT:- 9:00 pm / CST:- 04:00 PM / IST:- 02:30 am
+  events:
+    - schedule:
+        rate: cron(0 15 * * ? *) # GMT:- 3:00 pm / CST:- 10:00 am / IST:- 8:30 am
+    - schedule:
+        rate: cron(0 20 * * ? *) # GMT:- 8:00 pm / CST:- 03:00 pm / IST:- 1:30 am
+    - schedule:
+        rate: cron(0 1 * * ? *) # GMT:- 1:00 am / CST:- 08:00 pm / IST:- 6:30 am
   definition:
     Comment: "State machine to update netsuit vendor AP WT internal ids"
     StartAt: PublishEvents
