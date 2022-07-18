@@ -825,7 +825,7 @@ function getHardcodeData(isIntercompany = false) {
     source_system: "3",
     class: {
       head: "9",
-      line: { International: 3, Domestic: 2, Warehouse: 4, VAS: 5 },
+      line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
     },
     department: {
       default: { head: "15", line: "2" },
