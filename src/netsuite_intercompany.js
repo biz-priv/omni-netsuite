@@ -142,10 +142,7 @@ async function createInterCompanyInvoice(item) {
   const arInvoiceId = item.ar_internal_id;
   const transactionType = item.invoice_type == "IN" ? "invoice" : "creditmemo";
   try {
-    let baseUrl = `https://1238234-sb1.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=649&deploy=1`;
-    if (process.env.STAGE == "prod") {
-      baseUrl = `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=679&deploy=1`;
-    }
+    const baseUrl = process.env.NETSUITE_INTERCOMPANY_BASE_URL;
     const url = `${baseUrl}&iid1=${arInvoiceId}&iid2=${apInvoiceId}&transactionType=${transactionType}`;
     const authHeader = getAuthorizationHeader(url);
     const headers = {
