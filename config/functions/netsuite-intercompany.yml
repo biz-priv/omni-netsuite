@@ -12,3 +12,5 @@ function:
     include:
       - src/netsuite_intercompany.js
       - Helpers/**
+  environment:
+    NETSUITE_INTERCOMPANY_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuit/intercompany/url}
