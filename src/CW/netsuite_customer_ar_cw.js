@@ -179,7 +179,7 @@ function getcustomer(entityId) {
           } else {
             reject({
               customError: true,
-              msg: `Customer not found. (vendor_id: ${entityId})`,
+              msg: `Customer not found. (customer_id: ${entityId})`,
             });
           }
         } else {
@@ -218,11 +218,12 @@ async function recordErrorResponse(item, error) {
       id: item.invoice_nbr + item.invoice_type,
       invoice_nbr: item.invoice_nbr,
       customer_id: item.customer_id,
+      subsidiary: item.subsidiary,
       source_system: item.source_system,
       invoice_type: item.invoice_type,
       invoice_date: item.invoice_date.toLocaleString(),
       charge_cd_internal_id: item.charge_cd_internal_id,
-      errorDescription: error?.msg,
+      errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
       payload: error?.payload,
       response: error?.response,
       invoiceId: error?.invoiceId,
@@ -317,7 +318,7 @@ async function checkSameError(singleItem) {
       },
       ExpressionAttributeValues: {
         ":customer_id": singleItem.customer_id,
-        ":errorDescription": `Customer Api failed. (customer_id: ${singleItem.customer_id})`,
+        ":errorDescription": `Customer not found. (customer_id: ${singleItem.customer_id})`,
       },
     };
     const res = await documentClient.scan(params).promise();
