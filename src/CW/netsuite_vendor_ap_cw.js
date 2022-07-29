@@ -111,8 +111,17 @@ async function getVendorData(connections) {
 
 async function getDataByVendorId(connections, vendor_id) {
   try {
-    const query = `SELECT * FROM interface_ap_master where source_system = '${source_system}' and
-                    vendor_id = '${vendor_id}' limit 1`;
+    const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
+                  left join interface_ap_master iam on 
+                  ia.invoice_nbr = iam.invoice_nbr and
+                  ia.invoice_type = iam.invoice_type and 
+                  ia.vendor_id = iam.vendor_id and 
+                  ia.gc_code = iam.gc_code and 
+                  ia.source_system = iam.source_system and 
+                  iam.file_nbr = ia.file_nbr 
+                  where ia.source_system = '${source_system}' and
+                  ia.vendor_id = '${vendor_id}' limit 1`;
+
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -217,8 +226,11 @@ async function recordErrorResponse(item, error) {
       id: item.invoice_nbr + item.invoice_type,
       invoice_nbr: item.invoice_nbr,
       vendor_id: item.vendor_id,
+      subsidiary: item.subsidiary,
       invoice_type: item.invoice_type,
-      errorDescription: error?.msg,
+      source_system: item.source_system,
+      invoice_date: item.invoice_date.toLocaleString(),
+      errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
       payload: error?.payload,
       response: error?.response,
       status: "error",
