@@ -284,10 +284,10 @@ async function mainProcess(item, invoiceDataList) {
       let getQuery = "";
       try {
         getQuery = await getUpdateQuery(singleItem, null, false);
-        const checkError = await checkSameError(singleItem, error);
-        if (!checkError) {
-          await recordErrorResponse(singleItem, error);
-        }
+        // const checkError = await checkSameError(singleItem, error);
+        // if (!checkError) {
+        await recordErrorResponse(singleItem, error);
+        // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
@@ -852,9 +852,9 @@ function getHardcodeData(isIntercompany = false) {
 
 async function recordErrorResponse(item, error) {
   try {
-    let documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
+    // let documentClient = new AWS.DynamoDB.DocumentClient({
+    //   region: process.env.REGION,
+    // });
     const data = {
       id: item.invoice_nbr + item.invoice_type,
       invoice_nbr: item.invoice_nbr,
@@ -872,11 +872,11 @@ async function recordErrorResponse(item, error) {
       status: "error",
       created_at: new Date().toLocaleString(),
     };
-    const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-      Item: data,
-    };
-    await documentClient.put(params).promise();
+    // const params = {
+    //   TableName: process.env.NETSUIT_AP_ERROR_TABLE,
+    //   Item: data,
+    // };
+    // await documentClient.put(params).promise();
     await sendMail(data);
   } catch (e) {}
 }
