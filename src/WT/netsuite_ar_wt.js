@@ -254,8 +254,7 @@ function makeJsonToXml(payload, data, customerData) {
     recode["q1:location"]["@internalId"] = hardcode.location.head;
     recode["q1:subsidiary"]["@internalId"] = singleItem.subsidiary;
     recode["q1:currency"]["@internalId"] = customerData.currencyInternalId;
-
-    recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
+    recode["q1:otherRefNum"] = singleItem.order_ref; //prev:- customer_po is the bill to ref nbr new:- order_ref
     recode["q1:memo"] = ""; // (leave out for worldtrak)
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
