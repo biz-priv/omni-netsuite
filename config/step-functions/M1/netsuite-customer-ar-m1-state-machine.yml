@@ -1,0 +1,25 @@
+---
+stateMachine:
+  name: ${self:service}-netsuite-customer-ar-m1-state-machine-${self:provider.stage}
+  events:
+    - schedule:
+        rate: cron(0 6 * * ? *) #  UTC:- 6:00 AM
+  definition:
+    Comment: "State machine to update netsuit customer AR M1 internal details"
+    StartAt: PublishEvents
+    States:
+      PublishEvents:
+        Type: Task
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-customer-ar-m1-${self:provider.stage}"
+        Next: EndChoice
+      EndChoice:
+        Type: Choice
+        Choices:
+          - Variable: $.hasMoreData
+            StringEquals: "false"
+            Next: SuccessState
+          - Variable: $.hasMoreData
+            StringEquals: "true"
+            Next: PublishEvents
+      SuccessState:
+        Type: Succeed

@@ -1,0 +1,14 @@
+---
+function:
+  handler: src/M1/netsuite_ap_m1.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-ap-m1-${self:provider.stage}
+  description: M1 Netsuite AP api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/M1/netsuite_ap_m1.js
+      - Helpers/**
