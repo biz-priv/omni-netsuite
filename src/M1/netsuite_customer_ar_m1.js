@@ -10,25 +10,18 @@ const Search = NetSuite.Search;
 
 let userConfig = "";
 
-let totalCountPerLoop = 1;
-let nextOffset = 0;
+let totalCountPerLoop = 10;
 const today = getCustomDate();
 
 const arDbName = "interface_ar";
-const source_system = "CW";
+const source_system = "M1";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
-
-  nextOffset = event.hasOwnProperty("nextOffset")
-    ? event.nextOffset
-    : nextOffset;
-  const nextOffsetCount = nextOffset + totalCountPerLoop;
   try {
     /**
      * Get connections
@@ -36,11 +29,11 @@ module.exports.handler = async (event, context, callback) => {
     const connections = dbc(getConnection(process.env));
 
     /**
-     * Get data from db
+     * Get data from  db
      */
     const customerList = await getCustomerData(connections);
 
-    console.log("customerList", customerList.length, customerList);
+    console.log("customerList", customerList.length);
     currentCount = customerList.length;
     // return {};
 
@@ -92,11 +85,11 @@ module.exports.handler = async (event, context, callback) => {
 
   if (hasMoreData == "false") {
     try {
-      // await startNetsuitInvoiceStep();
+      await startNetsuitInvoiceStep();
     } catch (error) {}
-    return { hasMoreData, nextOffset: nextOffsetCount };
+    return { hasMoreData };
   } else {
-    return { hasMoreData, nextOffset: nextOffsetCount };
+    return { hasMoreData };
   }
 };
 
@@ -104,10 +97,10 @@ async function getCustomerData(connections) {
   try {
     const query = `SELECT distinct customer_id FROM ${arDbName} 
                     where ((customer_internal_id = '' and processed_date is null) or
-                            (customer_internal_id = '' and processed_date <= '${today}'))
-                          and source_system = '${source_system}' order by customer_id 
-                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
-    console.log("query", query);
+                            (customer_internal_id = '' and processed_date < '${today}'))
+                          and source_system = '${source_system}'
+                    limit ${totalCountPerLoop + 1}`;
+
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -120,8 +113,7 @@ async function getCustomerData(connections) {
 
 async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT * FROM ${arDbName} where source_system = '${source_system}' 
-                    and customer_id = '${cus_id}' limit 1`;
+    const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -210,7 +202,7 @@ async function updateFailedRecords(connections, cus_id) {
     let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id = ''`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id = '';`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
@@ -265,10 +257,9 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com",
-        // subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
+        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -343,7 +334,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_M1_AR_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
