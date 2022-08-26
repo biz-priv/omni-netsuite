@@ -20,7 +20,7 @@ let queryOperator = "<=";
 let queryInvoiceId = null;
 let queryInvoiceNbr = null;
 let queryVendorId = null;
-const source_system = "CW";
+const source_system = "M1";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -29,7 +29,7 @@ module.exports.handler = async (event, context, callback) => {
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
-    : 20;
+    : 21;
   queryOperator = event.hasOwnProperty("queryOperator")
     ? event.queryOperator
     : "<=";
@@ -109,7 +109,7 @@ module.exports.handler = async (event, context, callback) => {
             console.log("orderData", orderData.length);
           } catch (error) {
             dbc.end();
-            await startNextStep();
+            // await startNextStep();
             return { hasMoreData: "false" };
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
@@ -178,6 +178,7 @@ module.exports.handler = async (event, context, callback) => {
         invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
         console.log("orderData", orderData.length);
         currentCount = orderData.length;
+        // return {};
         invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
       } catch (error) {
         return {
@@ -215,8 +216,9 @@ module.exports.handler = async (event, context, callback) => {
       return { hasMoreData: "true", queryOperator };
     }
   } catch (error) {
+    console.log("error", error);
     dbc.end();
-    await startNextStep();
+    // await startNextStep();
     return { hasMoreData: "false" };
   }
 };
@@ -236,8 +238,7 @@ async function mainProcess(item, invoiceDataList) {
       return (
         e.invoice_nbr == item.invoice_nbr &&
         e.vendor_id == item.vendor_id &&
-        e.invoice_type == item.invoice_type &&
-        e.gc_code == item.gc_code
+        e.invoice_type == item.invoice_type
       );
     });
 
@@ -305,7 +306,7 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `
-        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
+        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type
         FROM interface_ap_master iam
         LEFT JOIN interface_ap ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
@@ -317,11 +318,8 @@ async function getDataGroupBy(connections) {
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
               )
-              and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
-                    iam.intercompany='N'
-                  )
               and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type
         having tc ${queryOperator} ${lineItemPerProcess} limit ${
       totalCountPerLoop + 1
     }`;
@@ -402,9 +400,7 @@ function makeJsonToXml(payload, data, vendorData) {
     const auth = getOAuthKeys(userConfig);
 
     const singleItem = data[0];
-    const hardcode = getHardcodeData(
-      singleItem?.intercompany == "Y" ? true : false
-    );
+    const hardcode = getHardcodeData();
 
     payload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
@@ -451,7 +447,7 @@ function makeJsonToXml(payload, data, vendorData) {
     recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
     recode["q1:memo"] = ""; // (leave out for worldtrak)
 
-    if (singleItem.source_system == "CW" && singleItem.invoice_type == "IN") {
+    if (singleItem.source_system == "M1" && singleItem.invoice_type == "IN") {
       recode["q1:approvalStatus"] = { "@internalId": "2" };
     }
 
@@ -788,7 +784,7 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
       query += ` SET internal_id = null, processed = 'F', `;
     }
     query += ` processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
-              and vendor_id = '${item.vendor_id}' and gc_code = '${item.gc_code}';`;
+              and vendor_id = '${item.vendor_id}';`;
 
     return query;
   } catch (error) {}
@@ -808,7 +804,6 @@ async function updateInvoiceId(connections, query) {
     throw {
       customError: true,
       msg: "Vendor Bill is created But failed to update internal_id",
-      invoiceId,
     };
   }
 }
@@ -820,14 +815,14 @@ async function updateInvoiceId(connections, query) {
  */
 function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "1",
+    source_system: "2",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
     },
     department: {
       default: { head: "15", line: "2" },
-      intercompany: { head: "16", line: "2" },
+      intercompany: { head: "15", line: "1" },
     },
     location: { head: "18", line: "EXT ID: Take from DB" },
   };
@@ -888,8 +883,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",mish@bizcloudexperts.com",
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -989,6 +984,8 @@ async function checkSameError(singleItem, error) {
 }
 
 async function startNextStep() {
+  return {};
+  // no inter company invoices
   return new Promise((resolve, reject) => {
     try {
       const params = {

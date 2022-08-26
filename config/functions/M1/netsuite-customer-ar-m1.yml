@@ -1,0 +1,16 @@
+---
+function:
+  handler: src/M1/netsuite_customer_ar_m1.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-ar-m1-${self:provider.stage}
+  description: Netsuite customer AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/M1/netsuite_customer_ar_m1.js
+      - Helpers/**
+  environment:
+    NETSUITE_M1_AR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-m1-state-machine-${self:provider.stage}
