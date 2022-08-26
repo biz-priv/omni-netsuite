@@ -44,8 +44,8 @@ function getConnection(env) {
   try {
     const dbUser = env.USER;
     const dbPassword = env.PASS;
-    // const dbHost = env.HOST;
-    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbHost = env.HOST;
+    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
     const dbPort = env.PORT;
     const dbName = env.DBNAME;
 
