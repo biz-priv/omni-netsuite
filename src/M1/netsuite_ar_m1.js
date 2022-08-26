@@ -11,7 +11,7 @@ const { getConfig, getConnection } = require("../../Helpers/helper");
 let userConfig = "";
 
 const arDbName = "interface_ar";
-const source_system = "WT";
+const source_system = "M1";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
 
@@ -34,8 +34,10 @@ module.exports.handler = async (event, context, callback) => {
      */
     const orderData = await getDataGroupBy(connections);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("orderData", orderData.length);
+    console.log("orderData", orderData.length, orderData[0]);
     currentCount = orderData.length;
+
+    // return {};
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
 
@@ -146,7 +148,7 @@ async function getDataGroupBy(connections) {
      (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
     and source_system = '${source_system}'
     limit ${totalCountPerLoop + 1}`;
-
+    console.log("query", query);
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -455,7 +457,7 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "3",
+    source_system: "2",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
@@ -521,9 +523,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
