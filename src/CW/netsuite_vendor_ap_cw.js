@@ -11,7 +11,6 @@ const Search = NetSuite.Search;
 let userConfig = "";
 
 let totalCountPerLoop = 10;
-let nextOffset = 0;
 const today = getCustomDate();
 const source_system = "CW";
 
@@ -23,10 +22,6 @@ module.exports.handler = async (event, context, callback) => {
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
-
-  nextOffset = event.hasOwnProperty("nextOffset")
-    ? event.nextOffset + totalCountPerLoop
-    : nextOffset;
   try {
     /**
      * Get connections
@@ -101,8 +96,8 @@ async function getVendorData(connections) {
     const query = `SELECT distinct vendor_id FROM interface_ap_master 
                     where ((vendor_internal_id = '' and processed_date is null) or
                             (vendor_internal_id = '' and processed_date < '${today}'))
-                          and source_system = '${source_system}' order by vendor_id 
-                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+                          and source_system = '${source_system}' 
+                    limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
