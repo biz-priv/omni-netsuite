@@ -21,6 +21,7 @@ let queryInvoiceId = null;
 let queryInvoiceNbr = null;
 let queryVendorId = null;
 const source_system = "CW";
+let nextOffset = 0;
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -52,18 +53,24 @@ module.exports.handler = async (event, context, callback) => {
     ? event.queryVendorId
     : null;
 
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
+
   try {
     /**
      * Get connections
      */
     const connections = dbc(getConnection(process.env));
 
+    //process invoicess having > 500 line items
     if (queryOperator == ">") {
-      // Update 500 line items per process
+      // if = create else = Update with 500 line items.
       console.log("> start");
-
       totalCountPerLoop = 0;
       if (queryInvoiceId != null && queryInvoiceId.length > 0) {
+        //update the main invoice with 500 line items each time
         console.log(">if");
 
         try {
@@ -99,6 +106,7 @@ module.exports.handler = async (event, context, callback) => {
           };
         }
       } else {
+        //Create the main invoice with 500 line items 1st
         console.log("> else");
 
         try {
@@ -158,7 +166,7 @@ module.exports.handler = async (event, context, callback) => {
         }
       }
     } else {
-      //Create the main invoice with 500 line items 1st
+      //Create invoices with 500 line items 1st
       /**
        * Get data from db
        */
@@ -207,12 +215,12 @@ module.exports.handler = async (event, context, callback) => {
        * Updating total 20 invoices at once
        */
       await updateInvoiceId(connections, queryData);
-
-      if (currentCount < totalCountPerLoop) {
-        queryOperator = ">";
-      }
       dbc.end();
-      return { hasMoreData: "true", queryOperator };
+      if (currentCount < totalCountPerLoop) {
+        return { hasMoreData: "true", queryOperator: ">" };
+      } else {
+        return { hasMoreData: "true", queryOperator, nextOffsetCount };
+      }
     }
   } catch (error) {
     dbc.end();
@@ -304,6 +312,7 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
+    const dateCheckOperator = queryOperator == "<=" ? "<=" : "<";
     const query = `
         SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
         FROM interface_ap_master iam
@@ -315,16 +324,17 @@ async function getDataGroupBy(connections) {
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr 
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
-                OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
+                OR (iam.vendor_internal_id !='' and iam.processed ='F' and 
+                    iam.processed_date ${dateCheckOperator} '${today}' )
               )
               and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
                     iam.intercompany='N'
                   )
               and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
-        having tc ${queryOperator} ${lineItemPerProcess} limit ${
-      totalCountPerLoop + 1
-    }`;
+        having tc ${queryOperator} ${lineItemPerProcess} 
+        ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
+        limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -450,18 +460,6 @@ function makeJsonToXml(payload, data, vendorData) {
 
     recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
     recode["q1:memo"] = ""; // (leave out for worldtrak)
-
-    // all IN invoices will be default 1
-    // if (
-    //   (singleItem.source_system == "WT" && singleItem.invoice_type == "IN") ||
-    //   (singleItem.intercompany == "Y" && singleItem.invoice_type == "IN")
-    // ) {
-    //   recode["q1:approvalStatus"] = { "@internalId": "2" };
-    // }
-
-    // if (singleItem.source_system == "CW" && singleItem.invoice_type == "IN") {
-    //   recode["q1:approvalStatus"] = { "@internalId": "1" };
-    // }
 
     if (singleItem.source_system == "CW" && singleItem.invoice_type == "IN") {
       recode["q1:approvalStatus"] = { "@internalId": "2" };
@@ -900,7 +898,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `

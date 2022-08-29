@@ -11,6 +11,7 @@ const Search = NetSuite.Search;
 let userConfig = "";
 
 let totalCountPerLoop = 10;
+let nextOffset = 0;
 const today = getCustomDate();
 const source_system = "CW";
 
@@ -22,6 +23,11 @@ module.exports.handler = async (event, context, callback) => {
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
+
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -69,7 +75,7 @@ module.exports.handler = async (event, context, callback) => {
         } catch (error) {}
       }
     }
-
+    dbc.end();
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
@@ -78,16 +84,13 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     hasMoreData = "false";
   }
-
   if (hasMoreData == "false") {
     try {
       await startNetsuitInvoiceStep();
     } catch (error) {}
-    dbc.end();
     return { hasMoreData };
   } else {
-    dbc.end();
-    return { hasMoreData };
+    return { hasMoreData, nextOffsetCount };
   }
 };
 
@@ -95,10 +98,9 @@ async function getVendorData(connections) {
   try {
     const query = `SELECT distinct vendor_id FROM interface_ap_master 
                     where ((vendor_internal_id = '' and processed_date is null) or
-                            (vendor_internal_id = '' and processed_date < '${today}'))
-                          and source_system = '${source_system}' 
-                    limit ${totalCountPerLoop + 1}`;
-
+                            (vendor_internal_id = '' and processed_date <= '${today}'))
+                          and source_system = '${source_system}' order by vendor_id 
+                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found";
@@ -264,9 +266,9 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
