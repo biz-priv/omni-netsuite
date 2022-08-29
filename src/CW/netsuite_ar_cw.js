@@ -13,6 +13,7 @@ let userConfig = "";
 const arDbName = "interface_ar";
 const source_system = "CW";
 let totalCountPerLoop = 20;
+let nextOffset = 0;
 const today = getCustomDate();
 
 module.exports.handler = async (event, context, callback) => {
@@ -24,6 +25,10 @@ module.exports.handler = async (event, context, callback) => {
     ? event.totalCountPerLoop
     : totalCountPerLoop;
 
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -66,7 +71,7 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "false";
     }
     dbc.end();
-    return { hasMoreData };
+    return { hasMoreData, nextOffsetCount };
   } catch (error) {
     dbc.end();
     await startNextStep();
@@ -149,10 +154,12 @@ async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr,customer_id,invoice_type, gc_code FROM ${arDbName} where
     ((internal_id is null and processed != 'F' and customer_internal_id != '') or
-     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+     (customer_internal_id != '' and processed ='F' and processed_date <= '${today}'))
     and ((intercompany='Y' and pairing_available_flag ='Y') or intercompany='N')
     and source_system = '${source_system}' and invoice_nbr != ''
-    limit ${totalCountPerLoop + 1}`;
+    order by invoice_nbr,customer_id,invoice_type, gc_code 
+    limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+    console.log("query", query);
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -541,8 +548,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
+        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
