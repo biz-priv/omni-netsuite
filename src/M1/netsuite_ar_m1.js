@@ -328,6 +328,12 @@ function makeJsonToXml(payload, data, customerData) {
         value: singleItem.file_nbr ?? "",
       },
       {
+        "@internalId": "1735",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.ee_invoice ?? "",
+      },
+      {
         "@internalId": "1744",
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
