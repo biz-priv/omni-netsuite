@@ -11,6 +11,7 @@ const Search = NetSuite.Search;
 let userConfig = "";
 
 let totalCountPerLoop = 10;
+let nextOffset = 0;
 const today = getCustomDate();
 
 const arDbName = "interface_ar";
@@ -23,6 +24,11 @@ module.exports.handler = async (event, context, callback) => {
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
+
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -73,7 +79,7 @@ module.exports.handler = async (event, context, callback) => {
         } catch (error) {}
       }
     }
-
+    dbc.end();
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
@@ -89,7 +95,7 @@ module.exports.handler = async (event, context, callback) => {
     } catch (error) {}
     return { hasMoreData };
   } else {
-    return { hasMoreData };
+    return { hasMoreData, nextOffsetCount };
   }
 };
 
@@ -97,10 +103,9 @@ async function getCustomerData(connections) {
   try {
     const query = `SELECT distinct customer_id FROM ${arDbName} 
                     where ((customer_internal_id = '' and processed_date is null) or
-                            (customer_internal_id = '' and processed_date < '${today}'))
-                          and source_system = '${source_system}' 
-                    limit ${totalCountPerLoop + 1}`;
-
+                            (customer_internal_id = '' and processed_date <= '${today}'))
+                          and source_system = '${source_system}' order by customer_id 
+                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -259,7 +264,6 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         // to: "kazi.ali@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `

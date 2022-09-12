@@ -11,7 +11,7 @@ const { getConfig, getConnection } = require("../../Helpers/helper");
 let userConfig = "";
 
 const arDbName = "interface_ar";
-const source_system = "WT";
+const source_system = "M1";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
 
@@ -34,7 +34,7 @@ module.exports.handler = async (event, context, callback) => {
      */
     const orderData = await getDataGroupBy(connections);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("orderData", orderData.length);
+    console.log("orderData", orderData.length, orderData[0]);
     currentCount = orderData.length;
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
@@ -62,6 +62,7 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "true";
     } else {
       hasMoreData = "false";
+      await startM1APNextStep();
     }
     dbc.end();
     return { hasMoreData };
@@ -146,7 +147,7 @@ async function getDataGroupBy(connections) {
      (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
     and source_system = '${source_system}'
     limit ${totalCountPerLoop + 1}`;
-
+    console.log("query", query);
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -326,6 +327,12 @@ function makeJsonToXml(payload, data, customerData) {
         value: singleItem.file_nbr ?? "",
       },
       {
+        "@internalId": "1735",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.ee_invoice ?? "",
+      },
+      {
         "@internalId": "1744",
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
@@ -455,7 +462,7 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "3",
+    source_system: "2",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
@@ -522,8 +529,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -620,4 +626,28 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startM1APNextStep() {
+  return new Promise((resolve, reject) => {
+    return {};
+    try {
+      const params = {
+        stateMachineArn: process.env.NETSUITE_VENDOR_M1_STEP_ARN,
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit NETSUITE_VENDOR_M1_STEP_ARN trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit NETSUITE_VENDOR_M1_STEP_ARN started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }

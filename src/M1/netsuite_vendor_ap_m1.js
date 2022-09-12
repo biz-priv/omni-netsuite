@@ -11,23 +11,22 @@ const Search = NetSuite.Search;
 let userConfig = "";
 
 let totalCountPerLoop = 10;
-let nextOffset = 0;
 const today = getCustomDate();
-const source_system = "CW";
+const source_system = "M1";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-
+  // const checkIsRunning = await checkOldProcessIsRunning();
+  // if (checkIsRunning) {
+  //   return {
+  //     hasMoreData: "false",
+  //   };
+  // }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
-
-  nextOffset = event.hasOwnProperty("nextOffsetCount")
-    ? event.nextOffsetCount
-    : 0;
-  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -40,7 +39,6 @@ module.exports.handler = async (event, context, callback) => {
     const vendorList = await getVendorData(connections);
     console.log("vendorList", vendorList.length);
     currentCount = vendorList.length;
-
     for (let i = 0; i < vendorList.length; i++) {
       const vendor_id = vendorList[i].vendor_id;
       try {
@@ -75,7 +73,7 @@ module.exports.handler = async (event, context, callback) => {
         } catch (error) {}
       }
     }
-    dbc.end();
+
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
@@ -84,23 +82,84 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     hasMoreData = "false";
   }
+
   if (hasMoreData == "false") {
     try {
       await startNetsuitInvoiceStep();
     } catch (error) {}
+    dbc.end();
     return { hasMoreData };
   } else {
-    return { hasMoreData, nextOffsetCount };
+    dbc.end();
+    return { hasMoreData };
   }
 };
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //M1 AP vendor
+      const vendorArn = process.env.NETSUITE_AP_WT_VENDOR_STEP_ARN;
+      //M1 AP
+      const wtApArn = process.env.NETSUITE_AP_WT_STEP_ARN;
+
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: vendorArn,
+          statusFilter: status,
+          maxResults: 2,
+        },
+        (err, data) => {
+          console.log(" vendorArn listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length == 2 &&
+            venExcList[1].status === status
+          ) {
+            console.log("vendorArn running");
+            resolve(true);
+          } else {
+            stepfunctions.listExecutions(
+              {
+                stateMachineArn: wtApArn,
+                statusFilter: status,
+                maxResults: 1,
+              },
+              (err, data) => {
+                console.log(" wtApArn listExecutions data", data);
+                const wtapExcList = data.executions;
+                if (
+                  err === null &&
+                  wtapExcList.length > 0 &&
+                  wtapExcList[0].status === status
+                ) {
+                  console.log("wtApArn running");
+                  resolve(true);
+                } else {
+                  resolve(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
+    }
+  });
+}
 
 async function getVendorData(connections) {
   try {
     const query = `SELECT distinct vendor_id FROM interface_ap_master 
                     where ((vendor_internal_id = '' and processed_date is null) or
-                            (vendor_internal_id = '' and processed_date <= '${today}'))
-                          and source_system = '${source_system}' order by vendor_id 
-                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+                            (vendor_internal_id = '' and processed_date < '${today}'))
+                          and source_system = '${source_system}' 
+                    limit ${totalCountPerLoop + 1}`;
+    console.log("query", query);
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found";
@@ -114,16 +173,14 @@ async function getVendorData(connections) {
 async function getDataByVendorId(connections, vendor_id) {
   try {
     const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-                  left join interface_ap_master iam on 
-                  ia.invoice_nbr = iam.invoice_nbr and
-                  ia.invoice_type = iam.invoice_type and 
-                  ia.vendor_id = iam.vendor_id and 
-                  ia.gc_code = iam.gc_code and 
-                  ia.source_system = iam.source_system and 
-                  iam.file_nbr = ia.file_nbr 
-                  where ia.source_system = '${source_system}' and
-                  ia.vendor_id = '${vendor_id}' limit 1`;
-
+                    left join interface_ap_master iam on 
+                    ia.invoice_nbr = iam.invoice_nbr and
+                    ia.invoice_type = iam.invoice_type and 
+                    ia.vendor_id = iam.vendor_id and 
+                    ia.gc_code = iam.gc_code and 
+                    ia.source_system = iam.source_system and 
+                    iam.file_nbr = ia.file_nbr 
+                    where ia.source_system = '${source_system}' and  ia.vendor_id = '${vendor_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -267,8 +324,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -344,7 +400,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_AP_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_M1_AP_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();

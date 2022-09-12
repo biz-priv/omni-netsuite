@@ -1,7 +1,7 @@
 const AWS = require("aws-sdk");
-const nodemailer = require("nodemailer");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
+const nodemailer = require("nodemailer");
 const NetSuite = require("node-suitetalk");
 const { getConfig, getConnection } = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
@@ -11,23 +11,17 @@ const Search = NetSuite.Search;
 let userConfig = "";
 
 let totalCountPerLoop = 10;
-let nextOffset = 0;
 const today = getCustomDate();
-const source_system = "CW";
 
+const arDbName = "interface_ar";
+const source_system = "M1";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
-
-  nextOffset = event.hasOwnProperty("nextOffsetCount")
-    ? event.nextOffsetCount
-    : 0;
-  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -35,24 +29,25 @@ module.exports.handler = async (event, context, callback) => {
     const connections = dbc(getConnection(process.env));
 
     /**
-     * Get data from db
+     * Get data from  db
      */
-    const vendorList = await getVendorData(connections);
-    console.log("vendorList", vendorList.length);
-    currentCount = vendorList.length;
+    const customerList = await getCustomerData(connections);
 
-    for (let i = 0; i < vendorList.length; i++) {
-      const vendor_id = vendorList[i].vendor_id;
+    console.log("customerList", customerList.length);
+    currentCount = customerList.length;
+    // return {};
+
+    for (let i = 0; i < customerList.length; i++) {
+      const customer_id = customerList[i].customer_id;
       try {
         /**
-         * get vendor from netsuit
+         * get customer from netsuit
          */
-        const vendorData = await getVendor(vendor_id);
-
+        const customerData = await getcustomer(customer_id);
         /**
-         * Update vendor details into DB
+         * Update customer details into DB
          */
-        await putVendor(connections, vendorData, vendor_id);
+        await putCustomer(connections, customerData, customer_id);
         console.log("count", i + 1);
       } catch (error) {
         try {
@@ -60,8 +55,11 @@ module.exports.handler = async (event, context, callback) => {
             /**
              * update error
              */
-            const singleItem = await getDataByVendorId(connections, vendor_id);
-            await updateFailedRecords(connections, vendor_id);
+            const singleItem = await getDataByCustomerId(
+              connections,
+              customer_id
+            );
+            await updateFailedRecords(connections, customer_id);
             /**
              * check if same error from dynamo db
              * true if already notification sent
@@ -75,7 +73,7 @@ module.exports.handler = async (event, context, callback) => {
         } catch (error) {}
       }
     }
-    dbc.end();
+
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
@@ -84,72 +82,64 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     hasMoreData = "false";
   }
+
   if (hasMoreData == "false") {
     try {
       await startNetsuitInvoiceStep();
     } catch (error) {}
     return { hasMoreData };
   } else {
-    return { hasMoreData, nextOffsetCount };
+    return { hasMoreData };
   }
 };
 
-async function getVendorData(connections) {
+async function getCustomerData(connections) {
   try {
-    const query = `SELECT distinct vendor_id FROM interface_ap_master 
-                    where ((vendor_internal_id = '' and processed_date is null) or
-                            (vendor_internal_id = '' and processed_date <= '${today}'))
-                          and source_system = '${source_system}' order by vendor_id 
-                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+    const query = `SELECT distinct customer_id FROM ${arDbName} 
+                    where ((customer_internal_id = '' and processed_date is null) or
+                            (customer_internal_id = '' and processed_date < '${today}'))
+                          and source_system = '${source_system}'
+                    limit ${totalCountPerLoop + 1}`;
+
     const result = await connections.query(query);
     if (!result || result.length == 0) {
-      throw "No data found";
+      throw "No data found.";
     }
     return result;
   } catch (error) {
-    throw "getVendorData: No data found.";
+    throw "getCustomerData: No data found.";
   }
 }
 
-async function getDataByVendorId(connections, vendor_id) {
+async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-                  left join interface_ap_master iam on 
-                  ia.invoice_nbr = iam.invoice_nbr and
-                  ia.invoice_type = iam.invoice_type and 
-                  ia.vendor_id = iam.vendor_id and 
-                  ia.gc_code = iam.gc_code and 
-                  ia.source_system = iam.source_system and 
-                  iam.file_nbr = ia.file_nbr 
-                  where ia.source_system = '${source_system}' and
-                  ia.vendor_id = '${vendor_id}' limit 1`;
-
+    const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result[0];
   } catch (error) {
-    throw "getDataByVendorId: No data found.";
+    throw "getDataByCustomerId: No data found.";
   }
 }
 
-async function putVendor(connections, vendorData, vendor_id) {
+async function putCustomer(connections, customerData, customer_id) {
   try {
-    let query = `INSERT INTO netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
-                  VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','');`;
-    query += `UPDATE interface_ap_master SET 
-                    processed = '',
-                    vendor_internal_id = '${vendorData.entityInternalId}', 
+    let query = `INSERT INTO netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
+                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','');`;
+    query += `UPDATE ${arDbName} SET 
+                    processed = '', 
+                    customer_internal_id = '${customerData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id = '';`;
     await connections.query(query);
   } catch (error) {
-    throw "Vendor Update Failed";
+    throw "Customer Update Failed";
   }
 }
 
-function getVendor(entityId) {
+function getcustomer(entityId) {
   return new Promise((resolve, reject) => {
     const config = new Configuration(userConfig);
     const service = new Service(config);
@@ -163,7 +153,6 @@ function getVendor(entityId) {
 
         // Create basic search
         const search = new Search.Basic.CustomerSearchBasic();
-        search._name = "VendorSearchBasic";
 
         const nameStringField = new Search.Fields.SearchStringField();
         nameStringField.field = "entityId";
@@ -189,31 +178,31 @@ function getVendor(entityId) {
           } else {
             reject({
               customError: true,
-              msg: `Vendor not found. (vendor_id: ${entityId})`,
+              msg: `Customer not found. (customer_id: ${entityId})`,
             });
           }
         } else {
           reject({
             customError: true,
-            msg: `Vendor not found. (vendor_id: ${entityId})`,
+            msg: `Customer not found. (customer_id: ${entityId})`,
           });
         }
       })
       .catch((err) => {
         reject({
-          customError: false,
-          msg: `Vendor Api failed. (vendor_id: ${entityId})`,
+          customError: true,
+          msg: `Customer Api failed. (customer_id: ${entityId})`,
         });
       });
   });
 }
 
-async function updateFailedRecords(connections, vendor_id) {
+async function updateFailedRecords(connections, cus_id) {
   try {
-    let query = `UPDATE interface_ap_master SET 
-                  processed = 'F',
+    let query = `UPDATE ${arDbName}  
+                  SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id = '';`;
     const result = await connections.query(query);
     return result;
   } catch (error) {}
@@ -227,19 +216,21 @@ async function recordErrorResponse(item, error) {
     const data = {
       id: item.invoice_nbr + item.invoice_type,
       invoice_nbr: item.invoice_nbr,
-      vendor_id: item.vendor_id,
+      customer_id: item.customer_id,
       subsidiary: item.subsidiary,
-      invoice_type: item.invoice_type,
       source_system: item.source_system,
+      invoice_type: item.invoice_type,
       invoice_date: item.invoice_date.toLocaleString(),
+      charge_cd_internal_id: item.charge_cd_internal_id,
       errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
       payload: error?.payload,
       response: error?.response,
+      invoiceId: error?.invoiceId,
       status: "error",
       created_at: new Date().toLocaleString(),
     };
     // const params = {
-    //   TableName: process.env.NETSUIT_AP_ERROR_TABLE,
+    //   TableName: process.env.NETSUIT_AR_ERROR_TABLE,
     //   Item: data,
     // };
     // await documentClient.put(params).promise();
@@ -257,7 +248,7 @@ function sendMail(data) {
       const transporter = nodemailer.createTransport({
         host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
         port: 587,
-        secure: false,
+        secure: false, // true for 465, false for other ports
         auth: {
           user: process.env.NETSUIT_AR_ERROR_EMAIL_USER,
           pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
@@ -266,10 +257,9 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
+        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -317,16 +307,16 @@ async function checkSameError(singleItem) {
     });
 
     const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
+      TableName: process.env.NETSUIT_AR_ERROR_TABLE,
       FilterExpression:
-        "#vendor_id = :vendor_id AND #errorDescription = :errorDescription",
+        "#customer_id = :customer_id AND #errorDescription = :errorDescription",
       ExpressionAttributeNames: {
-        "#vendor_id": "vendor_id",
+        "#customer_id": "customer_id",
         "#errorDescription": "errorDescription",
       },
       ExpressionAttributeValues: {
-        ":vendor_id": singleItem.vendor_id,
-        ":errorDescription": `Vendor not found. (vendor_id: ${singleItem.vendor_id})`,
+        ":customer_id": singleItem.customer_id,
+        ":errorDescription": `Customer not found. (customer_id: ${singleItem.customer_id})`,
       },
     };
     const res = await documentClient.scan(params).promise();
@@ -344,16 +334,16 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_AP_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_M1_AR_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.startExecution(params, (err, data) => {
         if (err) {
-          console.log("Netsuit AP api trigger failed");
+          console.log("Netsuit Ar api trigger failed");
           resolve(false);
         } else {
-          console.log("Netsuit AP started");
+          console.log("Netsuit Ar started");
           resolve(true);
         }
       });

@@ -37,6 +37,8 @@ provider:
     NETSUIT_AR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecret}
     NETSUIT_CW_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyCW}
     NETSUIT_CW_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretCW}
+    NETSUIT_M1_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyM1}
+    NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
@@ -91,6 +93,11 @@ functions:
   netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
   netsuite-vendor-ap-cw: ${file(config/functions/CW/netsuite-vendor-ap-cw.yml):function}
 
+  netsuite-ar-m1: ${file(config/functions/M1/netsuite-ar-m1.yml):function}
+  netsuite-customer-ar-m1: ${file(config/functions/M1/netsuite-customer-ar-m1.yml):function}
+  netsuite-ap-m1: ${file(config/functions/M1/netsuite-ap-m1.yml):function}
+  netsuite-vendor-ap-m1: ${file(config/functions/M1/netsuite-vendor-ap-m1.yml):function}
+
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
@@ -106,5 +113,10 @@ stepFunctions:
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
     netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
     netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+
+    netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
+    netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
+    netsuite-customer-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-customer-ar-m1-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-vendor-ap-m1-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
