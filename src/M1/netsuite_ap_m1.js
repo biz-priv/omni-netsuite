@@ -308,17 +308,17 @@ async function getDataGroupBy(connections) {
     const query = `
         SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type
         FROM interface_ap_master iam
-        LEFT JOIN interface_ap ia ON 
-        iam.invoice_nbr = ia.invoice_nbr and 
-        iam.invoice_type = ia.invoice_type and 
-        iam.vendor_id = ia.vendor_id and 
-        iam.gc_code = ia.gc_code and 
-        iam.source_system = ia.source_system and 
-        iam.file_nbr = ia.file_nbr 
+        LEFT JOIN interface_ap ia ON
+        iam.invoice_nbr = ia.invoice_nbr and
+        iam.invoice_type = ia.invoice_type and
+        iam.vendor_id = ia.vendor_id and
+        iam.gc_code = ia.gc_code and
+        iam.source_system = ia.source_system and
+        iam.file_nbr = ia.file_nbr
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
               )
-              and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
+              and iam.source_system = '${source_system}' and iam.invoice_nbr != ''
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type
         having tc ${queryOperator} ${lineItemPerProcess} limit ${
       totalCountPerLoop + 1
@@ -667,6 +667,18 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.ref_nbr ?? "",
             },
+            {
+              "@internalId": "2510", //prod:- 2510 dev:- 2506
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.consol_nbr ?? "",
+            },
+            {
+              "@internalId": "2614", //prod:-  dev:- 2614
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.finalizedby ?? "",
+            },
           ],
         },
       };
@@ -883,8 +895,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",mish@bizcloudexperts.com",
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
+        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",mish@bizcloudexperts.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
