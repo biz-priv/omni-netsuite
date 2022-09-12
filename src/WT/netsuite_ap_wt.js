@@ -1003,7 +1003,6 @@ async function checkSameError(singleItem, error) {
 }
 
 async function startNextStep() {
-  return {};
   return new Promise((resolve, reject) => {
     try {
       const params = {

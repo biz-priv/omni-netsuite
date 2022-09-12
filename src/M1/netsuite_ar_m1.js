@@ -37,8 +37,6 @@ module.exports.handler = async (event, context, callback) => {
     console.log("orderData", orderData.length, orderData[0]);
     currentCount = orderData.length;
 
-    // return {};
-
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
 
     /**
@@ -64,6 +62,7 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "true";
     } else {
       hasMoreData = "false";
+      await startM1APNextStep();
     }
     dbc.end();
     return { hasMoreData };
@@ -529,8 +528,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -627,4 +626,27 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startM1APNextStep() {
+  return new Promise((resolve, reject) => {
+    try {
+      const params = {
+        stateMachineArn: process.env.NETSUITE_VENDOR_M1_STEP_ARN,
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit NETSUITE_VENDOR_M1_STEP_ARN trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit NETSUITE_VENDOR_M1_STEP_ARN started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }

@@ -12,3 +12,5 @@ function:
     include:
       - src/M1/netsuite_ar_m1.js
       - Helpers/**
+  environment:
+    NETSUITE_VENDOR_M1_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-m1-state-machine-${self:provider.stage}
