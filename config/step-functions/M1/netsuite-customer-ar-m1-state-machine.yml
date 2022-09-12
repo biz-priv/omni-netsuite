@@ -1,11 +1,11 @@
 ---
 stateMachine:
   name: ${self:service}-netsuite-customer-ar-m1-state-machine-${self:provider.stage}
-  events:
-    - schedule:
-        rate: cron(0 16 * * ? *) # CST:- 11:00 AM IST:- 9:30 pm
-    - schedule:
-        rate: cron(0 21 * * ? *) # CST:- 4:00 PM IST:- 2:30 am
+  # events:
+  #   - schedule:
+  #       rate: cron(0 16 * * ? *) # CST:- 11:00 AM IST:- 9:30 pm
+  #   - schedule:
+  #       rate: cron(0 21 * * ? *) # CST:- 4:00 PM IST:- 2:30 am
   definition:
     Comment: "State machine to update netsuit customer AR M1 internal details"
     StartAt: PublishEvents
