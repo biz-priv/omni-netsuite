@@ -681,6 +681,18 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.ref_nbr ?? "",
             },
+            {
+              "@internalId": "2510", //prod:- 2510 dev:- 2506
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.consol_nbr ?? "",
+            },
+            {
+              "@internalId": "2614", //prod:-  dev:- 2614
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.finalizedby ?? "",
+            },
           ],
         },
       };
