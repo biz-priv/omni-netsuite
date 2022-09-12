@@ -511,7 +511,7 @@ function makeJsonToXml(payload, data, vendorData) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": "2614", //prod:-  dev:- 2614
+              "@internalId": hardcode.finalizedbyInternalId, //prod:-2614  dev:-2511
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",
@@ -674,7 +674,7 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": "2614", //prod:-  dev:- 2614
+              "@internalId": hardcode.finalizedbyInternalId,
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",
@@ -828,6 +828,7 @@ async function updateInvoiceId(connections, query) {
 function getHardcodeData(isIntercompany = false) {
   const data = {
     source_system: "2",
+    finalizedbyInternalId: process.env.STAGE == "dev" ? 2511 : 2614, //prod:-2614  dev:-2511
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
@@ -993,29 +994,4 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
-}
-
-async function startNextStep() {
-  return {};
-  // no inter company invoices
-  return new Promise((resolve, reject) => {
-    try {
-      const params = {
-        stateMachineArn: process.env.NETSUITE_INTERCOMPANY_STEP_ARN,
-        input: JSON.stringify({}),
-      };
-      const stepfunctions = new AWS.StepFunctions();
-      stepfunctions.startExecution(params, (err, data) => {
-        if (err) {
-          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN trigger failed");
-          resolve(false);
-        } else {
-          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN started");
-          resolve(true);
-        }
-      });
-    } catch (error) {
-      resolve(false);
-    }
-  });
 }

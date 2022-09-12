@@ -630,6 +630,7 @@ async function checkSameError(singleItem, error) {
 
 async function startM1APNextStep() {
   return new Promise((resolve, reject) => {
+    return {};
     try {
       const params = {
         stateMachineArn: process.env.NETSUITE_VENDOR_M1_STEP_ARN,
