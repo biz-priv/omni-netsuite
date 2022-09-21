@@ -260,6 +260,9 @@ function makeJsonToXml(payload, data, customerData) {
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
+        "q1:taxCode": {
+          "@internalId": e.tax_code_internal_id,
+        },
         "q1:item": {
           "@internalId": e.charge_cd_internal_id,
         },

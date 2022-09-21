@@ -619,6 +619,9 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
+        "q1:taxCode": {
+          "@internalId": e.tax_code_internal_id,
+        },
         "q1:item": {
           "@internalId": e.charge_cd_internal_id,
         },
@@ -674,7 +677,7 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": hardcode.finalizedbyInternalId,
+              "@internalId": hardcode.finalizedbyInternalId, //prod:-2614  dev:-2511
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",
