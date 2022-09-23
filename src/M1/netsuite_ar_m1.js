@@ -85,7 +85,9 @@ async function mainProcess(item, invoiceDataList) {
      */
     const dataList = invoiceDataList.filter((e) => {
       return (
-        e.invoice_nbr == item.invoice_nbr && e.invoice_type == item.invoice_type
+        e.invoice_nbr == item.invoice_nbr &&
+        e.invoice_type == item.invoice_type &&
+        e.subsidiary == item.subsidiary
       );
     });
 
@@ -142,7 +144,7 @@ async function mainProcess(item, invoiceDataList) {
 
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr,invoice_type FROM ${arDbName} where
+    const query = `SELECT distinct invoice_nbr,invoice_type,subsidiary FROM ${arDbName} where
     ((internal_id is null and processed != 'F' and customer_internal_id != '') or
      (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
     and source_system = '${source_system}' and invoice_nbr != ''
@@ -444,7 +446,7 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
     }
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
-              and invoice_type = '${item.invoice_type}' ;`;
+              and invoice_type = '${item.invoice_type}' and subsidiary = '${item.subsidiary}' ;`;
 
     return query;
   } catch (error) {}
@@ -532,7 +534,7 @@ function sendMail(data) {
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>

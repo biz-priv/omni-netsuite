@@ -20,6 +20,7 @@ let queryOperator = "<=";
 let queryInvoiceId = null;
 let queryInvoiceNbr = null;
 let queryVendorId = null;
+let queryGcCode = null;
 const source_system = "CW";
 let nextOffset = 0;
 
@@ -52,6 +53,8 @@ module.exports.handler = async (event, context, callback) => {
   queryVendorId = event.hasOwnProperty("queryVendorId")
     ? event.queryVendorId
     : null;
+
+  queryGcCode = event.hasOwnProperty("queryGcCode") ? event.queryGcCode : null;
 
   nextOffset = event.hasOwnProperty("nextOffsetCount")
     ? event.nextOffsetCount
@@ -96,6 +99,7 @@ module.exports.handler = async (event, context, callback) => {
               queryInvoiceNbr,
               queryinvoiceType,
               queryVendorId,
+              queryGcCode,
             };
           }
         } catch (error) {
@@ -122,6 +126,8 @@ module.exports.handler = async (event, context, callback) => {
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
           queryVendorId = orderData[0].vendor_id;
+          queryGcCode = orderData[0].gc_code;
+
           invoiceDataList = await getInvoiceNbrData(
             connections,
             queryInvoiceNbr,
@@ -154,6 +160,7 @@ module.exports.handler = async (event, context, callback) => {
               queryInvoiceNbr: queryInvoiceNbr,
               queryinvoiceType: orderData[0].invoice_type,
               queryVendorId,
+              queryGcCode,
             };
           }
         } catch (error) {
@@ -357,7 +364,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
       iam.file_nbr = ia.file_nbr 
       where ia.source_system = '${source_system}' and `;
     if (isBigData) {
-      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
+      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' and iam.gc_code = ='${queryGcCode}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
     } else {
       query += ` ia.invoice_nbr in (${invoice_nbr.join(",")})`;
@@ -596,8 +603,10 @@ function makeJsonToXml(payload, data, vendorData) {
 function makeJsonToXmlForLineItems(internalId, linePayload, data) {
   try {
     const auth = getOAuthKeys(userConfig);
-    const hardcode = getHardcodeData();
     const singleItem = data[0];
+    const hardcode = getHardcodeData(
+      singleItem?.intercompany == "Y" ? true : false
+    );
     linePayload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
         "@xmlns": "urn:messages_2021_2.platform.webservices.netsuite.com",
@@ -633,6 +642,9 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
+        "q1:taxCode": {
+          "@internalId": e.tax_code_internal_id,
+        },
         "q1:item": {
           "@internalId": e.charge_cd_internal_id,
         },
