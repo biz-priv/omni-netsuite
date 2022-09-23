@@ -446,14 +446,6 @@ function makeJsonToXml(payload, data, vendorData) {
     recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
     recode["q1:memo"] = ""; // (leave out for worldtrak)
 
-    // all IN invoices will be default 1
-    // if (
-    //   (singleItem.source_system == "WT" && singleItem.invoice_type == "IN") ||
-    //   (singleItem.intercompany == "Y" && singleItem.invoice_type == "IN")
-    // ) {
-    //   recode["q1:approvalStatus"] = { "@internalId": "2" };
-    // }
-
     if (singleItem.source_system == "WT" && singleItem.invoice_type == "IN") {
       recode["q1:approvalStatus"] = { "@internalId": "2" };
     }
@@ -626,6 +618,9 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
+        "q1:taxCode": {
+          "@internalId": e.tax_code_internal_id,
+        },
         "q1:item": {
           "@internalId": e.charge_cd_internal_id,
         },
