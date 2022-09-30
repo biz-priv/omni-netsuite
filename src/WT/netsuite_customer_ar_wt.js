@@ -17,6 +17,12 @@ const arDbName = "interface_ar";
 const source_system = "WT";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -334,7 +340,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_AR_WT_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
@@ -349,6 +355,63 @@ async function startNetsuitInvoiceStep() {
       });
     } catch (error) {
       resolve(false);
+    }
+  });
+}
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //WT ar customer
+      const customerArn = process.env.NETSUITE_AR_WT_CUSTOMER_STEP_ARN;
+      //WT ar
+      const wtArArn = process.env.NETSUITE_AR_WT_STEP_ARN;
+
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: customerArn,
+          statusFilter: status,
+          maxResults: 2,
+        },
+        (err, data) => {
+          console.log(" customerArn listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length == 2 &&
+            venExcList[1].status === status
+          ) {
+            console.log("customerArn running");
+            resolve(true);
+          } else {
+            stepfunctions.listExecutions(
+              {
+                stateMachineArn: wtArArn,
+                statusFilter: status,
+                maxResults: 1,
+              },
+              (err, data) => {
+                console.log(" wtArArn listExecutions data", data);
+                const wtapExcList = data.executions;
+                if (
+                  err === null &&
+                  wtapExcList.length > 0 &&
+                  wtapExcList[0].status === status
+                ) {
+                  console.log("wtArArn running");
+                  resolve(true);
+                } else {
+                  resolve(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
     }
   });
 }
