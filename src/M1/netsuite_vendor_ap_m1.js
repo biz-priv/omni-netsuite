@@ -16,12 +16,12 @@ const source_system = "M1";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -415,6 +415,63 @@ async function startNetsuitInvoiceStep() {
       });
     } catch (error) {
       resolve(false);
+    }
+  });
+}
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //CW AP vendor
+      const vendorArn = process.env.NETSUITE_AP_M1_VENDOR_STEP_ARN;
+      //CW AP
+      const cwApArn = process.env.NETSUITE_M1_AP_STEP_ARN;
+
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: vendorArn,
+          statusFilter: status,
+          maxResults: 2,
+        },
+        (err, data) => {
+          console.log(" vendorArn listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length == 2 &&
+            venExcList[1].status === status
+          ) {
+            console.log("vendorArn running");
+            resolve(true);
+          } else {
+            stepfunctions.listExecutions(
+              {
+                stateMachineArn: cwApArn,
+                statusFilter: status,
+                maxResults: 1,
+              },
+              (err, data) => {
+                console.log(" cwApArn listExecutions data", data);
+                const wtapExcList = data.executions;
+                if (
+                  err === null &&
+                  wtapExcList.length > 0 &&
+                  wtapExcList[0].status === status
+                ) {
+                  console.log("cwApArn running");
+                  resolve(true);
+                } else {
+                  resolve(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
     }
   });
 }
