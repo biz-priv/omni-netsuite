@@ -18,6 +18,13 @@ const arDbName = "interface_ar";
 const source_system = "CW";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    console.log("checkIsRunning", checkIsRunning);
+    return {
+      hasMoreData: "false",
+    };
+  }
 
   let hasMoreData = "false";
   let currentCount = 0;
@@ -101,11 +108,16 @@ module.exports.handler = async (event, context, callback) => {
 
 async function getCustomerData(connections) {
   try {
+    // const query = `SELECT distinct customer_id FROM ${arDbName}
+    //                 where ((customer_internal_id = '' and processed_date is null) or
+    //                         (customer_internal_id = '' and processed_date <= '${today}'))
+    //                       and source_system = '${source_system}' order by customer_id
+    //                       limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
     const query = `SELECT distinct customer_id FROM ${arDbName} 
-                    where ((customer_internal_id = '' and processed_date is null) or
-                            (customer_internal_id = '' and processed_date <= '${today}'))
-                          and source_system = '${source_system}' order by customer_id 
-                          limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+                          where ((customer_internal_id = '' and processed_date is null) or
+                                  (customer_internal_id = '' and processed_date < '${today}'))
+                                and source_system = '${source_system}' order by customer_id 
+                                limit ${totalCountPerLoop + 1}`;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -340,7 +352,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_AR_CW_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
@@ -355,6 +367,63 @@ async function startNetsuitInvoiceStep() {
       });
     } catch (error) {
       resolve(false);
+    }
+  });
+}
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //CW AP customer
+      const customerArn = process.env.NETSUITE_AR_CW_CUSTOMER_STEP_ARN;
+      //CW AP
+      const cwApArn = process.env.NETSUITE_AR_CW_STEP_ARN;
+
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: customerArn,
+          statusFilter: status,
+          maxResults: 2,
+        },
+        (err, data) => {
+          console.log(" customerArn listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length == 2 &&
+            venExcList[1].status === status
+          ) {
+            console.log("customerArn running");
+            resolve(true);
+          } else {
+            stepfunctions.listExecutions(
+              {
+                stateMachineArn: cwApArn,
+                statusFilter: status,
+                maxResults: 1,
+              },
+              (err, data) => {
+                console.log(" cwApArn listExecutions data", data);
+                const wtapExcList = data.executions;
+                if (
+                  err === null &&
+                  wtapExcList.length > 0 &&
+                  wtapExcList[0].status === status
+                ) {
+                  console.log("cwApArn running");
+                  resolve(true);
+                } else {
+                  resolve(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
     }
   });
 }

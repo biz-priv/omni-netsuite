@@ -319,7 +319,8 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
-    const dateCheckOperator = queryOperator == "<=" ? "<=" : "<";
+    // const dateCheckOperator = queryOperator == "<=" ? "<=" : "<";
+    const dateCheckOperator = "<";
     const query = `
         SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
         FROM interface_ap_master iam
@@ -341,7 +342,7 @@ async function getDataGroupBy(connections) {
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
         having tc ${queryOperator} ${lineItemPerProcess} 
         ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
-        limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
+        limit ${totalCountPerLoop + 1} `;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
