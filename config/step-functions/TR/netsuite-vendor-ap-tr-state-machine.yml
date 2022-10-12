@@ -1,0 +1,22 @@
+---
+stateMachine:
+  name: ${self:service}-netsuite-vendor-ap-tr-state-machine-${self:provider.stage}
+  definition:
+    Comment: "State machine to update netsuit AP TR vendor internal details"
+    StartAt: PublishEvents
+    States:
+      PublishEvents:
+        Type: Task
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-vendor-ap-tr-${self:provider.stage}"
+        Next: EndChoice
+      EndChoice:
+        Type: Choice
+        Choices:
+          - Variable: $.hasMoreData
+            StringEquals: "false"
+            Next: SuccessState
+          - Variable: $.hasMoreData
+            StringEquals: "true"
+            Next: PublishEvents
+      SuccessState:
+        Type: Succeed

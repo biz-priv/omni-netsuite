@@ -20,7 +20,9 @@ let queryOperator = "<=";
 let queryInvoiceId = null;
 let queryInvoiceNbr = null;
 let queryVendorId = null;
-const source_system = "WT";
+let queryGcCode = null;
+const source_system = "TR";
+let nextOffset = 0;
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -29,7 +31,7 @@ module.exports.handler = async (event, context, callback) => {
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
-    : 21;
+    : 20;
   queryOperator = event.hasOwnProperty("queryOperator")
     ? event.queryOperator
     : "<=";
@@ -52,18 +54,26 @@ module.exports.handler = async (event, context, callback) => {
     ? event.queryVendorId
     : null;
 
+  queryGcCode = event.hasOwnProperty("queryGcCode") ? event.queryGcCode : null;
+
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
+
   try {
     /**
      * Get connections
      */
     const connections = dbc(getConnection(process.env));
 
+    //process invoicess having > 500 line items
     if (queryOperator == ">") {
-      // Update 500 line items per process
+      // if = create else = Update with 500 line items.
       console.log("> start");
-
       totalCountPerLoop = 0;
       if (queryInvoiceId != null && queryInvoiceId.length > 0) {
+        //update the main invoice with 500 line items each time
         console.log(">if");
 
         try {
@@ -89,6 +99,7 @@ module.exports.handler = async (event, context, callback) => {
               queryInvoiceNbr,
               queryinvoiceType,
               queryVendorId,
+              queryGcCode,
             };
           }
         } catch (error) {
@@ -99,6 +110,7 @@ module.exports.handler = async (event, context, callback) => {
           };
         }
       } else {
+        //Create the main invoice with 500 line items 1st
         console.log("> else");
 
         try {
@@ -109,10 +121,13 @@ module.exports.handler = async (event, context, callback) => {
             console.log("orderData", orderData.length);
           } catch (error) {
             dbc.end();
+            await startNextStep();
             return { hasMoreData: "false" };
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
           queryVendorId = orderData[0].vendor_id;
+          queryGcCode = orderData[0].gc_code;
+
           invoiceDataList = await getInvoiceNbrData(
             connections,
             queryInvoiceNbr,
@@ -145,6 +160,7 @@ module.exports.handler = async (event, context, callback) => {
               queryInvoiceNbr: queryInvoiceNbr,
               queryinvoiceType: orderData[0].invoice_type,
               queryVendorId,
+              queryGcCode,
             };
           }
         } catch (error) {
@@ -157,7 +173,7 @@ module.exports.handler = async (event, context, callback) => {
         }
       }
     } else {
-      //Create the main invoice with 500 line items 1st
+      //Create invoices with 500 line items 1st
       /**
        * Get data from db
        */
@@ -206,16 +222,16 @@ module.exports.handler = async (event, context, callback) => {
        * Updating total 20 invoices at once
        */
       await updateInvoiceId(connections, queryData);
-
-      if (currentCount < totalCountPerLoop) {
-        queryOperator = ">";
-      }
       dbc.end();
-      return { hasMoreData: "true", queryOperator };
+      if (currentCount < totalCountPerLoop) {
+        return { hasMoreData: "true", queryOperator: ">" };
+      } else {
+        return { hasMoreData: "true", queryOperator, nextOffsetCount };
+      }
     }
   } catch (error) {
-    console.log("error", error);
     dbc.end();
+    await startNextStep();
     return { hasMoreData: "false" };
   }
 };
@@ -235,7 +251,8 @@ async function mainProcess(item, invoiceDataList) {
       return (
         e.invoice_nbr == item.invoice_nbr &&
         e.vendor_id == item.vendor_id &&
-        e.invoice_type == item.invoice_type
+        e.invoice_type == item.invoice_type &&
+        e.gc_code == item.gc_code
       );
     });
 
@@ -302,8 +319,10 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
+    // const dateCheckOperator = queryOperator == "<=" ? "<=" : "<";
+    const dateCheckOperator = "<";
     const query = `
-        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type
+        SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
         FROM interface_ap_master iam
         LEFT JOIN interface_ap ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
@@ -313,13 +332,17 @@ async function getDataGroupBy(connections) {
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr 
         WHERE ((iam.internal_id is null and iam.processed != 'F' and iam.vendor_internal_id !='')
-                OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
+                OR (iam.vendor_internal_id !='' and iam.processed ='F' and 
+                    iam.processed_date ${dateCheckOperator} '${today}' )
               )
+              and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
+                    iam.intercompany='N'
+                  )
               and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type
-        having tc ${queryOperator} ${lineItemPerProcess} limit ${
-      totalCountPerLoop + 1
-    }`;
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
+        having tc ${queryOperator} ${lineItemPerProcess} 
+        ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
+        limit ${totalCountPerLoop + 1} `;
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
@@ -342,7 +365,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
       iam.file_nbr = ia.file_nbr 
       where ia.source_system = '${source_system}' and `;
     if (isBigData) {
-      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' 
+      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' and iam.gc_code ='${queryGcCode}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
     } else {
       query += ` ia.invoice_nbr in (${invoice_nbr.join(",")})`;
@@ -397,7 +420,9 @@ function makeJsonToXml(payload, data, vendorData) {
     const auth = getOAuthKeys(userConfig);
 
     const singleItem = data[0];
-    const hardcode = getHardcodeData();
+    const hardcode = getHardcodeData(
+      singleItem?.intercompany == "Y" ? true : false
+    );
 
     payload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
@@ -444,7 +469,7 @@ function makeJsonToXml(payload, data, vendorData) {
     recode["q1:otherRefNum"] = singleItem.customer_po; //customer_po is the bill to ref nbr
     recode["q1:memo"] = ""; // (leave out for worldtrak)
 
-    if (singleItem.source_system == "WT" && singleItem.invoice_type == "IN") {
+    if (singleItem.source_system == "TR" && singleItem.invoice_type == "IN") {
       recode["q1:approvalStatus"] = { "@internalId": "2" };
     }
 
@@ -579,8 +604,10 @@ function makeJsonToXml(payload, data, vendorData) {
 function makeJsonToXmlForLineItems(internalId, linePayload, data) {
   try {
     const auth = getOAuthKeys(userConfig);
-    const hardcode = getHardcodeData();
     const singleItem = data[0];
+    const hardcode = getHardcodeData(
+      singleItem?.intercompany == "Y" ? true : false
+    );
     linePayload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
         "@xmlns": "urn:messages_2021_2.platform.webservices.netsuite.com",
@@ -796,7 +823,7 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
       query += ` SET internal_id = null, processed = 'F', `;
     }
     query += ` processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
-              and vendor_id = '${item.vendor_id}';`;
+              and vendor_id = '${item.vendor_id}' and gc_code = '${item.gc_code}';`;
 
     return query;
   } catch (error) {}
@@ -816,6 +843,7 @@ async function updateInvoiceId(connections, query) {
     throw {
       customError: true,
       msg: "Vendor Bill is created But failed to update internal_id",
+      invoiceId,
     };
   }
 }
@@ -827,14 +855,14 @@ async function updateInvoiceId(connections, query) {
  */
 function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "3",
+    source_system: "1",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
     },
     department: {
       default: { head: "15", line: "2" },
-      intercompany: { head: "15", line: "1" },
+      intercompany: { head: "16", line: "2" },
     },
     location: { head: "18", line: "EXT ID: Take from DB" },
   };
@@ -895,8 +923,10 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        // to: "kazi.ali@bizcloudexperts.com",
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -993,4 +1023,28 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startNextStep() {
+  return {};
+  return new Promise((resolve, reject) => {
+    try {
+      const params = {
+        stateMachineArn: process.env.NETSUITE_INTERCOMPANY_STEP_ARN,
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }

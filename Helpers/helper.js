@@ -36,6 +36,18 @@ function getConfig(source_system, env) {
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
+    TR: {
+      account: env.NETSUIT_AR_ACCOUNT,
+      apiVersion: "2021_2",
+      accountSpecificUrl: true,
+      token: {
+        consumer_key: env.NETSUIT_AR_CONSUMER_KEY,
+        consumer_secret: env.NETSUIT_AR_CONSUMER_SECRET,
+        token_key: env.NETSUIT_M1_TOKEN_KEY,
+        token_secret: env.NETSUIT_M1_TOKEN_SECRET,
+      },
+      wsdlPath: env.NETSUIT_AR_WDSLPATH,
+    },
   };
   return data[source_system];
 }
