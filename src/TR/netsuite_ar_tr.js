@@ -11,18 +11,24 @@ const { getConfig, getConnection } = require("../../Helpers/helper");
 let userConfig = "";
 
 const arDbName = "interface_ar";
-const source_system = "WT";
+const source_system = "TR";
 let totalCountPerLoop = 20;
+let nextOffset = 0;
 const today = getCustomDate();
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
+
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
     : totalCountPerLoop;
 
+  nextOffset = event.hasOwnProperty("nextOffsetCount")
+    ? event.nextOffsetCount
+    : 0;
+  const nextOffsetCount = nextOffset + totalCountPerLoop + 1;
   try {
     /**
      * Get connections
@@ -34,8 +40,10 @@ module.exports.handler = async (event, context, callback) => {
      */
     const orderData = await getDataGroupBy(connections);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("orderData", orderData.length);
+    console.log("orderData", orderData[0], orderData.length);
     currentCount = orderData.length;
+
+    // return {};
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
 
@@ -61,12 +69,14 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
+      await startNextStep();
       hasMoreData = "false";
     }
     dbc.end();
-    return { hasMoreData };
+    return { hasMoreData, nextOffsetCount };
   } catch (error) {
     dbc.end();
+    await startNextStep();
     return { hasMoreData: "false" };
   }
 };
@@ -84,7 +94,10 @@ async function mainProcess(item, invoiceDataList) {
      */
     const dataList = invoiceDataList.filter((e) => {
       return (
-        e.invoice_nbr == item.invoice_nbr && e.invoice_type == item.invoice_type
+        e.invoice_nbr == item.invoice_nbr &&
+        e.customer_id == item.customer_id &&
+        e.invoice_type == item.invoice_type &&
+        e.gc_code == item.gc_code
       );
     });
 
@@ -141,11 +154,14 @@ async function mainProcess(item, invoiceDataList) {
 
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr,invoice_type FROM ${arDbName} where
+    const query = `SELECT distinct invoice_nbr,customer_id,invoice_type, gc_code FROM ${arDbName} where
     ((internal_id is null and processed != 'F' and customer_internal_id != '') or
      (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+    and ((intercompany='Y' and pairing_available_flag ='Y') or intercompany='N')
     and source_system = '${source_system}' and invoice_nbr != ''
-    limit ${totalCountPerLoop + 1}`;
+    order by invoice_nbr,customer_id,invoice_type, gc_code 
+    limit ${totalCountPerLoop + 1} `;
+    console.log("query", query);
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -212,7 +228,9 @@ function makeJsonToXml(payload, data, customerData) {
      */
     const auth = getOAuthKeys(userConfig);
     const singleItem = data[0];
-    const hardcode = getHardcodeData();
+    const hardcode = getHardcodeData(
+      singleItem.intercompany == "Y" ? true : false
+    );
     payload["soap:Envelope"]["soap:Header"] = {
       tokenPassport: {
         "@xmlns": "urn:messages_2018_2.platform.webservices.netsuite.com",
@@ -248,18 +266,20 @@ function makeJsonToXml(payload, data, customerData) {
     recode["q1:entity"]["@internalId"] = customerData.entityInternalId; //This is internal ID for the customer.
     recode["q1:tranId"] = singleItem.invoice_nbr; //invoice ID
     recode["q1:tranDate"] = dateFormat(singleItem.invoice_date); //invoice date
-    // recode["q1:tranDate"] = dateFormat(singleItem.ready_date); //invoice date
 
     recode["q1:class"]["@internalId"] = hardcode.class.head;
     recode["q1:department"]["@internalId"] = hardcode.department.head;
     recode["q1:location"]["@internalId"] = hardcode.location.head;
     recode["q1:subsidiary"]["@internalId"] = singleItem.subsidiary;
     recode["q1:currency"]["@internalId"] = customerData.currencyInternalId;
-    recode["q1:otherRefNum"] = singleItem.customer_po;
+    recode["q1:otherRefNum"] = singleItem.order_ref; //prev:- customer_po is the bill to ref nbr new:- order_ref
     recode["q1:memo"] = ""; // (leave out for worldtrak)
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
+        "q1:taxCode": {
+          "@internalId": e.tax_code_internal_id,
+        },
         "q1:item": {
           "@internalId": e.charge_cd_internal_id,
         },
@@ -300,7 +320,7 @@ function makeJsonToXml(payload, data, customerData) {
               "@internalId": "1166",
               "@xsi:type": "SelectCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-              value: { "@externalId": e.controlling_stn } ?? "",
+              value: { "@externalId": e.controlling_stn },
             },
             {
               "@internalId": "1164",
@@ -435,7 +455,8 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
     }
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
-              and invoice_type = '${item.invoice_type}' ;`;
+              and invoice_type = '${item.invoice_type}'and customer_id = '${item.customer_id}' 
+              and gc_code = '${item.gc_code}';`;
 
     return query;
   } catch (error) {}
@@ -454,17 +475,24 @@ async function updateInvoiceId(connections, query) {
   }
 }
 
-function getHardcodeData() {
+function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "3",
+    source_system: "1",
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
     },
-    department: { head: "15", line: "1" },
+    department: {
+      default: { head: "15", line: "1" },
+      intercompany: { head: "16", line: "1" },
+    },
     location: { head: "18", line: "EXT ID: Take from DB" },
   };
-  return data;
+  const departmentType = isIntercompany ? "intercompany" : "default";
+  return {
+    ...data,
+    department: data.department[departmentType],
+  };
 }
 
 async function recordErrorResponse(item, error) {
@@ -522,9 +550,10 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
         // to: "kazi.ali@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
+        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -621,4 +650,27 @@ async function checkSameError(singleItem, error) {
   } catch (error) {
     return false;
   }
+}
+
+async function startNextStep() {
+  return new Promise((resolve, reject) => {
+    try {
+      const params = {
+        stateMachineArn: process.env.NETSUITE_VENDOR_STEP_ARN,
+        input: JSON.stringify({}),
+      };
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN trigger failed");
+          resolve(false);
+        } else {
+          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN started");
+          resolve(true);
+        }
+      });
+    } catch (error) {
+      resolve(false);
+    }
+  });
 }
