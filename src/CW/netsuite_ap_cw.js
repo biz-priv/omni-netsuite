@@ -127,6 +127,7 @@ module.exports.handler = async (event, context, callback) => {
           queryInvoiceNbr = orderData[0].invoice_nbr;
           queryVendorId = orderData[0].vendor_id;
           queryGcCode = orderData[0].gc_code;
+          queryinvoiceType = orderData[0].invoice_type;
 
           invoiceDataList = await getInvoiceNbrData(
             connections,
