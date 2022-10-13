@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/TR/netsuite_customer_ar_tr.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-ar-tr-${self:provider.stage}
+  description: TR Netsuite customer AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/TR/netsuite_customer_ar_tr.js
+      - Helpers/**
+  environment:
+    NETSUITE_AR_TR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-tr-state-machine-${self:provider.stage}
+    NETSUITE_AR_TR_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-customer-ar-tr-state-machine-${self:provider.stage}

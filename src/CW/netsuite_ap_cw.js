@@ -127,6 +127,7 @@ module.exports.handler = async (event, context, callback) => {
           queryInvoiceNbr = orderData[0].invoice_nbr;
           queryVendorId = orderData[0].vendor_id;
           queryGcCode = orderData[0].gc_code;
+          queryinvoiceType = orderData[0].invoice_type;
 
           invoiceDataList = await getInvoiceNbrData(
             connections,
@@ -365,7 +366,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
       iam.file_nbr = ia.file_nbr 
       where ia.source_system = '${source_system}' and `;
     if (isBigData) {
-      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' and iam.gc_code = ='${queryGcCode}' 
+      query += ` ia.invoice_nbr = '${invoice_nbr}' and ia.invoice_type = '${queryinvoiceType}' and iam.vendor_id ='${queryVendorId}' and iam.gc_code ='${queryGcCode}' 
       order by id limit ${lineItemPerProcess + 1} offset ${queryOffset}`;
     } else {
       query += ` ia.invoice_nbr in (${invoice_nbr.join(",")})`;
