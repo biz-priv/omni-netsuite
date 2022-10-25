@@ -164,7 +164,7 @@ async function createInterCompanyInvoice(item) {
       arInvoiceId,
       apInvoiceId,
       transactionType,
-      data: error?.data ? res.data : error.response.data,
+      data: error?.data ? res.data : error?.response?.data,
     };
   }
 }

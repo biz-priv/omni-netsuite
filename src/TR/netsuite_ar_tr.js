@@ -6,9 +6,14 @@ const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const payload = require("../../Helpers/netsuit_AR.json");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createARFailedRecords,
+} = require("../../Helpers/helper");
 
 let userConfig = "";
+let connections = "";
 
 const arDbName = "interface_ar";
 const source_system = "TR";
@@ -33,7 +38,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = dbc(getConnection(process.env));
+    connections = dbc(getConnection(process.env));
 
     /**
      * Get data from db
@@ -131,21 +136,23 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * update invoice id
      */
-    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    const getQuery = getUpdateQuery(singleItem, invoiceId);
     getUpdateQueryList += getQuery;
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
-        getQuery = await getUpdateQuery(singleItem, null, false);
+        getQuery = getUpdateQuery(singleItem, null, false);
         // const checkError = await checkSameError(singleItem, error);
         // if (!checkError) {
         await recordErrorResponse(singleItem, error);
+        await createARFailedRecords(connections, singleItem, error);
         // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
+        await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
@@ -273,7 +280,7 @@ function makeJsonToXml(payload, data, customerData) {
     recode["q1:subsidiary"]["@internalId"] = singleItem.subsidiary;
     recode["q1:currency"]["@internalId"] = customerData.currencyInternalId;
     recode["q1:otherRefNum"] = singleItem.order_ref; //prev:- customer_po is the bill to ref nbr new:- order_ref
-    recode["q1:memo"] = ""; // (leave out for worldtrak)
+    recode["q1:memo"] = singleItem.housebill_nbr;
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
@@ -345,6 +352,12 @@ function makeJsonToXml(payload, data, customerData) {
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
         value: singleItem.file_nbr ?? "",
+      },
+      {
+        "@internalId": "1735",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.ee_invoice ?? "",
       },
       {
         "@internalId": "1744",
@@ -440,7 +453,7 @@ async function createInvoice(soapPayload, type) {
   }
 }
 
-async function getUpdateQuery(item, invoiceId, isSuccess = true) {
+function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
     console.log(
       "invoice_nbr " + item.invoice_type,
@@ -459,7 +472,9 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
               and gc_code = '${item.gc_code}';`;
 
     return query;
-  } catch (error) {}
+  } catch (error) {
+    return "";
+  }
 }
 
 async function updateInvoiceId(connections, query) {
