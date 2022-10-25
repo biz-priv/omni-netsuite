@@ -19,7 +19,7 @@ const userConfig = {
   },
 };
 const today = getCustomDate();
-const totalCountPerLoop = 15;
+const totalCountPerLoop = 5;
 
 module.exports.handler = async (event, context, callback) => {
   let hasMoreData = "false";
