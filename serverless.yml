@@ -104,6 +104,7 @@ functions:
   netsuite-vendor-ap-tr: ${file(config/functions/TR/netsuite-vendor-ap-tr.yml):function}
 
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
+  netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
 
@@ -130,3 +131,4 @@ stepFunctions:
     netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
+    netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}

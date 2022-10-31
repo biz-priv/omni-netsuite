@@ -7,9 +7,14 @@ const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const payload = require("../../Helpers/netsuit_AP.json");
 const lineItemPayload = require("../../Helpers/netsuit_line_items_AP.json");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createAPFailedRecords,
+} = require("../../Helpers/helper");
 
 let userConfig = "";
+let connections = "";
 
 const today = getCustomDate();
 const lineItemPerProcess = 500;
@@ -56,7 +61,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = dbc(getConnection(process.env));
+    connections = dbc(getConnection(process.env));
 
     if (queryOperator == ">") {
       // Update 500 line items per process
@@ -275,7 +280,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * update invoice id
      */
-    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    const getQuery = getUpdateQuery(singleItem, invoiceId);
     getUpdateQueryList += getQuery;
 
     return getUpdateQueryList;
@@ -283,14 +288,16 @@ async function mainProcess(item, invoiceDataList) {
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
-        getQuery = await getUpdateQuery(singleItem, null, false);
+        getQuery = getUpdateQuery(singleItem, null, false);
         // const checkError = await checkSameError(singleItem, error);
         // if (!checkError) {
         await recordErrorResponse(singleItem, error);
+        await createAPFailedRecords(connections, singleItem, error);
         // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
+        await createAPFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
@@ -788,7 +795,7 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
  * @param {*} isSuccess
  * @returns
  */
-async function getUpdateQuery(item, invoiceId, isSuccess = true) {
+function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
     console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE interface_ap_master `;
@@ -801,7 +808,9 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
               and vendor_id = '${item.vendor_id}';`;
 
     return query;
-  } catch (error) {}
+  } catch (error) {
+    return "query";
+  }
 }
 
 /**

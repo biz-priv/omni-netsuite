@@ -1,0 +1,16 @@
+---
+function:
+  handler: src/netsuite_tr_intercompany.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-tr-intercompany-${self:provider.stage}
+  description: Netsuite TR Intercompany api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/netsuite_tr_intercompany.js
+      - Helpers/**
+  environment:
+    NETSUITE_INTERCOMPANY_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuit/intercompany/url}

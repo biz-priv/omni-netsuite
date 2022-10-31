@@ -6,9 +6,14 @@ const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const payload = require("../../Helpers/netsuit_AR.json");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createARFailedRecords,
+} = require("../../Helpers/helper");
 
 let userConfig = "";
+let connections = "";
 
 const arDbName = "interface_ar";
 const source_system = "M1";
@@ -27,7 +32,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = dbc(getConnection(process.env));
+    connections = dbc(getConnection(process.env));
 
     /**
      * Get data from db
@@ -68,6 +73,7 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   } catch (error) {
     dbc.end();
+    await startM1APNextStep();
     return { hasMoreData: "false" };
   }
 };
@@ -121,21 +127,23 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * update invoice id
      */
-    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    const getQuery = getUpdateQuery(singleItem, invoiceId);
     getUpdateQueryList += getQuery;
     return getUpdateQueryList;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
-        getQuery = await getUpdateQuery(singleItem, null, false);
+        getQuery = getUpdateQuery(singleItem, null, false);
         // const checkError = await checkSameError(singleItem, error);
         // if (!checkError) {
         await recordErrorResponse(singleItem, error);
+        await createARFailedRecords(connections, singleItem, error);
         // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
+        await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
@@ -258,7 +266,7 @@ function makeJsonToXml(payload, data, customerData) {
     recode["q1:subsidiary"]["@internalId"] = singleItem.subsidiary;
     recode["q1:currency"]["@internalId"] = customerData.currencyInternalId;
     recode["q1:otherRefNum"] = singleItem.order_ref; //prev:- customer_po is the bill to ref nbr new:- order_ref
-    recode["q1:memo"] = ""; // (leave out for worldtrak)
+    recode["q1:memo"] = singleItem.housebill_nbr;
 
     recode["q1:itemList"]["q1:item"] = data.map((e) => {
       return {
@@ -431,7 +439,7 @@ async function createInvoice(soapPayload, type) {
   }
 }
 
-async function getUpdateQuery(item, invoiceId, isSuccess = true) {
+function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
     console.log(
       "invoice_nbr " + item.invoice_type,
@@ -449,7 +457,9 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
               and invoice_type = '${item.invoice_type}' and subsidiary = '${item.subsidiary}' ;`;
 
     return query;
-  } catch (error) {}
+  } catch (error) {
+    return "";
+  }
 }
 
 async function updateInvoiceId(connections, query) {

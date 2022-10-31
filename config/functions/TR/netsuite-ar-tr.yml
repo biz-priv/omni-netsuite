@@ -13,4 +13,4 @@ function:
       - src/TR/netsuite_ar_tr.js
       - Helpers/**
   environment:
-    NETSUITE_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-tr-state-machine-${self:provider.stage}
+    NETSUITE_TR_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-tr-state-machine-${self:provider.stage}

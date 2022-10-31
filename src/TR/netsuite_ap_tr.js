@@ -7,9 +7,14 @@ const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const payload = require("../../Helpers/netsuit_AP.json");
 const lineItemPayload = require("../../Helpers/netsuit_line_items_AP.json");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createAPFailedRecords,
+} = require("../../Helpers/helper");
 
 let userConfig = "";
+let connections = "";
 
 const today = getCustomDate();
 const lineItemPerProcess = 500;
@@ -65,7 +70,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get connections
      */
-    const connections = dbc(getConnection(process.env));
+    connections = dbc(getConnection(process.env));
 
     //process invoicess having > 500 line items
     if (queryOperator == ">") {
@@ -291,7 +296,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * update invoice id
      */
-    const getQuery = await getUpdateQuery(singleItem, invoiceId);
+    const getQuery = getUpdateQuery(singleItem, invoiceId);
     getUpdateQueryList += getQuery;
 
     return getUpdateQueryList;
@@ -299,14 +304,13 @@ async function mainProcess(item, invoiceDataList) {
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
-        getQuery = await getUpdateQuery(singleItem, null, false);
-        // const checkError = await checkSameError(singleItem, error);
-        // if (!checkError) {
+        getQuery = getUpdateQuery(singleItem, null, false);
         await recordErrorResponse(singleItem, error);
-        // }
+        await createAPFailedRecords(connections, singleItem, error);
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
+        await createAPFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
@@ -534,7 +538,7 @@ function makeJsonToXml(payload, data, vendorData) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": "2614", //prod:-  dev:- 2614
+              "@internalId": hardcode.finalizedbyInternalId,
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",
@@ -545,6 +549,12 @@ function makeJsonToXml(payload, data, vendorData) {
     });
 
     recode["q1:customFieldList"]["customField"] = [
+      {
+        "@internalId": "1734",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.internal_ref_nbr ?? "",
+      },
       {
         "@internalId": "1730",
         "@xsi:type": "StringCustomFieldRef",
@@ -702,7 +712,7 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": "2614", //prod:-  dev:- 2614
+              "@internalId": hardcode.finalizedbyInternalId,
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",
@@ -814,7 +824,7 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
  * @param {*} isSuccess
  * @returns
  */
-async function getUpdateQuery(item, invoiceId, isSuccess = true) {
+function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
     console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE interface_ap_master `;
@@ -827,7 +837,9 @@ async function getUpdateQuery(item, invoiceId, isSuccess = true) {
               and vendor_id = '${item.vendor_id}' and gc_code = '${item.gc_code}';`;
 
     return query;
-  } catch (error) {}
+  } catch (error) {
+    return "";
+  }
 }
 
 /**
@@ -857,6 +869,7 @@ async function updateInvoiceId(connections, query) {
 function getHardcodeData(isIntercompany = false) {
   const data = {
     source_system: "1",
+    finalizedbyInternalId: process.env.STAGE === "dev" ? "2511" : "2614", //prod:-2614  dev:-2511
     class: {
       head: "9",
       line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
@@ -924,10 +937,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -991,56 +1002,22 @@ function getCustomDate() {
   return `${ye}-${mo}-${da}`;
 }
 
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem, error) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-      FilterExpression:
-        "#invoice_nbr = :invoice_nbr AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#invoice_nbr": "invoice_nbr",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":invoice_nbr": singleItem.invoice_nbr,
-        ":errorDescription": error?.msg,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
-}
-
 async function startNextStep() {
-  return {};
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_INTERCOMPANY_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_TR_INTERCOMPANY_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.startExecution(params, (err, data) => {
         if (err) {
-          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN trigger failed");
+          console.log(
+            "Netsuit NETSUITE_TR_INTERCOMPANY_STEP_ARN trigger failed"
+          );
           resolve(false);
         } else {
-          console.log("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN started");
+          console.log("Netsuit NETSUITE_TR_INTERCOMPANY_STEP_ARN started");
           resolve(true);
         }
       });
