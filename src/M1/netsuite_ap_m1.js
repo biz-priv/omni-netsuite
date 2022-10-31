@@ -692,7 +692,7 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
               value: e.consol_nbr ?? "",
             },
             {
-              "@internalId": hardcode.finalizedbyInternalId, //prod:-2614  dev:-2511
+              "@internalId": hardcode.finalizedbyInternalId,
               "@xsi:type": "StringCustomFieldRef",
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: e.finalizedby ?? "",

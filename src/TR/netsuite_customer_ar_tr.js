@@ -22,12 +22,12 @@ const arDbName = "interface_ar";
 const source_system = "TR";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
 
   let hasMoreData = "false";
   let currentCount = 0;
@@ -82,11 +82,8 @@ module.exports.handler = async (event, context, callback) => {
              * true if already notification sent
              * false if it is new
              */
-            // const checkError = await checkSameError(singleItem);
-            // if (!checkError) {
             await recordErrorResponse(singleItem, error);
             await createARFailedRecords(connections, singleItem, error);
-            // }
           }
         } catch (error) {}
       }
@@ -276,8 +273,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -312,41 +309,6 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
-}
-
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AR_ERROR_TABLE,
-      FilterExpression:
-        "#customer_id = :customer_id AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#customer_id": "customer_id",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":customer_id": singleItem.customer_id,
-        ":errorDescription": `Customer not found. (customer_id: ${singleItem.customer_id})`,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
 }
 
 async function startNetsuitInvoiceStep() {

@@ -144,11 +144,8 @@ async function mainProcess(item, invoiceDataList) {
       let getQuery = "";
       try {
         getQuery = getUpdateQuery(singleItem, null, false);
-        // const checkError = await checkSameError(singleItem, error);
-        // if (!checkError) {
         await recordErrorResponse(singleItem, error);
         await createARFailedRecords(connections, singleItem, error);
-        // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
@@ -565,10 +562,8 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
@@ -671,16 +666,16 @@ async function startNextStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_VENDOR_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_TR_VENDOR_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.startExecution(params, (err, data) => {
         if (err) {
-          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN trigger failed");
+          console.log("Netsuit NETSUITE_TR_VENDOR_STEP_ARN trigger failed");
           resolve(false);
         } else {
-          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN started");
+          console.log("Netsuit NETSUITE_TR_VENDOR_STEP_ARN started");
           resolve(true);
         }
       });

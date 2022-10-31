@@ -73,6 +73,7 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   } catch (error) {
     dbc.end();
+    await startM1APNextStep();
     return { hasMoreData: "false" };
   }
 };

@@ -20,7 +20,7 @@ const userConfig = {
 };
 const today = getCustomDate();
 const totalCountPerLoop = 5;
-const source_system = "CW";
+const source_system = "TR";
 
 module.exports.handler = async (event, context, callback) => {
   let hasMoreData = "false";
@@ -218,7 +218,7 @@ function sendMail(data) {
         to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
         // to: "kazi.ali@bizcloudexperts.com",
-        subject: `Netsuite CW Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
+        subject: `Netsuite TR Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
         <!DOCTYPE html>
         <html lang="en">
