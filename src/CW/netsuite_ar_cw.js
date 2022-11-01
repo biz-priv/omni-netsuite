@@ -142,15 +142,12 @@ async function mainProcess(item, invoiceDataList) {
       let getQuery = "";
       try {
         getQuery = getUpdateQuery(singleItem, null, false);
-        // const checkError = await checkSameError(singleItem, error);
-        // if (!checkError) {
         await recordErrorResponse(singleItem, error);
-        await createARFailedRecords(connections, singleItem, error);
-        // }
+        // await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
-        await createARFailedRecords(connections, singleItem, error);
+        // await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }

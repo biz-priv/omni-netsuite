@@ -78,7 +78,7 @@ module.exports.handler = async (event, context, callback) => {
              * false if it is new
              */
             await recordErrorResponse(singleItem, error);
-            await createAPFailedRecords(connections, singleItem, error);
+            // await createAPFailedRecords(connections, singleItem, error);
           }
         } catch (error) {}
       }

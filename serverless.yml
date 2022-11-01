@@ -106,6 +106,8 @@ functions:
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
+
+  invoice-report: ${file(config/functions/invoice-report.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
 
 stepFunctions:
