@@ -3,7 +3,11 @@ const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const nodemailer = require("nodemailer");
 const NetSuite = require("node-suitetalk");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createARFailedRecords,
+} = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
@@ -17,12 +21,12 @@ const arDbName = "interface_ar";
 const source_system = "WT";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  const checkIsRunning = await checkOldProcessIsRunning();
-  if (checkIsRunning) {
-    return {
-      hasMoreData: "false",
-    };
-  }
+  // const checkIsRunning = await checkOldProcessIsRunning();
+  // if (checkIsRunning) {
+  //   return {
+  //     hasMoreData: "false",
+  //   };
+  // }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -73,6 +77,7 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
+            // await createARFailedRecords(connections, singleItem, error);
             // }
           }
         } catch (error) {}
@@ -100,7 +105,7 @@ module.exports.handler = async (event, context, callback) => {
 
 async function getCustomerData(connections) {
   try {
-    const query = `SELECT distinct customer_id FROM ${arDbName} 
+    const query = `SELECT distinct customer_id FROM ${arDbName}
                     where ((customer_internal_id = '' and processed_date is null) or
                             (customer_internal_id = '' and processed_date < '${today}'))
                           and source_system = '${source_system}'
@@ -215,9 +220,6 @@ async function updateFailedRecords(connections, cus_id) {
 
 async function recordErrorResponse(item, error) {
   try {
-    // let documentClient = new AWS.DynamoDB.DocumentClient({
-    //   region: process.env.REGION,
-    // });
     const data = {
       id: item.invoice_nbr + item.invoice_type,
       invoice_nbr: item.invoice_nbr,
@@ -234,11 +236,7 @@ async function recordErrorResponse(item, error) {
       status: "error",
       created_at: new Date().toLocaleString(),
     };
-    // const params = {
-    //   TableName: process.env.NETSUIT_AR_ERROR_TABLE,
-    //   Item: data,
-    // };
-    // await documentClient.put(params).promise();
+
     await sendMail(data);
   } catch (e) {}
 }

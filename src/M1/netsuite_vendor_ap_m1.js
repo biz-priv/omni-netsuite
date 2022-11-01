@@ -3,7 +3,11 @@ const nodemailer = require("nodemailer");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const NetSuite = require("node-suitetalk");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createAPFailedRecords,
+} = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
@@ -68,6 +72,7 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
+            // await createAPFailedRecords(connections, singleItem, error);
             // }
           }
         } catch (error) {}

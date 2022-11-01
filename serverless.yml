@@ -39,6 +39,8 @@ provider:
     NETSUIT_CW_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretCW}
     NETSUIT_M1_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyM1}
     NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
+    NETSUIT_TR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyTR}
+    NETSUIT_TR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretTR}
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
@@ -104,7 +106,10 @@ functions:
   netsuite-vendor-ap-tr: ${file(config/functions/TR/netsuite-vendor-ap-tr.yml):function}
 
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
+  netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
+
+  invoice-report: ${file(config/functions/invoice-report.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
 
 stepFunctions:
@@ -130,3 +135,4 @@ stepFunctions:
     netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
+    netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}

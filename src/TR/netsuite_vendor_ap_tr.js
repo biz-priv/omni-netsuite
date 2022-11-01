@@ -3,7 +3,11 @@ const nodemailer = require("nodemailer");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const NetSuite = require("node-suitetalk");
-const { getConfig, getConnection } = require("../../Helpers/helper");
+const {
+  getConfig,
+  getConnection,
+  createAPFailedRecords,
+} = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
@@ -17,12 +21,12 @@ const source_system = "TR";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
 
   let hasMoreData = "false";
   let currentCount = 0;
@@ -73,10 +77,8 @@ module.exports.handler = async (event, context, callback) => {
              * true if already notification sent
              * false if it is new
              */
-            // const checkError = await checkSameError(singleItem);
-            // if (!checkError) {
             await recordErrorResponse(singleItem, error);
-            // }
+            // await createAPFailedRecords(connections, singleItem, error);
           }
         } catch (error) {}
       }
@@ -273,9 +275,7 @@ function sendMail(data) {
 
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
+        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
         // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
         subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
         html: `
@@ -311,41 +311,6 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
-}
-
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-      FilterExpression:
-        "#vendor_id = :vendor_id AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#vendor_id": "vendor_id",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":vendor_id": singleItem.vendor_id,
-        ":errorDescription": `Vendor not found. (vendor_id: ${singleItem.vendor_id})`,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
 }
 
 async function startNetsuitInvoiceStep() {
