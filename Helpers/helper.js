@@ -50,8 +50,8 @@ function getConfig(source_system, env) {
       token: {
         consumer_key: env.NETSUIT_AR_CONSUMER_KEY,
         consumer_secret: env.NETSUIT_AR_CONSUMER_SECRET,
-        token_key: env.NETSUIT_M1_TOKEN_KEY,
-        token_secret: env.NETSUIT_M1_TOKEN_SECRET,
+        token_key: env.NETSUIT_TR_TOKEN_KEY,
+        token_secret: env.NETSUIT_TR_TOKEN_SECRET,
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
