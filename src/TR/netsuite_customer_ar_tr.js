@@ -83,7 +83,7 @@ module.exports.handler = async (event, context, callback) => {
              * false if it is new
              */
             await recordErrorResponse(singleItem, error);
-            await createARFailedRecords(connections, singleItem, error);
+            // await createARFailedRecords(connections, singleItem, error);
           }
         } catch (error) {}
       }

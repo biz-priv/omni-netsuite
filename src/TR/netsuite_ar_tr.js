@@ -145,11 +145,11 @@ async function mainProcess(item, invoiceDataList) {
       try {
         getQuery = getUpdateQuery(singleItem, null, false);
         await recordErrorResponse(singleItem, error);
-        await createARFailedRecords(connections, singleItem, error);
+        // await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
-        await createARFailedRecords(connections, singleItem, error);
+        // await createARFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
