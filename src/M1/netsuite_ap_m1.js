@@ -125,11 +125,7 @@ module.exports.handler = async (event, context, callback) => {
             queryInvoiceNbr,
             true
           );
-          console.log(
-            "invoiceDataList",
-            invoiceDataList.length,
-            invoiceDataList[0]
-          );
+          console.log("invoiceDataList", invoiceDataList.length);
 
           /**
            * set queryInvoiceId in this process and return update query
