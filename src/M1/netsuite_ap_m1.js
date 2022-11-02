@@ -114,7 +114,6 @@ module.exports.handler = async (event, context, callback) => {
             console.log("orderData", orderData.length);
           } catch (error) {
             dbc.end();
-            // await startNextStep();
             return { hasMoreData: "false" };
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
@@ -132,12 +131,10 @@ module.exports.handler = async (event, context, callback) => {
             invoiceDataList[0]
           );
 
-          return {};
           /**
            * set queryInvoiceId in this process and return update query
            */
           const queryData = await mainProcess(orderData[0], invoiceDataList);
-          // console.log("queryData", queryData);
           await updateInvoiceId(connections, queryData);
 
           /**
@@ -191,7 +188,6 @@ module.exports.handler = async (event, context, callback) => {
         invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
         console.log("orderData", orderData.length);
         currentCount = orderData.length;
-        // return {};
         invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
       } catch (error) {
         return {
