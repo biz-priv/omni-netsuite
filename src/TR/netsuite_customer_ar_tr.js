@@ -52,8 +52,6 @@ module.exports.handler = async (event, context, callback) => {
 
     console.log("customerList", customerList.length, customerList);
     currentCount = customerList.length;
-    // return {};
-
     for (let i = 0; i < customerList.length; i++) {
       const customer_id = customerList[i].customer_id;
       try {

@@ -48,8 +48,6 @@ module.exports.handler = async (event, context, callback) => {
     console.log("orderData", orderData[0], orderData.length);
     currentCount = orderData.length;
 
-    // return {};
-
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
 
     /**
