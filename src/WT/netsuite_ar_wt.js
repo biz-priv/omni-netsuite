@@ -254,8 +254,7 @@ function makeJsonToXml(payload, data, customerData) {
     let recode = payload["soap:Envelope"]["soap:Body"]["add"]["record"];
     recode["q1:entity"]["@internalId"] = customerData.entityInternalId; //This is internal ID for the customer.
     recode["q1:tranId"] = singleItem.invoice_nbr; //invoice ID
-    // recode["q1:tranDate"] = dateFormat(singleItem.invoice_date); //invoice date
-    recode["q1:tranDate"] = dateFormat(singleItem.ready_date); //invoice date
+    recode["q1:tranDate"] = dateFormat(singleItem.invoice_date); //invoice date
 
     recode["q1:class"]["@internalId"] = hardcode.class.head;
     recode["q1:department"]["@internalId"] = hardcode.department.head;
