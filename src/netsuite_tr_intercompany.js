@@ -2,7 +2,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
-const dbc = pgp({ capSQL: true });
+const dbc = pgp({ capSQL: true, noLocking: false });
 const nodemailer = require("nodemailer");
 const { getConnection } = require("../Helpers/helper");
 
@@ -111,17 +111,22 @@ async function updateAPandAr(connections, item, processed = "P") {
       "AR " + item.ar_internal_id,
       processed
     );
-    const query = `UPDATE interface_ap_master set 
+    const query1 = `
+                UPDATE interface_ap_master set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
                 where internal_id = '${item.ap_internal_id}' and source_system = '${source_system}';
-                
+                `;
+    console.log("query1", query1);
+    await connections.query(query1);
+    const query2 = `
                 UPDATE interface_ar set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
                 where internal_id = '${item.ar_internal_id}' and source_system = '${source_system}';
               `;
-    await connections.query(query);
+    console.log("query2", query2);
+    await connections.query(query2);
   } catch (error) {
     throw "Unable to Update";
   }
@@ -166,7 +171,7 @@ async function createInterCompanyInvoice(item) {
       arInvoiceId,
       apInvoiceId,
       transactionType,
-      data: error?.data ? res.data : error?.response?.data,
+      data: error?.data ?? error?.response?.data,
     };
   }
 }

@@ -15,7 +15,7 @@ const {
 let userConfig = "";
 let connections = "";
 
-const arDbName = "interface_ar";
+const arDbName = "interface_ar_cw";
 const source_system = "CW";
 let totalCountPerLoop = 20;
 let nextOffset = 0;
