@@ -29,6 +29,9 @@ let queryGcCode = null;
 const source_system = "CW";
 let nextOffset = 0;
 
+const apMasterDbName = "interface_ap_master_cw";
+const apDbName = "interface_ap_cw";
+
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
 
@@ -331,8 +334,8 @@ async function getDataGroupBy(connections) {
     const dateCheckOperator = "<";
     const query = `
         SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code 
-        FROM interface_ap_master iam
-        LEFT JOIN interface_ap ia ON 
+        FROM ${apMasterDbName} iam
+        LEFT JOIN ${apDbName} ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
         iam.invoice_type = ia.invoice_type and 
         iam.vendor_id = ia.vendor_id and 
@@ -363,8 +366,8 @@ async function getDataGroupBy(connections) {
 
 async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
   try {
-    let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-      left join interface_ap_master iam on 
+    let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM ${apDbName} ia 
+      left join ${apMasterDbName} iam on 
       ia.invoice_nbr = iam.invoice_nbr and
       ia.invoice_type = iam.invoice_type and 
       ia.vendor_id = iam.vendor_id and 
@@ -815,7 +818,7 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
 }
 
 /**
- * prepear the query for update interface_ap_master
+ * prepear the query for update ${apMasterDbName}
  * @param {*} item
  * @param {*} invoiceId
  * @param {*} isSuccess
@@ -824,7 +827,7 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
     console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
-    let query = `UPDATE interface_ap_master `;
+    let query = `UPDATE ${apMasterDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
     } else {

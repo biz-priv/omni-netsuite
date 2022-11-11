@@ -19,6 +19,9 @@ let nextOffset = 0;
 const today = getCustomDate();
 const source_system = "CW";
 
+const apMasterDbName = "interface_ap_master_cw";
+const apDbName = "interface_ap_cw";
+
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
   const checkIsRunning = await checkOldProcessIsRunning();
@@ -107,12 +110,7 @@ module.exports.handler = async (event, context, callback) => {
 
 async function getVendorData(connections) {
   try {
-    // const query = `SELECT distinct vendor_id FROM interface_ap_master
-    //                 where ((vendor_internal_id = '' and processed_date is null) or
-    //                         (vendor_internal_id = '' and processed_date <= '${today}'))
-    //                       and source_system = '${source_system}' order by vendor_id
-    //                       limit ${totalCountPerLoop + 1} offset ${nextOffset}`;
-    const query = `SELECT distinct vendor_id FROM interface_ap_master 
+    const query = `SELECT distinct vendor_id FROM ${apMasterDbName} 
                     where ((vendor_internal_id = '' and processed_date is null) or
                             (vendor_internal_id = '' and processed_date < '${today}'))
                           and source_system = '${source_system}' order by vendor_id 
@@ -129,8 +127,8 @@ async function getVendorData(connections) {
 
 async function getDataByVendorId(connections, vendor_id) {
   try {
-    const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-                  left join interface_ap_master iam on 
+    const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM ${apDbName} ia 
+                  left join ${apMasterDbName} iam on 
                   ia.invoice_nbr = iam.invoice_nbr and
                   ia.invoice_type = iam.invoice_type and 
                   ia.vendor_id = iam.vendor_id and 
@@ -154,7 +152,7 @@ async function putVendor(connections, vendorData, vendor_id) {
   try {
     let query = `INSERT INTO netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
                   VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','');`;
-    query += `UPDATE interface_ap_master SET 
+    query += `UPDATE ${apMasterDbName} SET 
                     processed = '',
                     vendor_internal_id = '${vendorData.entityInternalId}', 
                     processed_date = '${today}' 
@@ -226,7 +224,7 @@ function getVendor(entityId) {
 
 async function updateFailedRecords(connections, vendor_id) {
   try {
-    let query = `UPDATE interface_ap_master SET 
+    let query = `UPDATE ${apMasterDbName} SET 
                   processed = 'F',
                   processed_date = '${today}' 
                   WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;

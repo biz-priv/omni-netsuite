@@ -18,7 +18,7 @@ let totalCountPerLoop = 10;
 let nextOffset = 0;
 const today = getCustomDate();
 
-const arDbName = "interface_ar";
+const arDbName = "interface_ar_cw";
 const source_system = "CW";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);

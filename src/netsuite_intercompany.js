@@ -2,7 +2,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
-const dbc = pgp({ capSQL: true });
+const dbc = pgp({ capSQL: true, noLocking: false });
 const nodemailer = require("nodemailer");
 const { getConnection } = require("../Helpers/helper");
 
@@ -21,6 +21,9 @@ const userConfig = {
 const today = getCustomDate();
 const totalCountPerLoop = 5;
 const source_system = "CW";
+const arDbName = "interface_ar_cw";
+const apMasterDbName = "interface_ap_master_cw";
+const apDbName = "interface_ap_cw";
 
 module.exports.handler = async (event, context, callback) => {
   let hasMoreData = "false";
@@ -31,7 +34,7 @@ module.exports.handler = async (event, context, callback) => {
      */
     const connections = dbc(getConnection(process.env));
     /**
-     * Get invoice internal ids from interface_ap and interface_ar
+     * Get invoice internal ids from ${apDbName} and ${arDbName}
      */
     const invoiceData = await getData(connections);
     console.log("invoiceData", invoiceData.length);
@@ -39,9 +42,11 @@ module.exports.handler = async (event, context, callback) => {
 
     for (let i = 0; i < invoiceData.length; i++) {
       const item = invoiceData[i];
+      console.log("item", item);
       await mainProcess(connections, item);
       console.log("count", i + 1);
     }
+    console.log("count log", currentCount, totalCountPerLoop);
 
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
@@ -51,6 +56,7 @@ module.exports.handler = async (event, context, callback) => {
     dbc.end();
     return { hasMoreData };
   } catch (error) {
+    console.log("error:handler", error);
     dbc.end();
     return { hasMoreData: "false" };
   }
@@ -65,15 +71,15 @@ async function getData(connections) {
     const query = `
           select distinct ar.source_system , ar.file_nbr , ar.ar_internal_id , ap.ap_internal_id, ap.invoice_type
           from (select distinct source_system ,file_nbr ,invoice_nbr ,invoice_type ,unique_ref_nbr,internal_id as ar_internal_id ,total 
-              from interface_ar ia
+              from ${arDbName} ia
                 where source_system = '${source_system}' and intercompany = 'Y' and pairing_available_flag = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
                   (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
               )ar
           join
               (
                   select distinct a.source_system ,a.file_nbr ,a.invoice_nbr ,a.invoice_type ,a.unique_ref_nbr ,b.internal_id as ap_internal_id,total 
-                  from ( select * from interface_ap where intercompany = 'Y' and pairing_available_flag = 'Y' and source_system = '${source_system}')a
-                  join (select * from interface_ap_master 
+                  from ( select * from ${apDbName} where intercompany = 'Y' and pairing_available_flag = 'Y' and source_system = '${source_system}')a
+                  join (select * from ${apMasterDbName} 
                           where source_system = '${source_system}' and intercompany = 'Y' and pairing_available_flag = 'Y' and processed = 'P' and (intercompany_processed_date is null or 
                               (intercompany_processed = 'F' and intercompany_processed_date < '${today}'))
                   )b
@@ -94,6 +100,7 @@ async function getData(connections) {
     }
     return result;
   } catch (error) {
+    console.log("error:getData", error);
     throw "No data found.";
   }
 }
@@ -111,18 +118,24 @@ async function updateAPandAr(connections, item, processed = "P") {
       "AR " + item.ar_internal_id,
       processed
     );
-    const query = `UPDATE interface_ap_master set 
+    const query1 = `
+                UPDATE ${apMasterDbName} set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
                 where internal_id = '${item.ap_internal_id}' and source_system = '${source_system}';
-                
-                UPDATE interface_ar set 
+                `;
+    console.log("query1", query1);
+    await connections.query(query1);
+    const query2 = `
+                UPDATE ${arDbName} set 
                 intercompany_processed = '${processed}', 
                 intercompany_processed_date = '${today}'
                 where internal_id = '${item.ar_internal_id}' and source_system = '${source_system}';
               `;
-    await connections.query(query);
+    console.log("query2", query2);
+    await connections.query(query2);
   } catch (error) {
+    console.log("error:updateAPandAr", error);
     throw "Unable to Update";
   }
 }
@@ -132,6 +145,7 @@ async function mainProcess(connections, item) {
     await createInterCompanyInvoice(item);
     await updateAPandAr(connections, item);
   } catch (error) {
+    console.log("error:mainProcess", error);
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(connections, item, "F");
       await sendMail(error);
@@ -161,12 +175,13 @@ async function createInterCompanyInvoice(item) {
       };
     }
   } catch (error) {
+    console.log("error:createInterCompanyInvoice", error);
     throw {
       customError: true,
       arInvoiceId,
       apInvoiceId,
       transactionType,
-      data: error?.data ? res.data : error?.response?.data,
+      data: error?.data ?? error?.response?.data,
     };
   }
 }
