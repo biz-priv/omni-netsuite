@@ -26,6 +26,13 @@ const apMasterDbName = "interface_ap_master_cw";
 const apDbName = "interface_ap_cw";
 
 module.exports.handler = async (event, context, callback) => {
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
+
   let hasMoreData = "false";
   let currentCount = 0;
   try {
@@ -271,4 +278,38 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
+}
+
+async function checkOldProcessIsRunning() {
+  return new Promise((resolve, reject) => {
+    try {
+      //intercompant arn
+      const intercompany = process.env.NETSUITE_INTERCOMPANY_ARN;
+      const status = "RUNNING";
+      const stepfunctions = new AWS.StepFunctions();
+      stepfunctions.listExecutions(
+        {
+          stateMachineArn: intercompany,
+          statusFilter: status,
+          maxResults: 2,
+        },
+        (err, data) => {
+          console.log(" Intercompany listExecutions data", data);
+          const venExcList = data.executions;
+          if (
+            err === null &&
+            venExcList.length == 2 &&
+            venExcList[1].status === status
+          ) {
+            console.log("Intercompany running");
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        }
+      );
+    } catch (error) {
+      resolve(true);
+    }
+  });
 }
