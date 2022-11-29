@@ -220,7 +220,7 @@ function sendMail(
 
       const message = {
         from: `${title} <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com,mish@bizcloudexperts.com,kiranv@bizcloudexperts.com",
+        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com,mish@bizcloudexperts.com,kiranv@bizcloudexperts.com,ashish.akshantal@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com",
         // to:
         //   type === "INTERCOMPANY"
