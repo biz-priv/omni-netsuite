@@ -84,7 +84,7 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
-            // await createARFailedRecords(connections, singleItem, error);
+            await createARFailedRecords(connections, singleItem, error);
             // }
           }
         } catch (error) {}

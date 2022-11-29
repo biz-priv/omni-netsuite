@@ -293,12 +293,12 @@ async function mainProcess(item, invoiceDataList) {
         // const checkError = await checkSameError(singleItem, error);
         // if (!checkError) {
         await recordErrorResponse(singleItem, error);
-        // await createAPFailedRecords(connections, singleItem, error);
+        await createAPFailedRecords(connections, singleItem, error);
         // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
-        // await createAPFailedRecords(connections, singleItem, error);
+        await createAPFailedRecords(connections, singleItem, error);
         return getQuery;
       }
     }
@@ -786,7 +786,9 @@ async function createInvoiceAndUpdateLineItems(invoiceId, data) {
         SOAPAction: "update",
       },
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log("error", error);
+  }
 }
 
 /**

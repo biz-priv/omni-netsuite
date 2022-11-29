@@ -4,37 +4,77 @@ const { parse } = require("json2csv");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const { getConnection } = require("../Helpers/helper");
-
-let sourceSystem = "";
-let ssType = ""; // AP/ AR
+const mailList = {
+  WT: {
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+  },
+  CW: {
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+  },
+  M1: {
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+  },
+  TR: {
+    AR: process.env.NETSUIT_AR_TR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
+  },
+  INTERCOMPANY: {
+    CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    TR: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+  },
+};
 
 module.exports.handler = async (event, context, callback) => {
   try {
-    console.log("event", event);
-    // event = { source_system: "WT", ss_type: "AR" };
-    sourceSystem = event.source_system;
-    ssType = event.ss_type;
-    const dataList = {
-      WT: {
-        sql: "",
-      },
-      CW: {
-        sql: "",
-      },
-      M1: {
-        sql: "",
-      },
-      TR: {
-        sql: "",
-      },
-    };
+    const sourceSystemList = ["WT", "CW", "M1", "TR"];
     /**
      * Get connections
      */
     const connections = dbc(getConnection(process.env));
-    const data = await getReportData(connections);
-    if (data.length == 0) return;
+    for (let index = 0; index < sourceSystemList.length; index++) {
+      const sourceSystem = sourceSystemList[index];
+      await generateCsvAndMail(connections, sourceSystem, "AR");
+      await generateCsvAndMail(connections, sourceSystem, "AP");
+      if (["CW", "TR"].includes(sourceSystem)) {
+        await generateCsvAndMail(
+          connections,
+          sourceSystem,
+          "INTERCOMPANY",
+          "AP"
+        );
+        await generateCsvAndMail(
+          connections,
+          sourceSystem,
+          "INTERCOMPANY",
+          "AR"
+        );
+      }
+    }
 
+    return "Success";
+  } catch (error) {
+    console.log("error", error);
+    return "Failed";
+  }
+};
+
+async function generateCsvAndMail(
+  connections,
+  sourceSystem,
+  type,
+  intercompanyType = null
+) {
+  try {
+    const data = await getReportData(
+      connections,
+      sourceSystem,
+      type,
+      intercompanyType
+    );
+    if (!data || data.length == 0) return;
     /**
      * create csv
      */
@@ -45,46 +85,124 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * send mail
      */
-    const filename = `Netsuite-${sourceSystem}-${ssType}-${
+    const filename = `Netsuite-${sourceSystem}-${type}-${
       process.env.STAGE
     }-report-${moment().format("DD-MM-YYYY")}.csv`;
-    await sendMail(filename, csv);
+    await sendMail(filename, csv, sourceSystem, type, intercompanyType);
 
-    return "completed";
+    /**
+     * Update rows
+     */
+    const maxId = Math.max(...data.map((e) => e.id));
+    console.log("sourceSystem, type, maxId", sourceSystem, type, maxId);
+    if (intercompanyType === null || intercompanyType === "AR") {
+      await updateReportData(connections, sourceSystem, type, maxId);
+    }
   } catch (error) {
-    console.log("error", error);
-    return "Failed";
-  }
-  // var lambda = new aws.Lambda({
-  //   region: 'us-west-2' //change to your region
-  // });
-
-  // lambda.invoke({
-  //   FunctionName: 'name_of_your_lambda_function',
-  //   Payload: JSON.stringify(event, null, 2) // pass params
-  // }, function(error, data) {
-  //   if (error) {
-  //     context.done('error', error);
-  //   }
-  //   if(data.Payload){
-  //    context.succeed(data.Payload)
-  //   }
-  // });
-};
-
-async function getReportData(connections) {
-  try {
-    const query = `select source_system,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,invoice_type,handling_stn,charge_cd,charge_cd_internal_id,currency,total,intercompany,error_msg
-                    from interface_ar_api_logs where source_system = 'TR'`;
-
-    return await connections.query(query);
-  } catch (error) {
-    console.log("error", error);
-    throw "No data found.";
+    console.log("error:generateCsvAndMail", error);
   }
 }
 
-function sendMail(filename, content) {
+async function getReportData(
+  connections,
+  sourceSystem,
+  type,
+  intercompanyType
+) {
+  try {
+    let query = "";
+    if (type === "AP") {
+      // AP
+      query = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
+              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+    } else if (type === "AR") {
+      // AR
+      query = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
+              from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+    } else {
+      // INTERCOMPANY
+      if (sourceSystem === "CW") {
+        if (intercompanyType === "AP") {
+          query = `                             
+          select distinct ap.*,apm.processed ,apm.intercompany_processed,apm.vendor_internal_id, ial.error_msg, ial.id 
+          from public.interface_ap_cw ap
+          join public.interface_ap_master_cw apm 
+          on ap.invoice_nbr =apm.invoice_nbr
+          and ap.vendor_id =apm.vendor_id and ap.invoice_type =apm.invoice_type
+          join interface_intercompany_api_logs ial on ial.source_system = apm.source_system 
+          and ial.ap_internal_id = apm.internal_id and ial.file_nbr = apm.file_nbr 
+          where ap.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+        } else {
+          query = `                             
+            select distinct ar.*, ial.error_msg, ial.id 
+            from public.interface_ar_cw ar
+            join interface_intercompany_api_logs ial on ial.source_system = ar.source_system 
+            and ial.ar_internal_id  = ar.internal_id and ial.file_nbr = ar.file_nbr 
+            where ar.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+        }
+      } else {
+        if (intercompanyType === "AP") {
+          query = `                             
+          select distinct ap.*,apm.processed ,apm.intercompany_processed,apm.vendor_internal_id, ial.error_msg, ial.id 
+          from public.interface_ap ap
+          join public.interface_ap_master apm 
+          on ap.invoice_nbr =apm.invoice_nbr
+          and ap.vendor_id =apm.vendor_id and ap.invoice_type =apm.invoice_type
+          join interface_intercompany_api_logs ial on ial.source_system = apm.source_system 
+          and ial.ap_internal_id = apm.internal_id and ial.file_nbr = apm.file_nbr 
+          where ap.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+        } else {
+          query = `                             
+            select distinct ar.*, ial.error_msg, ial.id
+            from public.interface_ar ar
+            join interface_intercompany_api_logs ial on ial.source_system = ar.source_system 
+            and ial.ar_internal_id  = ar.internal_id and ial.file_nbr = ar.file_nbr 
+            where ar.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+        }
+      }
+    }
+    const data = await connections.query(query);
+    if (data && data.length > 0) {
+      return data.map((e) => ({
+        source_system: e.source_system,
+        error_msg: e.error_msg,
+        ...e,
+      }));
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.log("error:getReportData", error);
+    return [];
+  }
+}
+
+async function updateReportData(connections, sourceSystem, type, maxId) {
+  try {
+    let table = "";
+    if (type === "AP") {
+      table = "interface_ap_api_logs";
+    } else if (type === "AR") {
+      table = "interface_ar_api_logs";
+    } else {
+      table = "interface_intercompany_api_logs";
+    }
+    const query = `Update ${table} set is_report_sent ='P' 
+              where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
+    console.log("query", query);
+    return await connections.query(query);
+  } catch (error) {
+    console.log("error:updateReportData", error);
+  }
+}
+
+function sendMail(
+  filename,
+  content,
+  sourceSystem,
+  type,
+  intercompanyType = null
+) {
   return new Promise((resolve, reject) => {
     try {
       const transporter = nodemailer.createTransport({
@@ -96,11 +214,18 @@ function sendMail(filename, content) {
           pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
         },
       });
-      const title = `Netsuite ${sourceSystem} ${ssType} Report ${process.env.STAGE.toUpperCase()}`;
+      const title = `Netsuite ${sourceSystem} ${type} ${
+        intercompanyType ? intercompanyType : ""
+      } Report ${process.env.STAGE.toUpperCase()}`;
+
       const message = {
         from: `${title} <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com",
+        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com,mish@bizcloudexperts.com,kiranv@bizcloudexperts.com,ashish.akshantal@bizcloudexperts.com",
+        // to: "kazi.ali@bizcloudexperts.com",
+        // to:
+        //   type === "INTERCOMPANY"
+        //     ? mailList[type][sourceSystem]
+        //     : mailList[sourceSystem][type],
         subject: title,
         attachments: [{ filename, content }],
         html: `
