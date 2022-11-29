@@ -57,7 +57,6 @@ module.exports.handler = async (event, context, callback) => {
       await mainProcess(connections, item);
       console.log("count", i + 1);
     }
-    console.log("count log", currentCount, totalCountPerLoop);
 
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";

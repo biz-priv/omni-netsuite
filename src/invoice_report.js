@@ -94,10 +94,8 @@ async function generateCsvAndMail(
      * Update rows
      */
     const maxId = Math.max(...data.map((e) => e.id));
-    console.log("data high", maxId);
-    if (intercompanyType === null) {
-      await updateReportData(connections, sourceSystem, type, maxId);
-    } else if (intercompanyType === "AR") {
+    console.log("sourceSystem, type, maxId", sourceSystem, type, maxId);
+    if (intercompanyType === null || intercompanyType === "AR") {
       await updateReportData(connections, sourceSystem, type, maxId);
     }
   } catch (error) {
@@ -195,7 +193,6 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
     return await connections.query(query);
   } catch (error) {
     console.log("error:updateReportData", error);
-    // throw "Unable to update";
   }
 }
 
@@ -218,17 +215,17 @@ function sendMail(
         },
       });
       const title = `Netsuite ${sourceSystem} ${type} ${
-        intercompanyType ?? intercompanyType
+        intercompanyType ? intercompanyType : ""
       } Report ${process.env.STAGE.toUpperCase()}`;
 
       const message = {
         from: `${title} <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+        // to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com",
         // to: "kazi.ali@bizcloudexperts.com",
-        // to:
-        //   type === "INTERCOMPANY"
-        //     ? mailList[type][sourceSystem]
-        //     : mailList[sourceSystem][type],
+        to:
+          type === "INTERCOMPANY"
+            ? mailList[type][sourceSystem]
+            : mailList[sourceSystem][type],
         subject: title,
         attachments: [{ filename, content }],
         html: `
