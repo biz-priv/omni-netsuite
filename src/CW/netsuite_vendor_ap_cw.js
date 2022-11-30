@@ -83,7 +83,7 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
-            // await createAPFailedRecords(connections, singleItem, error);
+            await createAPFailedRecords(connections, singleItem, error);
             // }
           }
         } catch (error) {}

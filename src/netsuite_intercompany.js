@@ -5,7 +5,10 @@ const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true, noLocking: false });
 const nodemailer = require("nodemailer");
-const { getConnection } = require("../Helpers/helper");
+const {
+  getConnection,
+  createIntercompanyFailedRecords,
+} = require("../Helpers/helper");
 
 const userConfig = {
   account: process.env.NETSUIT_AR_ACCOUNT,
@@ -54,7 +57,6 @@ module.exports.handler = async (event, context, callback) => {
       await mainProcess(connections, item);
       console.log("count", i + 1);
     }
-    console.log("count log", currentCount, totalCountPerLoop);
 
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
@@ -156,6 +158,7 @@ async function mainProcess(connections, item) {
     console.log("error:mainProcess", error);
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(connections, item, "F");
+      await createIntercompanyFailedRecords(connections, item, error);
       await sendMail(error);
     }
   }

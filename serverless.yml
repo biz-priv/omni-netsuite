@@ -10,7 +10,6 @@ provider:
   memorySize: 256
   deploymentBucket: ${ssm:/omni-dw/${self:provider.stage}/sls/deployment/bucket}
   role: ${ssm:/omni-dw/${self:provider.stage}/lambda/role}
-  # apiName: ${self:service}-api-${self:provider.stage}
   vpc:
     securityGroupIds:
       - ${ssm:/omni-dw/${self:provider.stage}/lambda/sgId}
@@ -52,17 +51,6 @@ provider:
     NETSUIT_AP_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/dynamo/errorTable}
     NETSUIT_AR_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/TR/errorEmail/to}
     NETSUIT_AP_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/TR/errorEmail/to}
-
-# custom:
-#   prod:
-#     domainName: api.omnilogistics.com
-#     certificateName: api.omnilogistics.com
-#   apiKeys: ${file(config/${self:provider.stage}ApiKeys.yaml):keys}
-
-#   standardResponseHeaders:
-#     "Access-Control-Allow-Origin": "'*'"
-#     "Access-Control-Allow-Credentials": "'true'"
-#     "Access-Control-Allow-Headers": "'*'"
 
 plugins:
   - serverless-offline

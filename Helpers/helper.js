@@ -81,7 +81,7 @@ function getConnection(env) {
 }
 
 /**
- * handle error logs
+ * handle error logs AR
  */
 async function createARFailedRecords(connections, item, error) {
   try {
@@ -93,31 +93,49 @@ async function createARFailedRecords(connections, item, error) {
       invoice_nbr: item?.invoice_nbr ?? null,
       invoice_date:
         item?.invoice_date && moment(item?.invoice_date).isValid()
-          ? "'" + moment(item?.invoice_date).format("YYYY-MM-DD HH:mm:ss") + "'"
+          ? moment(item?.invoice_date).format("YYYY-MM-DD HH:mm:ss")
           : null,
       housebill_nbr: item?.housebill_nbr ?? null,
+      master_bill_nbr: item?.master_bill_nbr ?? null,
       invoice_type: item?.invoice_type ?? null,
-      handling_stn: item?.handling_stn ?? null,
+      controlling_stn: item?.controlling_stn ?? null,
       charge_cd: item?.charge_cd ?? null,
-      charge_cd_internal_id: item?.charge_cd_internal_id ?? null,
-      currency: item?.currency ?? null,
       total: item?.total ?? null,
+      curr_cd: item?.curr_cd ?? null,
+      posted_date:
+        item?.posted_date && moment(item?.posted_date).isValid()
+          ? moment(item?.posted_date).format("YYYY-MM-DD HH:mm:ss")
+          : null,
+      gc_code: item?.gc_code ?? null,
+      tax_code: item?.tax_code ?? null,
+      unique_ref_nbr: item?.unique_ref_nbr ?? null,
+      internal_ref_nbr: item?.internal_ref_nbr ?? null,
+      order_ref: item?.order_ref ?? null,
+      ee_invoice: item?.ee_invoice ?? null,
       intercompany: item?.intercompany ?? null,
-      error_msg: error?.msg + " Subsidiary: " + item.subsidiary,
-      response: error?.response ?? null,
+      error_msg: error?.msg + " Subsidiary: " + item?.subsidiary,
       payload: null,
+      response: error?.response ?? null,
+      is_report_sent: "N",
+      current_dt: moment().format("YYYY-MM-DD"),
     };
     // console.log("formatData", formatData);
-    const query = `
-      INSERT INTO interface_ar_api_logs 
-      (source_system, file_nbr, customer_id, subsidiary, invoice_nbr, invoice_date, housebill_nbr, invoice_type, 
-        handling_stn, charge_cd, charge_cd_internal_id, currency, total, intercompany, error_msg, response, 
-        payload )
-      VALUES ('${formatData.source_system}', '${formatData.file_nbr}', '${formatData.customer_id}', '${formatData.subsidiary}', 
-              '${formatData.invoice_nbr}', ${formatData.invoice_date}, '${formatData.housebill_nbr}', '${formatData.invoice_type}', 
-              '${formatData.handling_stn}', '${formatData.charge_cd}', '${formatData.charge_cd_internal_id}', '${formatData.currency}', 
-              '${formatData.total}', '${formatData.intercompany}', '${formatData.error_msg}', '${formatData.response}', '${formatData.payload}');
-    `;
+
+    let tableStr = "";
+    let valueStr = "";
+    let objKyes = Object.keys(formatData);
+    objKyes.map((e, i) => {
+      if (i > 0) {
+        valueStr += ",";
+      }
+      valueStr += "'" + formatData[e] + "'";
+    });
+    tableStr = objKyes.join(",");
+
+    console.log("tableStr", tableStr);
+    console.log("valueStr", valueStr);
+
+    const query = `INSERT INTO interface_ar_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
     await connections.query(query);
   } catch (error) {
@@ -126,7 +144,7 @@ async function createARFailedRecords(connections, item, error) {
 }
 
 /**
- * handle error logs
+ * handle error logs AP
  */
 async function createAPFailedRecords(connections, item, error) {
   try {
@@ -138,40 +156,94 @@ async function createAPFailedRecords(connections, item, error) {
       invoice_nbr: item?.invoice_nbr ?? null,
       invoice_date:
         item?.invoice_date && moment(item?.invoice_date).isValid()
-          ? "'" + moment(item?.invoice_date).format("YYYY-MM-DD HH:mm:ss") + "'"
+          ? moment(item?.invoice_date).format("YYYY-MM-DD HH:mm:ss")
           : null,
       housebill_nbr: item?.housebill_nbr ?? null,
+      master_bill_nbr: item.master_bill_nbr ?? null,
       invoice_type: item?.invoice_type ?? null,
-      handling_stn: item?.handling_stn ?? null,
-      charge_cd: item?.charge_cd ?? null,
-      charge_cd_internal_id: item?.charge_cd_internal_id ?? null,
+      controlling_stn: item.controlling_stn ?? null,
       currency: item?.currency ?? null,
+      charge_cd: item?.charge_cd ?? null,
       total: item?.total ?? null,
+      posted_date:
+        item?.posted_date && moment(item?.posted_date).isValid()
+          ? moment(item?.posted_date).format("YYYY-MM-DD HH:mm:ss")
+          : null,
+      gc_code: item.gc_code ?? null,
+      tax_code: item.tax_code ?? null,
+      unique_ref_nbr: item.unique_ref_nbr ?? null,
+      internal_ref_nbr: item.internal_ref_nbr ?? null,
       intercompany: item?.intercompany ?? null,
       error_msg: error?.msg + " Subsidiary: " + item.subsidiary,
-      response: error?.response ?? null,
       payload: null,
+      response: error?.response ?? null,
+      is_report_sent: "N",
+      current_dt: moment().format("YYYY-MM-DD"),
     };
     // console.log("formatData", formatData);
-    const query = `
-      INSERT INTO interface_ap_api_logs 
-      (source_system, file_nbr, vendor_id, subsidiary, invoice_nbr, invoice_date, housebill_nbr, invoice_type, 
-        handling_stn, charge_cd, charge_cd_internal_id, currency, total, intercompany, error_msg, response, 
-        payload )
-      VALUES ('${formatData.source_system}', '${formatData.file_nbr}', '${formatData.vendor_id}', '${formatData.subsidiary}', 
-              '${formatData.invoice_nbr}', ${formatData.invoice_date}, '${formatData.housebill_nbr}', '${formatData.invoice_type}', 
-              '${formatData.handling_stn}', '${formatData.charge_cd}', '${formatData.charge_cd_internal_id}', '${formatData.currency}', 
-              '${formatData.total}', '${formatData.intercompany}', '${formatData.error_msg}', '${formatData.response}', '${formatData.payload}');
-    `;
+
+    let tableStr = "";
+    let valueStr = "";
+    let objKyes = Object.keys(formatData);
+    objKyes.map((e, i) => {
+      if (i > 0) {
+        valueStr += ",";
+      }
+      valueStr += "'" + formatData[e] + "'";
+    });
+    tableStr = objKyes.join(",");
+
+    console.log("tableStr", tableStr);
+    console.log("valueStr", valueStr);
+
+    const query = `INSERT INTO interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
     await connections.query(query);
   } catch (error) {
     console.log("createAPFailedRecords:error", error);
   }
 }
+
+/**
+ * handle error logs AP
+ */
+async function createIntercompanyFailedRecords(connections, item, error) {
+  try {
+    const formatData = {
+      source_system: item.source_system,
+      invoice_type: item.invoice_type,
+      file_nbr: item.file_nbr,
+      ar_internal_id: item.ar_internal_id,
+      ap_internal_id: item.ap_internal_id,
+      error_msg: error.data.error.message,
+      is_report_sent: "N",
+      current_dt: moment().format("YYYY-MM-DD"),
+    };
+    console.log("formatData", formatData);
+
+    let tableStr = "";
+    let valueStr = "";
+    let objKyes = Object.keys(formatData);
+    objKyes.map((e, i) => {
+      if (i > 0) {
+        valueStr += ",";
+      }
+      valueStr += "'" + formatData[e] + "'";
+    });
+    tableStr = objKyes.join(",");
+
+    const query = `INSERT INTO interface_intercompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    console.log("query", query);
+    await connections.query(query);
+  } catch (error) {
+    console.log("createIntercompanyFailedRecords:error", error);
+  }
+}
+
 module.exports = {
   getConfig,
   getConnection,
   createARFailedRecords,
   createAPFailedRecords,
+  createIntercompanyFailedRecords,
 };
