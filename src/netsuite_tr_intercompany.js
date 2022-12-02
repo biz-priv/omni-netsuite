@@ -245,7 +245,7 @@ function sendMail(data) {
             <title>Netsuite Error</title>
         </head>
         <body>
-          <h3>Error msg:- ${data.data.error.message} </h3>
+          <h3>Error msg:- ${data?.data?.error?.message ?? ""} </h3>
           <p> Error Obj:- </p> <pre> ${JSON.stringify(data, null, 4)} </pre>
         </body>
         </html>
