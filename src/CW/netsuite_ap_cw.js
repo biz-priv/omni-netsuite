@@ -668,7 +668,9 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
         },
         "q1:class": {
           "@internalId":
-            hardcode.class.line[e.business_segment.split(":")[1].trim()], //hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
         },
         "q1:location": {
           "@externalId": e.handling_stn,
@@ -873,7 +875,20 @@ function getHardcodeData(isIntercompany = false) {
     source_system: "1",
     class: {
       head: "9",
-      line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
+      line: {
+        international: 3,
+        domestic: 2,
+        warehouse: 16,
+        vas: 5,
+        sorting: 35,
+        "system level testing (slt)": 34,
+        "value added services": 33,
+        storage: 45,
+        wh1: 18,
+        wh2: 37,
+        wh3: 38,
+        wh4: 39,
+      },
     },
     department: {
       default: { head: "15", line: "2" },
