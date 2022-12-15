@@ -349,7 +349,7 @@ async function getDataGroupBy(connections) {
               and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
                     iam.intercompany='N'
                   )
-              and iam.source_system = '${source_system}' and iam.invoice_nbr != '' 
+              and iam.source_system = '${source_system}' and iam.invoice_nbr != '' and iam.gc_code is not null
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
         having tc ${queryOperator} ${lineItemPerProcess} 
         ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
@@ -500,7 +500,9 @@ function makeJsonToXml(payload, data, vendorData) {
         },
         "q1:class": {
           "@internalId":
-            hardcode.class.line[e.business_segment.split(":")[1].trim()], //hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
         },
         "q1:location": {
           "@externalId": e.handling_stn,
