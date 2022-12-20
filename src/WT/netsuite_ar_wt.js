@@ -10,6 +10,7 @@ const {
   getConfig,
   getConnection,
   createARFailedRecords,
+  triggerReportLambda,
 } = require("../../Helpers/helper");
 
 let userConfig = "";
@@ -66,12 +67,14 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
+      await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AR");
       hasMoreData = "false";
     }
     dbc.end();
     return { hasMoreData };
   } catch (error) {
     dbc.end();
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AR");
     return { hasMoreData: "false" };
   }
 };

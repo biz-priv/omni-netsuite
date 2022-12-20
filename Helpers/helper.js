@@ -1,4 +1,7 @@
 const moment = require("moment");
+const AWS = require("aws-sdk");
+const lambda = new AWS.Lambda();
+
 /**
  * Config for Netsuite
  * @param {*} source_system
@@ -240,10 +243,41 @@ async function createIntercompanyFailedRecords(connections, item, error) {
   }
 }
 
+/**
+ * send report lambda trigger function
+ */
+function triggerReportLambda(functionName, payloadData) {
+  return new Promise((resolve, reject) => {
+    try {
+      lambda.invoke(
+        {
+          FunctionName: functionName,
+          Payload: JSON.stringify({ invPayload: payloadData }, null, 2),
+        },
+        function (error, data) {
+          if (error) {
+            console.log("error: unable to send report", error);
+            resolve("failed");
+          }
+          if (data.Payload) {
+            console.log(data.Payload);
+            resolve("success");
+          }
+        }
+      );
+    } catch (error) {
+      console.log("error:triggerReportLambda", error);
+      console.log("unable to send report");
+      resolve("failed");
+    }
+  });
+}
+
 module.exports = {
   getConfig,
   getConnection,
   createARFailedRecords,
   createAPFailedRecords,
   createIntercompanyFailedRecords,
+  triggerReportLambda,
 };
