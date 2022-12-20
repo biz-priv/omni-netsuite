@@ -11,6 +11,7 @@ const {
   getConfig,
   getConnection,
   createAPFailedRecords,
+  triggerReportLambda,
 } = require("../../Helpers/helper");
 
 let userConfig = "";
@@ -114,6 +115,10 @@ module.exports.handler = async (event, context, callback) => {
             console.log("orderData", orderData.length);
           } catch (error) {
             dbc.end();
+            await triggerReportLambda(
+              process.env.NETSUIT_INVOICE_REPORT,
+              "WT_AP"
+            );
             return { hasMoreData: "false" };
           }
           queryInvoiceNbr = orderData[0].invoice_nbr;
@@ -223,6 +228,7 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log("error", error);
     dbc.end();
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
     return { hasMoreData: "false" };
   }
 };

@@ -29,31 +29,26 @@ const mailList = {
 
 module.exports.handler = async (event, context, callback) => {
   try {
-    const sourceSystemList = ["WT", "CW", "M1", "TR"];
-    /**
-     * Get connections
-     */
-    const connections = dbc(getConnection(process.env));
-    for (let index = 0; index < sourceSystemList.length; index++) {
-      const sourceSystem = sourceSystemList[index];
-      await generateCsvAndMail(connections, sourceSystem, "AR");
-      await generateCsvAndMail(connections, sourceSystem, "AP");
-      if (["CW", "TR"].includes(sourceSystem)) {
-        await generateCsvAndMail(
-          connections,
-          sourceSystem,
-          "INTERCOMPANY",
-          "AP"
-        );
-        await generateCsvAndMail(
-          connections,
-          sourceSystem,
-          "INTERCOMPANY",
-          "AR"
-        );
-      }
-    }
+    console.log(event);
 
+    const connections = dbc(getConnection(process.env));
+    const eventData = event.invPayload;
+    const sourceSystem = eventData.split("_")[0];
+    const reportType = eventData.split("_")[1];
+    console.log(sourceSystem, reportType);
+
+    if (reportType === "AR") {
+      console.log("AR");
+      await generateCsvAndMail(connections, sourceSystem, "AR");
+    } else if (reportType === "AP") {
+      console.log("AP");
+      await generateCsvAndMail(connections, sourceSystem, "AP");
+    } else {
+      //intercompany
+      console.log("intercompany");
+      await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AP");
+      await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AR");
+    }
     return "Success";
   } catch (error) {
     console.log("error", error);
