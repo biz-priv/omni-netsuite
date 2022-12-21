@@ -108,12 +108,12 @@ async function getReportData(
     let query = "";
     if (type === "AP") {
       // AP
-      query = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
-              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
-    } else if (type === "AR") {
-      // AR
       query = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
               from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+    } else if (type === "AR") {
+      // AR
+      query = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
+              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
     } else {
       // INTERCOMPANY
       if (sourceSystem === "CW") {
@@ -156,7 +156,9 @@ async function getReportData(
         }
       }
     }
+    console.log("query:getReportData", query);
     const data = await connections.query(query);
+    console.log("query:data", data.length);
     if (data && data.length > 0) {
       return data.map((e) => ({
         source_system: e.source_system,
@@ -182,8 +184,10 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
     } else {
       table = "interface_intercompany_api_logs";
     }
-    const query = `Update ${table} set is_report_sent ='P' 
-              where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
+    const query = `Update ${table} set 
+                  is_report_sent ='P', 
+                  report_sent_time = '${moment().format("YYYY-MM-DD H:m:s")}' 
+                  where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
     console.log("query", query);
     return await connections.query(query);
   } catch (error) {

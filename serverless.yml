@@ -20,11 +20,6 @@ provider:
     CreateBy: BizCloudExperts
     Version: "1.0"
     Environment: ${self:provider.stage}
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - lambda:InvokeFunction
-      Resource: "*"
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
