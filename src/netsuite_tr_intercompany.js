@@ -226,6 +226,7 @@ function getAuthorizationHeader(url) {
 }
 
 function sendMail(data) {
+  return {};
   return new Promise((resolve, reject) => {
     try {
       const transporter = nodemailer.createTransport({

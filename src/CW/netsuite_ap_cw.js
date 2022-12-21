@@ -943,6 +943,7 @@ async function recordErrorResponse(item, error) {
 }
 
 function sendMail(data) {
+  return {};
   return new Promise((resolve, reject) => {
     try {
       let errorObj = JSON.parse(JSON.stringify(data));
