@@ -528,6 +528,7 @@ async function recordErrorResponse(item, error) {
  * @returns
  */
 function sendMail(data) {
+  return {};
   return new Promise((resolve, reject) => {
     try {
       let errorObj = JSON.parse(JSON.stringify(data));
