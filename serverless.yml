@@ -51,6 +51,7 @@ provider:
     NETSUIT_AP_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/dynamo/errorTable}
     NETSUIT_AR_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/TR/errorEmail/to}
     NETSUIT_AP_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/TR/errorEmail/to}
+    NETSUIT_INVOICE_REPORT: ${self:service}-invoice-report-${self:provider.stage}
 
 plugins:
   - serverless-offline

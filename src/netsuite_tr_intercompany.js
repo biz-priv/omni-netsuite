@@ -8,6 +8,7 @@ const nodemailer = require("nodemailer");
 const {
   getConnection,
   createIntercompanyFailedRecords,
+  triggerReportLambda,
 } = require("../Helpers/helper");
 
 const userConfig = {
@@ -56,12 +57,20 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
+      await triggerReportLambda(
+        process.env.NETSUIT_INVOICE_REPORT,
+        "TR_INTERCOMPANY"
+      );
       hasMoreData = "false";
     }
     dbc.end();
     return { hasMoreData };
   } catch (error) {
     dbc.end();
+    await triggerReportLambda(
+      process.env.NETSUIT_INVOICE_REPORT,
+      "TR_INTERCOMPANY"
+    );
     return { hasMoreData: "false" };
   }
 };
@@ -217,6 +226,7 @@ function getAuthorizationHeader(url) {
 }
 
 function sendMail(data) {
+  return {};
   return new Promise((resolve, reject) => {
     try {
       const transporter = nodemailer.createTransport({

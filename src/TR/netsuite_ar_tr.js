@@ -10,6 +10,7 @@ const {
   getConfig,
   getConnection,
   createARFailedRecords,
+  triggerReportLambda,
 } = require("../../Helpers/helper");
 
 let userConfig = "";
@@ -72,6 +73,7 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
+      await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "TR_AR");
       await startNextStep();
       hasMoreData = "false";
     }
@@ -79,6 +81,7 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData, nextOffsetCount };
   } catch (error) {
     dbc.end();
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "TR_AR");
     await startNextStep();
     return { hasMoreData: "false" };
   }
@@ -534,6 +537,7 @@ async function recordErrorResponse(item, error) {
  * @returns
  */
 function sendMail(data) {
+  return {};
   return new Promise((resolve, reject) => {
     try {
       let errorObj = JSON.parse(JSON.stringify(data));
