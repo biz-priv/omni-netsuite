@@ -355,7 +355,7 @@ async function getDataGroupBy(connections) {
               and ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR 
                     iam.intercompany='N'
                   )
-              and iam.source_system = '${source_system}' and iam.invoice_nbr != '' and iam.gc_code is not null
+              and iam.source_system = '${source_system}' and iam.invoice_nbr != '' and iam.gc_code is not null and ia.gc_code is not null
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
         having tc ${queryOperator} ${lineItemPerProcess} 
         ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
@@ -896,6 +896,7 @@ function getHardcodeData(isIntercompany = false) {
         wh2: 37,
         wh3: 38,
         wh4: 39,
+        "local delivery": 17,
       },
     },
     department: {
