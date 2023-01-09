@@ -135,7 +135,7 @@ async function getReportData(
             and ial.ar_internal_id  = ar.internal_id and ial.file_nbr = ar.file_nbr 
             where ar.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
         }
-      } else {
+      } else if (sourceSystem === "TR") {
         if (intercompanyType === "AP") {
           query = `                             
           select distinct ap.*,apm.processed ,apm.intercompany_processed,apm.vendor_internal_id, ial.error_msg, ial.id 
@@ -145,14 +145,14 @@ async function getReportData(
           and ap.vendor_id =apm.vendor_id and ap.invoice_type =apm.invoice_type
           join interface_intercompany_api_logs ial on ial.source_system = apm.source_system 
           and ial.ap_internal_id = apm.internal_id and ial.file_nbr = apm.file_nbr 
-          where ap.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+          where ap.intercompany ='Y' and ial.source_system ='TR' and ial.is_report_sent ='N'`;
         } else {
           query = `                             
             select distinct ar.*, ial.error_msg, ial.id
             from public.interface_ar ar
             join interface_intercompany_api_logs ial on ial.source_system = ar.source_system 
             and ial.ar_internal_id  = ar.internal_id and ial.file_nbr = ar.file_nbr 
-            where ar.intercompany ='Y' and ial.source_system ='CW' and ial.is_report_sent ='N'`;
+            where ar.intercompany ='Y' and ial.source_system ='TR' and ial.is_report_sent ='N'`;
         }
       }
     }
