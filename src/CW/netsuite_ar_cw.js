@@ -502,6 +502,7 @@ function getHardcodeData(isIntercompany = false) {
         wh2: 37,
         wh3: 38,
         wh4: 39,
+        "local delivery": 17,
       },
     },
     department: {
