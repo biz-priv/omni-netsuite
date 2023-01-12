@@ -3,7 +3,7 @@ const moment = require("moment");
 const { parse } = require("json2csv");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
-const { getConnection } = require("../Helpers/helper");
+const { getConnection, sendDevNotification } = require("../Helpers/helper");
 const mailList = {
   WT: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -28,30 +28,34 @@ const mailList = {
 };
 
 module.exports.handler = async (event, context, callback) => {
+  let sourceSystem = "",
+    reportType = "";
   try {
     console.log(event);
 
     const connections = dbc(getConnection(process.env));
     const eventData = event.invPayload;
-    const sourceSystem = eventData.split("_")[0];
-    const reportType = eventData.split("_")[1];
-    console.log(sourceSystem, reportType);
+    sourceSystem = eventData.split("_")[0];
+    reportType = eventData.split("_")[1];
 
     if (reportType === "AR") {
-      console.log("AR");
       await generateCsvAndMail(connections, sourceSystem, "AR");
     } else if (reportType === "AP") {
-      console.log("AP");
       await generateCsvAndMail(connections, sourceSystem, "AP");
     } else {
-      //intercompany
-      console.log("intercompany");
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AP");
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AR");
     }
     return "Success";
   } catch (error) {
     console.log("error", error);
+    await sendDevNotification(
+      "INVOICE-REPOR-" + sourceSystem,
+      reportType,
+      "invoice_report main fn",
+      event.invPayload,
+      error
+    );
     return "Failed";
   }
 };
@@ -95,6 +99,13 @@ async function generateCsvAndMail(
     }
   } catch (error) {
     console.log("error:generateCsvAndMail", error);
+    await sendDevNotification(
+      "INVOICE-REPOR-" + sourceSystem,
+      reportType,
+      "invoice_report generateCsvAndMail",
+      {},
+      error
+    );
   }
 }
 
@@ -192,6 +203,7 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
     return await connections.query(query);
   } catch (error) {
     console.log("error:updateReportData", error);
+    throw error;
   }
 }
 

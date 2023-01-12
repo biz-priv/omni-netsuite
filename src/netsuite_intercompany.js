@@ -9,6 +9,7 @@ const {
   getConnection,
   createIntercompanyFailedRecords,
   triggerReportLambda,
+  sendDevNotification,
 } = require("../Helpers/helper");
 
 const userConfig = {
@@ -155,7 +156,13 @@ async function updateAPandAr(connections, item, processed = "P") {
     await connections.query(query2);
   } catch (error) {
     console.log("error:updateAPandAr", error);
-    throw "Unable to Update";
+    await sendDevNotification(
+      "INVOICE-INTERCOMPANY",
+      "CW",
+      "netsuite_intercompany updateAPandAr",
+      item,
+      error
+    );
   }
 }
 
@@ -168,7 +175,15 @@ async function mainProcess(connections, item) {
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(connections, item, "F");
       await createIntercompanyFailedRecords(connections, item, error);
-      await sendMail(error);
+      // await sendMail(error);
+    } else {
+      await sendDevNotification(
+        "INVOICE-INTERCOMPANY",
+        "CW",
+        "netsuite_intercompany mainProcess",
+        item,
+        error
+      );
     }
   }
 }

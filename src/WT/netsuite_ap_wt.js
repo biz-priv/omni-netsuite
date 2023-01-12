@@ -269,7 +269,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * Make Json to Xml payload
      */
-    const xmlPayload = makeJsonToXml(
+    const xmlPayload = await makeJsonToXml(
       JSON.parse(JSON.stringify(payload)),
       dataList,
       vendorData
@@ -407,7 +407,7 @@ function getOAuthKeys(configuration) {
   return res;
 }
 
-function makeJsonToXml(payload, data, vendorData) {
+async function makeJsonToXml(payload, data, vendorData) {
   try {
     const auth = getOAuthKeys(userConfig);
 
@@ -592,6 +592,13 @@ function makeJsonToXml(payload, data, vendorData) {
     const doc = create(payload);
     return doc.end({ prettyPrint: true });
   } catch (error) {
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_wt makeJsonToXml",
+      data[0],
+      error
+    );
     throw "Unable to make xml";
   }
 }
@@ -603,7 +610,7 @@ function makeJsonToXml(payload, data, vendorData) {
  * @param {*} data
  * @returns
  */
-function makeJsonToXmlForLineItems(internalId, linePayload, data) {
+async function makeJsonToXmlForLineItems(internalId, linePayload, data) {
   try {
     const auth = getOAuthKeys(userConfig);
     const hardcode = getHardcodeData();
@@ -722,6 +729,13 @@ function makeJsonToXmlForLineItems(internalId, linePayload, data) {
     const doc = create(linePayload);
     return doc.end({ prettyPrint: true });
   } catch (error) {
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_wt makeJsonToXmlForLineItems",
+      data[0],
+      error
+    );
     throw "Unable to make xml";
   }
 }
@@ -791,7 +805,7 @@ async function createInvoice(soapPayload, type) {
 
 async function createInvoiceAndUpdateLineItems(invoiceId, data) {
   try {
-    const lineItemXml = makeJsonToXmlForLineItems(
+    const lineItemXml = await makeJsonToXmlForLineItems(
       invoiceId,
       JSON.parse(JSON.stringify(lineItemPayload)),
       data
@@ -829,7 +843,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
 
     return query;
   } catch (error) {
-    return "query";
+    return "";
   }
 }
 
@@ -844,6 +858,13 @@ async function updateInvoiceId(connections, query) {
     const result = await connections.query(query);
     return result;
   } catch (error) {
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_wt updateInvoiceId",
+      "Invoice is created But failed to update internal_id " + query,
+      error
+    );
     throw {
       customError: true,
       msg: "Vendor Bill is created But failed to update internal_id",

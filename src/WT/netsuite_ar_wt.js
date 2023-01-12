@@ -11,6 +11,7 @@ const {
   getConnection,
   createARFailedRecords,
   triggerReportLambda,
+  sendDevNotification,
 } = require("../../Helpers/helper");
 
 let userConfig = "";
@@ -112,7 +113,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * Make Json to Xml payload
      */
-    const xmlPayload = makeJsonToXml(
+    const xmlPayload = await makeJsonToXml(
       JSON.parse(JSON.stringify(payload)),
       dataList,
       customerData
@@ -215,7 +216,7 @@ function getOAuthKeys(configuration) {
   return res;
 }
 
-function makeJsonToXml(payload, data, customerData) {
+async function makeJsonToXml(payload, data, customerData) {
   try {
     /**
      * get auth keys
@@ -379,6 +380,13 @@ function makeJsonToXml(payload, data, customerData) {
     const doc = create(payload);
     return doc.end({ prettyPrint: true });
   } catch (error) {
+    await sendDevNotification(
+      source_system,
+      "AR",
+      "netsuite_ar_wt makeJsonToXml",
+      data[0],
+      error
+    );
     throw "Unable to make xml";
   }
 }
@@ -469,10 +477,17 @@ async function updateInvoiceId(connections, query) {
     const result = await connections.query(query);
     return result;
   } catch (error) {
+    await sendDevNotification(
+      source_system,
+      "AR",
+      "netsuite_ar_wt updateInvoiceId",
+      "Invoice is created But failed to update internal_id " + query,
+      error
+    );
     throw {
       customError: true,
       msg: "Invoice is created But failed to update internal_id",
-      invoiceId,
+      query,
     };
   }
 }
