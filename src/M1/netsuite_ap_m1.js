@@ -296,11 +296,11 @@ async function mainProcess(item, invoiceDataList) {
       let getQuery = "";
       try {
         getQuery = getUpdateQuery(singleItem, null, false);
-        // const checkError = await checkSameError(singleItem, error);
-        // if (!checkError) {
+        if (error.hasOwnProperty("msg") && error.msg === "Unable to make xml") {
+          return getQuery;
+        }
         await recordErrorResponse(singleItem, error);
         await createAPFailedRecords(connections, singleItem, error);
-        // }
         return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
@@ -588,7 +588,11 @@ async function makeJsonToXml(payload, data, vendorData) {
       data[0],
       error
     );
-    throw "Unable to make xml";
+    throw {
+      customError: true,
+      msg: "Unable to make xml",
+      data: data[0],
+    };
   }
 }
 

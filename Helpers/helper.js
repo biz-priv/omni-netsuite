@@ -294,11 +294,8 @@ function sendDevNotification(
       });
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to:
-          process.env.NETSUIT_AR_ERROR_EMAIL_TO +
-          ",mish@bizcloudexperts.com,ashish.akshantal@bizcloudexperts.com",
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
+        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com,mish@bizcloudexperts.com,ashish.akshantal@bizcloudexperts.com",
         subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>
