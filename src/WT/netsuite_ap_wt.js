@@ -842,7 +842,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
-    query += ` processed_date = '${today}'  WHERE invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
+    query += ` processed_date = '${today}'  WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
               and vendor_id = '${item.vendor_id}';`;
 
     return query;
