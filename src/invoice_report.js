@@ -23,7 +23,8 @@ const mailList = {
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-    TR: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    TR:
+      process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",natalief.hkg@trinityworld.com",
   },
 };
 
