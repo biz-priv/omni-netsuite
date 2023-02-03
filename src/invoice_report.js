@@ -18,8 +18,12 @@ const mailList = {
     AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
   },
   TR: {
-    AR: process.env.NETSUIT_AR_TR_ERROR_EMAIL_TO,
-    AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
+    AR:
+      process.env.NETSUIT_AR_TR_ERROR_EMAIL_TO +
+      ",natalief.hkg@trinityworld.com",
+    AP:
+      process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO +
+      ",natalief.hkg@trinityworld.com",
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
