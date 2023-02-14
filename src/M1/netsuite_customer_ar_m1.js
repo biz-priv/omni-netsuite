@@ -7,6 +7,7 @@ const {
   getConfig,
   getConnection,
   createARFailedRecords,
+  sendDevNotification,
 } = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
@@ -60,15 +61,13 @@ module.exports.handler = async (event, context, callback) => {
         await putCustomer(connections, customerData, customer_id);
         console.log("count", i + 1);
       } catch (error) {
+        let singleItem = "";
         try {
           if (error.hasOwnProperty("customError")) {
             /**
              * update error
              */
-            const singleItem = await getDataByCustomerId(
-              connections,
-              customer_id
-            );
+            singleItem = await getDataByCustomerId(connections, customer_id);
             await updateFailedRecords(connections, customer_id);
             /**
              * check if same error from dynamo db
@@ -81,7 +80,15 @@ module.exports.handler = async (event, context, callback) => {
             await createARFailedRecords(connections, singleItem, error);
             // }
           }
-        } catch (error) {}
+        } catch (error) {
+          await sendDevNotification(
+            source_system,
+            "AR",
+            "netsuite_customer_ar_m1 for loop",
+            singleItem,
+            error
+          );
+        }
       }
     }
 

@@ -7,6 +7,7 @@ const {
   getConfig,
   getConnection,
   createAPFailedRecords,
+  sendDevNotification,
 } = require("../../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
@@ -58,12 +59,13 @@ module.exports.handler = async (event, context, callback) => {
         await putVendor(connections, vendorData, vendor_id);
         console.log("count", i + 1);
       } catch (error) {
+        let singleItem = "";
         try {
           if (error.hasOwnProperty("customError")) {
             /**
              * update error
              */
-            const singleItem = await getDataByVendorId(connections, vendor_id);
+            singleItem = await getDataByVendorId(connections, vendor_id);
             await updateFailedRecords(connections, vendor_id);
             /**
              * check if same error from dynamo db
@@ -76,7 +78,15 @@ module.exports.handler = async (event, context, callback) => {
             await createAPFailedRecords(connections, singleItem, error);
             // }
           }
-        } catch (error) {}
+        } catch (error) {
+          await sendDevNotification(
+            source_system,
+            "AP",
+            "netsuite_vendor_ap_wt for loop",
+            singleItem,
+            error
+          );
+        }
       }
     }
 
