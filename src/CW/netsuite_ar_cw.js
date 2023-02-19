@@ -491,13 +491,15 @@ async function updateInvoiceId(connections, query) {
     const result = await connections.query(query);
     return result;
   } catch (error) {
-    await sendDevNotification(
-      source_system,
-      "AR",
-      "netsuite_ar_cw updateInvoiceId",
-      "Invoice is created But failed to update internal_id " + query,
-      error
-    );
+    if (query.length > 0) {
+      await sendDevNotification(
+        source_system,
+        "AR",
+        "netsuite_ar_cw updateInvoiceId",
+        "Invoice is created But failed to update internal_id " + query,
+        error
+      );
+    }
     throw {
       customError: true,
       msg: "Invoice is created But failed to update internal_id",
