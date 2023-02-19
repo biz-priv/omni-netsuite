@@ -203,10 +203,15 @@ module.exports.handler = async (event, context, callback) => {
 
       try {
         invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-        console.log("orderData", orderData.length);
+        console.log("orderData**", orderData.length);
         currentCount = orderData.length;
         invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
       } catch (error) {
+        console.log("error:getInvoiceNbrData:try:catch", error);
+        console.log(
+          "invoiceIDs:try:catch found on getDataGroupBy but not in getInvoiceNbrData",
+          invoiceIDs
+        );
         return {
           hasMoreData: "true",
           queryOperator,
@@ -883,13 +888,15 @@ async function updateInvoiceId(connections, query) {
     const result = await connections.query(query);
     return result;
   } catch (error) {
-    await sendDevNotification(
-      source_system,
-      "AP",
-      "netsuite_ap_tr updateInvoiceId",
-      "Invoice is created But failed to update internal_id " + query,
-      error
-    );
+    if (query.length > 0) {
+      await sendDevNotification(
+        source_system,
+        "AP",
+        "netsuite_ap_tr updateInvoiceId",
+        "Invoice is created But failed to update internal_id " + query,
+        error
+      );
+    }
     throw {
       customError: true,
       msg: "Vendor Bill is created But failed to update internal_id",
