@@ -86,7 +86,7 @@ module.exports.handler = async (event, context, callback) => {
           await sendDevNotification(
             source_system,
             "AR",
-            "netsuite_customer_ar_tr for loop",
+            "netsuite_customer_ar_tr for loop customer_id" + customer_id,
             singleItem,
             error
           );

@@ -82,7 +82,7 @@ module.exports.handler = async (event, context, callback) => {
           await sendDevNotification(
             source_system,
             "AP",
-            "netsuite_vendor_ap_wt for loop",
+            "netsuite_vendor_ap_wt for loop vendor id =" + vendor_id,
             singleItem,
             error
           );
