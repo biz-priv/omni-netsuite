@@ -325,6 +325,7 @@ async function mainProcess(item, invoiceDataList) {
         }
         await recordErrorResponse(singleItem, error);
         await createAPFailedRecords(connections, singleItem, error);
+        return getQuery;
       } catch (error) {
         await recordErrorResponse(singleItem, error);
         await createAPFailedRecords(connections, singleItem, error);
@@ -365,6 +366,7 @@ async function getDataGroupBy(connections) {
         having tc ${queryOperator} ${lineItemPerProcess} 
         ORDER BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code 
         limit ${totalCountPerLoop + 1} `;
+    console.log("query", query);
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
