@@ -601,6 +601,18 @@ async function makeJsonToXml(payload, data, vendorData) {
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
         value: singleItem.master_bill_nbr ?? "",
       },
+      {
+        "@internalId": "2673", //mode
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.mode_name ?? "",
+      },
+      {
+        "@internalId": "2674", //service level
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.service_level ?? "",
+      },
     ];
 
     /**
@@ -929,6 +941,14 @@ function getHardcodeData(isIntercompany = false) {
         wh3: 38,
         wh4: 39,
         "local delivery": 17,
+        air: 50,
+        "customs brokerage": 52,
+        expedite: 53,
+        "ground standard": 54,
+        ocean: 55,
+        "small pack": 56,
+        tl: 57,
+        "warehouse/vas": 58,
       },
     },
     department: {

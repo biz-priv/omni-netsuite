@@ -281,7 +281,9 @@ async function makeJsonToXml(payload, data, customerData) {
         },
         "q1:class": {
           "@internalId":
-            hardcode.class.line[e.business_segment.split(":")[1].trim()], //,hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
         },
         "q1:location": {
           "@externalId": e.handling_stn,
@@ -350,6 +352,18 @@ async function makeJsonToXml(payload, data, customerData) {
           "@typeId": "752",
           "@internalId": hardcode.source_system,
         },
+      },
+      {
+        "@internalId": "2673", //mode
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.mode_name ?? "",
+      },
+      {
+        "@internalId": "2674", //service level
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.service_level ?? "",
       },
     ];
 
@@ -491,7 +505,29 @@ function getHardcodeData() {
     source_system: "3",
     class: {
       head: "9",
-      line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
+      line: {
+        international: 3,
+        domestic: 2,
+        warehouse: 16,
+        vas: 5,
+        sorting: 35,
+        "system level testing (slt)": 34,
+        "value added services": 33,
+        storage: 45,
+        wh1: 18,
+        wh2: 37,
+        wh3: 38,
+        wh4: 39,
+        "local delivery": 17,
+        air: 50,
+        "customs brokerage": 52,
+        expedite: 53,
+        "ground standard": 54,
+        ocean: 55,
+        "small pack": 56,
+        tl: 57,
+        "warehouse/vas": 58,
+      },
     },
     department: { head: "15", line: "1" },
     location: { head: "18", line: "EXT ID: Take from DB" },
