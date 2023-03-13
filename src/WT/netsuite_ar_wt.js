@@ -63,6 +63,8 @@ module.exports.handler = async (event, context, callback) => {
       );
       queryData += data.join("");
     }
+    return {};
+
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {
@@ -118,6 +120,8 @@ async function mainProcess(item, invoiceDataList) {
       dataList,
       customerData
     );
+    console.log("xmlPayload", xmlPayload);
+    return {};
 
     /**
      * create Netsuit Invoice
@@ -131,6 +135,8 @@ async function mainProcess(item, invoiceDataList) {
     getUpdateQueryList += getQuery;
     return getUpdateQueryList;
   } catch (error) {
+    return {};
+
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
@@ -153,9 +159,7 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr,invoice_type FROM ${arDbName} where
-    ((internal_id is null and processed != 'F' and customer_internal_id != '') or
-     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
-    and source_system = '${source_system}' and invoice_nbr != ''
+    source_system = '${source_system}' and invoice_nbr = 'IAH3340965-00'
     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
@@ -513,27 +517,53 @@ function getHardcodeData() {
     class: {
       head: "9",
       line: {
-        international: 3,
-        domestic: 2,
-        warehouse: 16,
-        vas: 5,
-        sorting: 35,
-        "system level testing (slt)": 34,
-        "value added services": 33,
-        storage: 45,
-        wh1: 18,
-        wh2: 37,
-        wh3: 38,
-        wh4: 39,
-        "local delivery": 17,
-        air: 50,
-        "customs brokerage": 52,
-        expedite: 53,
-        "ground standard": 54,
-        ocean: 55,
-        "small pack": 56,
-        tl: 57,
-        "warehouse/vas": 58,
+        domestic: "2",
+        international: "3",
+        warehouse: "16",
+        vas: "44",
+        administration: "8",
+        "balance sheet": "9",
+        customs: "15",
+        "local delivery": "17",
+        wh1: "18",
+        stw: "19",
+        wc12: "20",
+        wc18: "21",
+        tx12: "22",
+        tx18: "23",
+        tx19: "24",
+        tx23: "25",
+        gtwc11: "26",
+        gtwc13: "27",
+        gtwc16: "28",
+        gtwc20: "29",
+        gtwc26: "30",
+        gtwc28: "31",
+        gtwc30: "32",
+        "value added services": "33",
+        "system level testing": "34",
+        sorting: "35",
+        wine: "36",
+        wh2: "37",
+        wh3: "38",
+        wh4: "39",
+        wh5: "40",
+        "face mask": "41",
+        wholesale: "42",
+        "e-commerce": "43",
+        storage: "45",
+        returns: "46",
+        receiving: "47",
+        edi: "48",
+        "administration - addback": "49",
+        "ground standard": "50",
+        tl: "51",
+        expedite: "52",
+        air: "53",
+        ocean: "54",
+        "warehouse/vas": "55",
+        "small pack": "56",
+        "customs brokerage": "57",
       },
     },
     department: { head: "15", line: "1" },
