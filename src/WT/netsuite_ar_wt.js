@@ -63,8 +63,6 @@ module.exports.handler = async (event, context, callback) => {
       );
       queryData += data.join("");
     }
-    return {};
-
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {
@@ -120,8 +118,6 @@ async function mainProcess(item, invoiceDataList) {
       dataList,
       customerData
     );
-    console.log("xmlPayload", xmlPayload);
-    return {};
 
     /**
      * create Netsuit Invoice
@@ -135,8 +131,6 @@ async function mainProcess(item, invoiceDataList) {
     getUpdateQueryList += getQuery;
     return getUpdateQueryList;
   } catch (error) {
-    return {};
-
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
@@ -159,7 +153,9 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr,invoice_type FROM ${arDbName} where
-    source_system = '${source_system}' and invoice_nbr = 'IAH3340965-00'
+    ((internal_id is null and processed != 'F' and customer_internal_id != '') or
+     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+    and source_system = '${source_system}' and invoice_nbr != ''
     limit ${totalCountPerLoop + 1}`;
 
     const result = await connections.query(query);
