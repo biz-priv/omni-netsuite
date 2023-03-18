@@ -15,7 +15,7 @@ const Search = NetSuite.Search;
 
 let userConfig = "";
 
-let totalCountPerLoop = 10;
+let totalCountPerLoop = 5;
 let nextOffset = 0;
 const today = getCustomDate();
 const source_system = "CW";
