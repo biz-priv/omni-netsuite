@@ -15,7 +15,7 @@ const Search = NetSuite.Search;
 
 let userConfig = "";
 
-let totalCountPerLoop = 10;
+let totalCountPerLoop = 5;
 const today = getCustomDate();
 
 const arDbName = "interface_ar";
