@@ -13,6 +13,7 @@ const {
   createAPFailedRecords,
   triggerReportLambda,
 } = require("../../Helpers/helper");
+const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
 let userConfig = "";
 let connections = "";
@@ -484,7 +485,9 @@ async function makeJsonToXml(payload, data, vendorData) {
         },
         "q1:class": {
           "@internalId":
-            hardcode.class.line[e.business_segment.split(":")[1].trim()], //hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
         },
         "q1:location": {
           "@externalId": e.handling_stn,
@@ -571,6 +574,18 @@ async function makeJsonToXml(payload, data, vendorData) {
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
         value: singleItem.master_bill_nbr ?? "",
+      },
+      {
+        "@internalId": "2673", //mode
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.mode_name ?? "",
+      },
+      {
+        "@internalId": "2674", //service level
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.service_level ?? "",
       },
     ];
 
@@ -661,7 +676,9 @@ async function makeJsonToXmlForLineItems(internalId, linePayload, data) {
         },
         "q1:class": {
           "@internalId":
-            hardcode.class.line[e.business_segment.split(":")[1].trim()], //hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ], //hardcode.class.line, // class International - 3, Domestic - 2, Warehouse - 4,
         },
         "q1:location": {
           "@externalId": e.handling_stn,
@@ -881,7 +898,7 @@ function getHardcodeData(isIntercompany = false) {
     source_system: "3",
     class: {
       head: "9",
-      line: { International: 3, Domestic: 2, Warehouse: 16, VAS: 5 },
+      line: getBusinessSegment(process.env.STAGE),
     },
     department: {
       default: { head: "15", line: "2" },
