@@ -355,7 +355,6 @@ async function makeJsonToXml(payload, data, customerData) {
         },
       },
       {
-        // process.env.STAGE.toUpperCase() == "DEV" ? "2765" : "2698", //Destination Zip prod 2698 Sandbox 2765
         "@internalId": "2698",
         "@xsi:type": "StringCustomFieldRef",
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
