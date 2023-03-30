@@ -379,18 +379,24 @@ async function makeJsonToXml(payload, data, customerData) {
           "@internalId": hardcode.source_system,
         },
       },
-      // {
-      //   "@internalId": "2673", //mode
-      //   "@xsi:type": "StringCustomFieldRef",
-      //   "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-      //   value: singleItem?.mode_name ?? "",
-      // },
-      // {
-      //   "@internalId": "2674", //service level
-      //   "@xsi:type": "StringCustomFieldRef",
-      //   "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-      //   value: singleItem?.service_level ?? "",
-      // },
+      {
+        "@internalId": "2698",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.zip_code ?? "",
+      },
+      {
+        "@internalId": "2673", //mode
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.mode_name ?? "",
+      },
+      {
+        "@internalId": "2674", //service level
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.service_level ?? "",
+      },
     ];
 
     /**
