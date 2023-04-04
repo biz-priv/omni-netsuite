@@ -13,6 +13,7 @@ const {
   triggerReportLambda,
   sendDevNotification,
 } = require("../../Helpers/helper");
+const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
 let userConfig = "";
 let connections = "";
@@ -366,18 +367,24 @@ async function makeJsonToXml(payload, data, customerData) {
           "@internalId": hardcode.source_system,
         },
       },
-      // {
-      //   "@internalId": "2673", //mode
-      //   "@xsi:type": "StringCustomFieldRef",
-      //   "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-      //   value: singleItem?.mode_name ?? "",
-      // },
-      // {
-      //   "@internalId": "2674", //service level
-      //   "@xsi:type": "StringCustomFieldRef",
-      //   "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
-      //   value: singleItem?.service_level ?? "",
-      // },
+      {
+        "@internalId": "2698",
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.zip_code ?? "",
+      },
+      {
+        "@internalId": "2673", //mode
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.mode_name ?? "",
+      },
+      {
+        "@internalId": "2674", //service level
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.service_level ?? "",
+      },
     ];
 
     /**
@@ -518,29 +525,7 @@ function getHardcodeData() {
     source_system: "2",
     class: {
       head: "9",
-      line: {
-        international: 3,
-        domestic: 2,
-        warehouse: 16,
-        vas: 5,
-        sorting: 35,
-        "system level testing (slt)": 34,
-        "value added services": 33,
-        storage: 45,
-        wh1: 18,
-        wh2: 37,
-        wh3: 38,
-        wh4: 39,
-        "local delivery": 17,
-        air: 50,
-        "customs brokerage": 52,
-        expedite: 53,
-        "ground standard": 54,
-        ocean: 55,
-        "small pack": 56,
-        tl: 57,
-        "warehouse/vas": 58,
-      },
+      line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
     location: { head: "18", line: "EXT ID: Take from DB" },
