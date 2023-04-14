@@ -120,12 +120,153 @@ async function getReportData(
     let query = "";
     if (type === "AP") {
       // AP
-      query = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
-              from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
+              from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
+              error_msg NOT LIKE '%Vendor not found%'`;
+      const nonVenErrdata = await connections.query(queryNonVenErr);
+      console.log("nonVenErrdata", nonVenErrdata.length);
+      const queryVenErr = `select vendor_id from interface_ap_api_logs where source_system = '${sourceSystem}' 
+                          and is_report_sent ='N' and error_msg LIKE '%Vendor not found%'`;
+      const querySelectors = `ia.subsidiary, iam.source_system, 'Vendor not found. (vendor_id: '||iam.vendor_id||') Subsidiary: '||ia.subsidiary as error_msg`;
+      let mainQuery = "";
+      if (sourceSystem == "TR") {
+        mainQuery = ` SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors}
+        FROM interface_ap_master iam
+        LEFT JOIN interface_ap ia ON 
+        iam.invoice_nbr = ia.invoice_nbr and 
+        iam.invoice_type = ia.invoice_type and 
+        iam.vendor_id = ia.vendor_id and 
+        iam.gc_code = ia.gc_code and 
+        iam.source_system = ia.source_system and 
+        iam.file_nbr = ia.file_nbr 
+        where iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
+      } else if (sourceSystem == "WT") {
+        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ${querySelectors}
+        FROM interface_ap_master iam
+        LEFT JOIN interface_ap ia ON 
+        iam.invoice_nbr = ia.invoice_nbr and 
+        iam.invoice_type = ia.invoice_type and 
+        iam.vendor_id = ia.vendor_id and 
+        iam.gc_code = ia.gc_code and 
+        iam.source_system = ia.source_system and 
+        iam.file_nbr = ia.file_nbr 
+        where iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
+      } else if (sourceSystem == "CW") {
+        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
+        FROM interface_ap_master_cw iam
+        LEFT JOIN interface_ap_cw ia ON 
+        iam.invoice_nbr = ia.invoice_nbr and 
+        iam.invoice_type = ia.invoice_type and 
+        iam.vendor_id = ia.vendor_id and 
+        iam.gc_code = ia.gc_code and 
+        iam.source_system = ia.source_system and 
+        iam.file_nbr = ia.file_nbr
+        where iam.processed ='F' and iam.vendor_id in (${queryVenErr})  
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system;`;
+      } else if (sourceSystem == "M1") {
+        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type,${querySelectors}
+        FROM interface_ap_master iam
+        LEFT JOIN interface_ap ia ON
+        iam.invoice_nbr = ia.invoice_nbr and
+        iam.invoice_type = ia.invoice_type and
+        iam.vendor_id = ia.vendor_id and
+        iam.gc_code = ia.gc_code and
+        iam.source_system = ia.source_system and
+        iam.file_nbr = ia.file_nbr
+        where iam.processed ='F' and iam.vendor_id in (${queryVenErr})
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
+      }
+      console.log("mainQuery", mainQuery);
+      const data = await connections.query(mainQuery);
+      console.log("data", data.length);
+      if (data && data.length > 0) {
+        const formatedData = data.map((e) => ({
+          source_system: e?.source_system ?? "",
+          error_msg: e?.error_msg ?? "",
+          file_nbr: e?.file_nbr ?? "",
+          vendor_id: e?.vendor_id ?? "",
+          subsidiary: e?.subsidiary ?? "",
+          invoice_nbr: e?.invoice_nbr ?? "",
+          invoice_date: e?.invoice_date ?? "",
+          housebill_nbr: e?.housebill_nbr ?? "",
+          master_bill_nbr: e?.master_bill_nbr ?? "",
+          invoice_type: e?.invoice_type ?? "",
+          controlling_stn: e?.controlling_stn ?? "",
+          currency: e?.currency ?? "",
+          charge_cd: e?.charge_cd ?? "",
+          total: e?.total ?? "",
+          posted_date: e?.posted_date ?? "",
+          gc_code: e?.gc_code ?? "",
+          tax_code: e?.tax_code ?? "",
+          unique_ref_nbr: e?.unique_ref_nbr ?? "",
+          internal_ref_nbr: e?.internal_ref_nbr ?? "",
+          intercompany: e?.intercompany ?? "",
+          id: e?.id ?? "",
+        }));
+        return [...formatedData, ...nonVenErrdata];
+      } else {
+        return nonVenErrdata;
+      }
     } else if (type === "AR") {
       // AR
-      query = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
-              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
+              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
+              error_msg NOT LIKE '%Customer not found%'`;
+      const nonCuErrdata = await connections.query(queryNonCuErr);
+      console.log("nonCuErrdata", nonCuErrdata.length);
+
+      const queryCuErr = `select customer_id from interface_ar_api_logs where source_system = '${sourceSystem}' 
+                          and is_report_sent ='N' and error_msg LIKE '%Customer not found%'`;
+      const querySelectors = `subsidiary, source_system, 'Customer not found. (customer_id: '||customer_id||') Subsidiary: '||subsidiary as error_msg`;
+      let mainQuery = "";
+      if (sourceSystem == "TR") {
+        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
+        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+      } else if (sourceSystem == "WT") {
+        mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
+        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+      } else if (sourceSystem == "CW") {
+        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
+        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+      } else if (sourceSystem == "M1") {
+        mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
+        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+      }
+      console.log("mainQuery", mainQuery);
+      const data = await connections.query(mainQuery);
+      console.log("data", data.length);
+      if (data && data.length > 0) {
+        const formatedData = data.map((e) => ({
+          source_system: e?.source_system ?? "",
+          error_msg: e?.error_msg ?? "",
+          file_nbr: e?.file_nbr ?? "",
+          customer_id: e?.customer_id ?? "",
+          subsidiary: e?.subsidiary ?? "",
+          invoice_nbr: e?.invoice_nbr ?? "",
+          invoice_date: e?.invoice_date ?? "",
+          housebill_nbr: e?.housebill_nbr ?? "",
+          master_bill_nbr: e?.master_bill_nbr ?? "",
+          invoice_type: e?.invoice_type ?? "",
+          controlling_stn: e?.controlling_stn ?? "",
+          charge_cd: e?.charge_cd ?? "",
+          curr_cd: e?.curr_cd ?? "",
+          total: e?.total ?? "",
+          posted_date: e?.posted_date ?? "",
+          gc_code: e?.gc_code ?? "",
+          tax_code: e?.tax_code ?? "",
+          unique_ref_nbr: e?.unique_ref_nbr ?? "",
+          internal_ref_nbr: e?.internal_ref_nbr ?? "",
+          order_ref: e?.order_ref ?? "",
+          ee_invoice: e?.ee_invoice ?? "",
+          intercompany: e?.intercompany ?? "",
+          id: e?.id ?? "",
+        }));
+        return [...formatedData, ...nonCuErrdata];
+      } else {
+        return nonCuErrdata;
+      }
     } else {
       // INTERCOMPANY
       if (sourceSystem === "CW") {
@@ -167,18 +308,19 @@ async function getReportData(
             where ar.intercompany ='Y' and ial.source_system ='TR' and ial.is_report_sent ='N'`;
         }
       }
-    }
-    console.log("query:getReportData", query);
-    const data = await connections.query(query);
-    console.log("query:data", data.length);
-    if (data && data.length > 0) {
-      return data.map((e) => ({
-        source_system: e.source_system,
-        error_msg: e.error_msg,
-        ...e,
-      }));
-    } else {
-      return [];
+
+      console.log("query:getReportData", query);
+      const data = await connections.query(query);
+      console.log("query:data", data.length);
+      if (data && data.length > 0) {
+        return data.map((e) => ({
+          source_system: e.source_system,
+          error_msg: e.error_msg,
+          ...e,
+        }));
+      } else {
+        return [];
+      }
     }
   } catch (error) {
     console.log("error:getReportData", error);
