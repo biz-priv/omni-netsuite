@@ -229,7 +229,7 @@ async function getReportData(
         from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
-        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar_cw where processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "M1") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;

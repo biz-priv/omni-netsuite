@@ -189,6 +189,9 @@ module.exports.handler = async (event, context, callback) => {
       try {
         invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
         console.log("orderData**", orderData.length);
+        if (orderData.length === 1) {
+          console.log("length==1", orderData);
+        }
         currentCount = orderData.length;
         invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
       } catch (error) {
