@@ -46,6 +46,7 @@ module.exports.handler = async (event, context, callback) => {
     currentCount = vendorList.length;
     for (let i = 0; i < vendorList.length; i++) {
       const vendor_id = vendorList[i].vendor_id;
+      console.log("vendor_id", vendor_id);
       try {
         /**
          * get vendor from netsuit
@@ -58,6 +59,7 @@ module.exports.handler = async (event, context, callback) => {
         await putVendor(connections, vendorData, vendor_id);
         console.log("count", i + 1);
       } catch (error) {
+        console.log("error:forloop", error);
         let singleItem = "";
         try {
           if (error.hasOwnProperty("customError")) {
@@ -217,6 +219,7 @@ async function putVendor(connections, vendorData, vendor_id) {
                     WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
     await connections.query(query);
   } catch (error) {
+    console.log("error:putVendor", error);
     throw "Vendor Update Failed";
   }
 }
@@ -247,6 +250,8 @@ function getVendor(entityId) {
         return service.search(search);
       })
       .then((result, raw, soapHeader) => {
+        console.log("vendorAPI:result", JSON.stringify(result));
+
         if (result && result?.searchResult?.recordList?.record.length > 0) {
           const recordList = result.searchResult.recordList.record;
           let record = recordList.filter(
@@ -259,12 +264,14 @@ function getVendor(entityId) {
               entityInternalId: record["$attributes"].internalId,
             });
           } else {
+            console.log("exact matching record not found");
             reject({
               customError: true,
               msg: `Vendor not found. (vendor_id: ${entityId})`,
             });
           }
         } else {
+          console.log("No record found");
           reject({
             customError: true,
             msg: `Vendor not found. (vendor_id: ${entityId})`,
@@ -272,6 +279,8 @@ function getVendor(entityId) {
         }
       })
       .catch((err) => {
+        console.log("entityId", entityId);
+        console.log("vendorFetchAPi:error", err);
         reject({
           customError: false,
           msg: `Vendor Api failed. (vendor_id: ${entityId})`,
