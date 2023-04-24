@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/MC-LEOD/netsuite_customer_ar_mcl.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-ar-mcl-${self:provider.stage}
+  description: Netsuite customer AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/MC-LEOD/netsuite_customer_ar_mcl.js
+      - Helpers/**
+  environment:
+    NETSUITE_MCL_AR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-mcl-state-machine-${self:provider.stage}
+    NETSUITE_AR_MCL_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-customer-ar-mcl-state-machine-${self:provider.stage}
