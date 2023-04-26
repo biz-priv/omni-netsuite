@@ -1,14 +1,11 @@
 const AWS = require("aws-sdk");
-const NetSuite = require("node-suitetalk");
+var NsApiWrapper = require("netsuite-rest");
 const {
   getConfig,
   getConnectionToRds,
   createARFailedRecords,
   sendDevNotification,
 } = require("../../Helpers/helper");
-const Configuration = NetSuite.Configuration;
-const Service = NetSuite.Service;
-const Search = NetSuite.Search;
 
 let userConfig = "";
 
@@ -20,12 +17,12 @@ const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "TMS";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -140,7 +137,9 @@ async function getDataByCustomerId(connections, cus_id) {
   try {
     const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
     console.log("query", query);
-    const result = await connections.query(query);
+    const [rows] = await connections.execute(query);
+    const result = rows;
+    console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
@@ -177,48 +176,27 @@ async function putCustomer(connections, customerData, customer_id) {
 
 function getcustomer(entityId) {
   return new Promise((resolve, reject) => {
-    const config = new Configuration(userConfig);
-    const service = new Service(config);
-    service
-      .init()
-      .then((/**/) => {
-        // Set search preferences
-        const searchPreferences = new Search.SearchPreferences();
-        searchPreferences.pageSize = 50;
-        service.setSearchPreferences(searchPreferences);
-
-        // Create basic search
-        const search = new Search.Basic.CustomerSearchBasic();
-
-        const nameStringField = new Search.Fields.SearchStringField();
-        nameStringField.field = "entityId";
-        nameStringField.operator = "is";
-        nameStringField.searchValue = entityId;
-
-        search.searchFields.push(nameStringField);
-
-        return service.search(search);
-      })
-      .then((result, raw, soapHeader) => {
-        console.log("result", JSON.stringify(result));
-        if (result && result?.searchResult?.recordList?.record.length > 0) {
-          const recordList = result.searchResult.recordList.record;
-          console.log("recordList", recordList);
-          let record = recordList.filter(
-            (e) => e.entityId.toUpperCase() == entityId.toUpperCase()
-          );
-          if (record.length > 0) {
-            record = record[0];
-            resolve({
-              entityId: record.entityId,
-              entityInternalId: record["$attributes"].internalId,
-            });
-          } else {
-            reject({
-              customError: true,
-              msg: `Customer not found. (customer_id: ${entityId})`,
-            });
-          }
+    const NsApi = new NsApiWrapper({
+      consumer_key: userConfig.token.consumer_key,
+      consumer_secret_key: userConfig.token.consumer_secret,
+      token: userConfig.token.token_key,
+      token_secret: userConfig.token.token_secret,
+      realm: userConfig.account,
+    });
+    NsApi.request({
+      path: `record/v1/customer/eid:${entityId}`,
+    })
+      .then((response) => {
+        console.log("response", JSON.stringify(response.data));
+        const recordList = response.data;
+        console.log(recordList.id);
+        if (recordList && recordList.id) {
+          const record = recordList;
+          console.log("record", record);
+          resolve({
+            entityId: record.entityId,
+            entityInternalId: record.id,
+          });
         } else {
           reject({
             customError: true,
@@ -227,9 +205,10 @@ function getcustomer(entityId) {
         }
       })
       .catch((err) => {
+        console.log("error", err);
         reject({
           customError: true,
-          msg: `Customer Api failed. (customer_id: ${entityId})`,
+          msg: `Customer API failed. (customer_id: ${entityId})`,
         });
       });
   });
@@ -261,7 +240,7 @@ async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_AR_WT_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_MCL_AR_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
