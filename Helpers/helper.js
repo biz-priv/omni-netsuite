@@ -1,5 +1,6 @@
 const AWS = require("aws-sdk");
 const moment = require("moment");
+const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
 const lambda = new AWS.Lambda();
 
@@ -59,6 +60,27 @@ function getConfig(source_system, env) {
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
+    TMS: {
+      account: env.NETSUIT_AR_ACCOUNT,
+      apiVersion: "2021_2",
+      accountSpecificUrl: true,
+      token: {
+        consumer_key: env.NETSUIT_MCL_CONSUMER_KEY,
+        consumer_secret: env.NETSUIT_MCL_CONSUMER_SECRET,
+        token_key: env.NETSUIT_MCL_TOKEN_KEY,
+        token_secret: env.NETSUIT_MCL_TOKEN_SECRET,
+
+        // consumer_key:
+        //   "9199a46736cf74115dd8386d88cca574bcadb512938b356608b5467134242058",
+        // consumer_secret:
+        //   "110d6c1a46443ae2a6457ede5f2370b8b9bbb9940da258f33de17c583ed76f29",
+        // token_key:
+        //   "64c75fcd6f0d1b2c3fd3c7a019bdd2ff538491181e372d08f64234e4af035eb6",
+        // token_secret:
+        //   "6bd2ec556dc6de9fec72128aea46c21c9673d6714038e43d432a5b47404f6b1e",
+      },
+      wsdlPath: env.NETSUIT_AR_WDSLPATH,
+    },
   };
   return data[source_system];
 }
@@ -84,10 +106,38 @@ function getConnection(env) {
   }
 }
 
+async function getConnectionToRds(env) {
+  try {
+    const dbUser = env.db_username;
+    const dbPassword = env.db_password;
+    // const dbHost = env.db_host
+    const dbHost =
+      "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
+    const dbPort = env.db_port;
+    const dbName = env.db_name;
+    const connection = await mysql.createConnection({
+      host: dbHost,
+      user: dbUser,
+      password: dbPassword,
+      database: dbName,
+      port: dbPort,
+    });
+    return connection;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 /**
  * handle error logs AR
  */
-async function createARFailedRecords(connections, item, error) {
+async function createARFailedRecords(
+  connections,
+  item,
+  error,
+  dbType = "redshift",
+  arDbNamePrev = null
+) {
   try {
     const formatData = {
       source_system: item?.source_system ?? null,
@@ -136,12 +186,14 @@ async function createARFailedRecords(connections, item, error) {
     });
     tableStr = objKyes.join(",");
 
-    console.log("tableStr", tableStr);
-    console.log("valueStr", valueStr);
-
-    const query = `INSERT INTO interface_ar_api_logs (${tableStr}) VALUES (${valueStr});`;
+    const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
+    const query = `INSERT INTO ${dbPrev}interface_ar_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
-    await connections.query(query);
+    if (dbType === "redshift") {
+      await connections.query(query);
+    } else {
+      await connections.execute(query);
+    }
   } catch (error) {
     console.log("createARFailedRecords:error", error);
   }
@@ -150,7 +202,13 @@ async function createARFailedRecords(connections, item, error) {
 /**
  * handle error logs AP
  */
-async function createAPFailedRecords(connections, item, error) {
+async function createAPFailedRecords(
+  connections,
+  item,
+  error,
+  dbType = "redshift",
+  arDbNamePrev = null
+) {
   try {
     const formatData = {
       source_system: item?.source_system ?? null,
@@ -197,12 +255,14 @@ async function createAPFailedRecords(connections, item, error) {
     });
     tableStr = objKyes.join(",");
 
-    console.log("tableStr", tableStr);
-    console.log("valueStr", valueStr);
-
-    const query = `INSERT INTO interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
+    const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
+    const query = `INSERT INTO ${dbPrev}interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
-    await connections.query(query);
+    if (dbType === "redshift") {
+      await connections.query(query);
+    } else {
+      await connections.execute(query);
+    }
   } catch (error) {
     console.log("createAPFailedRecords:error", error);
   }
@@ -249,6 +309,8 @@ async function createIntercompanyFailedRecords(connections, item, error) {
  */
 function triggerReportLambda(functionName, payloadData) {
   return new Promise((resolve, reject) => {
+    console.log("functionName", functionName);
+    console.log("payloadData", payloadData);
     try {
       lambda.invoke(
         {
@@ -334,6 +396,7 @@ function sendDevNotification(
 module.exports = {
   getConfig,
   getConnection,
+  getConnectionToRds,
   createARFailedRecords,
   createAPFailedRecords,
   createIntercompanyFailedRecords,

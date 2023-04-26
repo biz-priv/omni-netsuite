@@ -28,6 +28,11 @@ provider:
     HOST: ${ssm:/omni-dw/${self:provider.stage}/db/host~true}
     PASS: ${ssm:/omni-dw/${self:provider.stage}/db/password~true}
     PORT: ${ssm:/omni-dw/${self:provider.stage}/db/port}
+    db_username: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/user~true}
+    db_password: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/password~true}
+    db_name: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/name}
+    db_host: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/host~true}
+    db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port}
     NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
     NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
     NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
@@ -40,6 +45,12 @@ provider:
     NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
     NETSUIT_TR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyTR}
     NETSUIT_TR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretTR}
+
+    NETSUIT_MCL_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerKey}
+    NETSUIT_MCL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerSecret}
+    NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL}
+    NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL}
+
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
@@ -96,6 +107,9 @@ functions:
   netsuite-ap-tr: ${file(config/functions/TR/netsuite-ap-tr.yml):function}
   netsuite-vendor-ap-tr: ${file(config/functions/TR/netsuite-vendor-ap-tr.yml):function}
 
+  netsuite-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-ar-mcl.yml):function}
+  netsuite-customer-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-customer-ar-mcl.yml):function}
+
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
@@ -124,6 +138,9 @@ stepFunctions:
     netsuite-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-ap-tr-state-machine.yml):stateMachine}
     netsuite-customer-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-customer-ar-tr-state-machine.yml):stateMachine}
     netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
+
+    netsuite-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ar-mcl-state-machine.yml):stateMachine}
+    netsuite-customer-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-customer-ar-mcl-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
