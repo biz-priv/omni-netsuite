@@ -21,6 +21,10 @@ const mailList = {
     AR: process.env.NETSUIT_AR_TR_ERROR_EMAIL_TO,
     AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
   },
+  OL: {
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+  },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
     TR:
@@ -35,9 +39,9 @@ module.exports.handler = async (event, context, callback) => {
     console.log(event);
 
     const connections = dbc(getConnection(process.env));
-    const eventData = event.invPayload;
-    sourceSystem = eventData.split("_")[0];
-    reportType = eventData.split("_")[1];
+    const eventData = event.invPayload.split("_");
+    sourceSystem = eventData[0];
+    reportType = eventData[1];
 
     if (reportType === "AR") {
       await generateCsvAndMail(connections, sourceSystem, "AR");
@@ -233,6 +237,9 @@ async function getReportData(
       } else if (sourceSystem == "M1") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+      } else if (sourceSystem == "OL") {
+        mainQuery = `select distinct invoice_nbr, invoice_type, file_nbr, ${querySelectors}
+        from dw_uat.interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
       }
       console.log("mainQuery", mainQuery);
       const data = await connections.query(mainQuery);

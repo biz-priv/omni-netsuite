@@ -18,7 +18,7 @@ let connections = "";
 
 const arDbNamePrev = "dw_uat.";
 const arDbName = arDbNamePrev + "interface_ar";
-const source_system = "TMS";
+const source_system = "OL";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
 
@@ -74,14 +74,14 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
-      // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "MCL_AR");
+      await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
       hasMoreData = "false";
     }
     dbc.end();
     return { hasMoreData };
   } catch (error) {
     dbc.end();
-    // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "MCL_AR");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
     return { hasMoreData: "false" };
   }
 };
