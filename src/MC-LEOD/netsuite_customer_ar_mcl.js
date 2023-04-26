@@ -14,7 +14,7 @@ const today = getCustomDate();
 
 const arDbNamePrev = "dw_uat.";
 const arDbName = arDbNamePrev + "interface_ar";
-const source_system = "TMS";
+const source_system = "OL";
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
   const checkIsRunning = await checkOldProcessIsRunning();
@@ -236,7 +236,6 @@ function getCustomDate() {
 }
 
 async function startNetsuitInvoiceStep() {
-  return {};
   return new Promise((resolve, reject) => {
     try {
       const params = {
