@@ -3,7 +3,11 @@ const moment = require("moment");
 const { parse } = require("json2csv");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
-const { getConnection, sendDevNotification } = require("../Helpers/helper");
+const {
+  getConnection,
+  sendDevNotification,
+  getConnectionToRds,
+} = require("../Helpers/helper");
 const mailList = {
   WT: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -37,11 +41,17 @@ module.exports.handler = async (event, context, callback) => {
     reportType = "";
   try {
     console.log(event);
+    let connections = "";
 
-    const connections = dbc(getConnection(process.env));
     const eventData = event.invPayload.split("_");
     sourceSystem = eventData[0];
     reportType = eventData[1];
+
+    if (["OL"].includes(sourceSystem)) {
+      connections = await getConnectionToRds(process.env);
+    } else {
+      connections = dbc(getConnection(process.env));
+    }
 
     if (reportType === "AR") {
       await generateCsvAndMail(connections, sourceSystem, "AR");
@@ -113,6 +123,18 @@ async function generateCsvAndMail(
     );
   }
 }
+async function executeQuery(connections, sourceSystem, queryData) {
+  try {
+    if (["OL"].includes(sourceSystem)) {
+      const [rows] = await connections.execute(queryData);
+      return rows;
+    } else {
+      return await connections.query(queryData);
+    }
+  } catch (error) {
+    throw error;
+  }
+}
 
 async function getReportData(
   connections,
@@ -127,7 +149,12 @@ async function getReportData(
       const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
               from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
               error_msg NOT LIKE '%Vendor not found%'`;
-      const nonVenErrdata = await connections.query(queryNonVenErr);
+
+      const nonVenErrdata = await executeQuery(
+        connections,
+        sourceSystem,
+        queryNonVenErr
+      );
       console.log("nonVenErrdata", nonVenErrdata.length);
       const queryVenErr = `select vendor_id from interface_ap_api_logs where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Vendor not found%'`;
@@ -183,7 +210,7 @@ async function getReportData(
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       }
       console.log("mainQuery", mainQuery);
-      const data = await connections.query(mainQuery);
+      const data = await executeQuery(connections, sourceSystem, mainQuery);
       console.log("data", data.length);
       if (data && data.length > 0) {
         const formatedData = data.map((e) => ({
@@ -218,7 +245,11 @@ async function getReportData(
       const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
               from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
               error_msg NOT LIKE '%Customer not found%'`;
-      const nonCuErrdata = await connections.query(queryNonCuErr);
+      const nonCuErrdata = await executeQuery(
+        connections,
+        sourceSystem,
+        queryNonCuErr
+      );
       console.log("nonCuErrdata", nonCuErrdata.length);
 
       const queryCuErr = `select customer_id from interface_ar_api_logs where source_system = '${sourceSystem}' 
@@ -242,7 +273,7 @@ async function getReportData(
         from dw_uat.interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
       }
       console.log("mainQuery", mainQuery);
-      const data = await connections.query(mainQuery);
+      const data = await executeQuery(connections, sourceSystem, mainQuery);
       console.log("data", data.length);
       if (data && data.length > 0) {
         const formatedData = data.map((e) => ({
@@ -317,7 +348,7 @@ async function getReportData(
       }
 
       console.log("query:getReportData", query);
-      const data = await connections.query(query);
+      const data = await executeQuery(connections, sourceSystem, query);
       console.log("query:data", data.length);
       if (data && data.length > 0) {
         return data.map((e) => ({
@@ -339,9 +370,13 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
   try {
     let table = "";
     if (type === "AP") {
-      table = "interface_ap_api_logs";
+      table = ["OL"].includes(sourceSystem)
+        ? "dw_uat.interface_ap_api_logs"
+        : "interface_ap_api_logs";
     } else if (type === "AR") {
-      table = "interface_ar_api_logs";
+      table = ["OL"].includes(sourceSystem)
+        ? "dw_uat.interface_ar_api_logs"
+        : "interface_ar_api_logs";
     } else {
       table = "interface_intercompany_api_logs";
     }
@@ -350,7 +385,7 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
                   report_sent_time = '${moment().format("YYYY-MM-DD H:m:s")}' 
                   where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
     console.log("query", query);
-    return await connections.query(query);
+    return await executeQuery(connections, sourceSystem, query);
   } catch (error) {
     console.log("error:updateReportData", error);
     throw error;
