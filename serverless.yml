@@ -45,8 +45,12 @@ provider:
     NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
     NETSUIT_TR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyTR}
     NETSUIT_TR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretTR}
-    NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyMCL}
-    NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretMCL}
+
+    NETSUIT_MCL_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerKey}
+    NETSUIT_MCL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerSecret}
+    NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL}
+    NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL}
+
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
@@ -135,6 +139,9 @@ stepFunctions:
     netsuite-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-ap-tr-state-machine.yml):stateMachine}
     netsuite-customer-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-customer-ar-tr-state-machine.yml):stateMachine}
     netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
+
+    netsuite-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ar-mcl-state-machine.yml):stateMachine}
+    netsuite-customer-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-customer-ar-mcl-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}

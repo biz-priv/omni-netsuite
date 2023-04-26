@@ -1,5 +1,6 @@
 const AWS = require("aws-sdk");
 const crypto = require("crypto");
+const OAuth = require("oauth-1.0a");
 const axios = require("axios");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
@@ -17,7 +18,7 @@ let connections = "";
 
 const arDbNamePrev = "dw_uat.";
 const arDbName = arDbNamePrev + "interface_ar";
-const source_system = "TMS";
+const source_system = "OL";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
 
@@ -51,7 +52,7 @@ module.exports.handler = async (event, context, callback) => {
      * 5 simultaneous process
      */
     const perLoop = 15;
-    let queryData = "";
+    let queryData = [];
     for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
       let newArray = orderData.slice(
         index * perLoop,
@@ -63,25 +64,24 @@ module.exports.handler = async (event, context, callback) => {
           return await mainProcess(item, invoiceDataList);
         })
       );
-      console.log("data", data);
-      queryData += data.join("");
-      console.log("queryData", queryData);
+      queryData = [...queryData, ...data];
+      // queryData += data.join("");
     }
-    return {};
 
+    console.log("queryData", queryData);
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
-      // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "MCL_AR");
+      await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
       hasMoreData = "false";
     }
     dbc.end();
     return { hasMoreData };
   } catch (error) {
     dbc.end();
-    // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "MCL_AR");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
     return { hasMoreData: "false" };
   }
 };
@@ -117,8 +117,6 @@ async function mainProcess(item, invoiceDataList) {
       currency: singleItem.curr_cd,
       currencyInternalId: singleItem.currency_internal_id,
     };
-    // console.log("customerData", customerData);
-    let getUpdateQueryList = "";
 
     /**
      * Make Json payload
@@ -128,25 +126,20 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * create Netsuit Invoice
      */
-    const invoiceId = await createInvoice(jsonPayload, singleItem.invoice_type);
+    const invoiceId = await createInvoice(jsonPayload);
     console.log("invoiceId", invoiceId);
 
     /**
      * update invoice id
      */
     const getQuery = getUpdateQuery(singleItem, invoiceId);
-    getUpdateQueryList += getQuery;
-    console.log("getUpdateQueryList", getUpdateQueryList);
-    return getUpdateQueryList;
+    return getQuery;
   } catch (error) {
     console.log("error:process", error);
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
         getQuery = getUpdateQuery(singleItem, null, false);
-        if (error.hasOwnProperty("msg") && error.msg === "Unable to make xml") {
-          return getQuery;
-        }
         await createARFailedRecords(
           connections,
           singleItem,
@@ -171,8 +164,10 @@ async function mainProcess(item, invoiceDataList) {
 
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr, invoice_type, file_nbr 
-                    FROM ${arDbName} where source_system = '${source_system}' and invoice_nbr != ''
+    const query = `SELECT distinct invoice_nbr, invoice_type, file_nbr FROM ${arDbName} where 
+                    ((internal_id is null and processed != 'F' and customer_internal_id != '') or
+                     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
+                    and source_system = '${source_system}' and invoice_nbr != ''
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -206,51 +201,16 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
   }
 }
 
-function getOAuthKeys(configuration) {
-  const res = {};
-  res.account = configuration.account;
-  res.consumerKey = configuration.token.consumer_key;
-  res.tokenKey = configuration.token.token_key;
-
-  res.nonce =
-    Math.random().toString(36).substr(2, 15) +
-    Math.random().toString(36).substr(2, 15);
-
-  res.timeStamp = Math.round(new Date().getTime() / 1000);
-
-  const key = `${configuration.token.consumer_secret}&${configuration.token.token_secret}`;
-
-  const baseString =
-    configuration.account +
-    "&" +
-    configuration.token.consumer_key +
-    "&" +
-    configuration.token.token_key +
-    "&" +
-    res.nonce +
-    "&" +
-    res.timeStamp;
-
-  res.base64hash = crypto
-    .createHmac("sha256", Buffer.from(key, "utf8"))
-    .update(baseString)
-    .digest(null, null)
-    .toString("base64");
-  return res;
-}
-
 async function makeJsonPayload(data, customerData) {
   try {
-    /**
-     * get auth keys
-     */
-    const auth = getOAuthKeys(userConfig);
-    // console.log("auth", auth);
     const singleItem = data[0];
     // console.log("singleItem", singleItem)
     const hardcode = getHardcodeData();
     // console.log("hardcode", hardcode)
 
+    /**
+     * Line level details.
+     */
     const item = data.map((e) => {
       return {
         item: e.internal_id ?? "",
@@ -263,10 +223,17 @@ async function makeJsonPayload(data, customerData) {
         custcol_hawb: e.housebill_nbr ?? "",
         custcol3: e.sales_person ?? "",
         custcol5: e.master_bill_nbr ?? "",
-        custcol2: e.controlling_stn ?? "",
+        custcol2: {
+          id: 15,
+          refName: e.controlling_stn ?? "",
+        },
         custcol1: e.ready_date ? e.ready_date.toISOString() : "",
       };
     });
+
+    /**
+     * head level details
+     */
     const payload = {
       entity: customerData.entityInternalId ?? "",
       trandate: dateFormat(singleItem.invoice_date) ?? "",
@@ -293,50 +260,90 @@ async function makeJsonPayload(data, customerData) {
   }
 }
 
-async function createInvoice(jsonPayload, type) {
-  try {
-    const res = await axios.post(
-      process.env.NETSUIT_AR_API_ENDPOINT,
-      jsonPayload,
+function getAuthorizationHeader(options) {
+  const oauth = OAuth({
+    consumer: {
+      key: options.consumer_key,
+      secret: options.consumer_secret_key,
+    },
+    realm: options.realm,
+    signature_method: "HMAC-SHA256",
+    hash_function(base_string, key) {
+      return crypto
+        .createHmac("sha256", key)
+        .update(base_string)
+        .digest("base64");
+    },
+  });
+  return oauth.toHeader(
+    oauth.authorize(
       {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
+        url: options.url,
+        method: options.method,
+      },
+      {
+        key: options.token,
+        secret: options.token_secret,
       }
-    );
-    console.log("res", res);
+    )
+  );
+}
 
-    if (res.status == 200 && res.data.success == true) {
-      return res.data.internalId;
-    } else if (res.status == 200) {
-      throw {
-        customError: true,
-        msg: res.data.errorMessage,
-        payload: jsonPayload,
-        response: res.data,
+function createInvoice(payload) {
+  return new Promise((resolve, reject) => {
+    try {
+      const options = {
+        consumer_key: userConfig.token.consumer_key,
+        consumer_secret_key: userConfig.token.consumer_secret,
+        token: userConfig.token.token_key,
+        token_secret: userConfig.token.token_secret,
+        realm: userConfig.account,
+        url: "https://1238234-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/invoice",
+        method: "POST",
       };
-    } else {
-      throw {
-        customError: true,
-        msg:
-          type == "IN"
-            ? "Unable to create invoice. Internal Server Error"
-            : "Unable to create CreditMemo. Internal Server Error",
-        payload: jsonPayload,
-        response: res.data,
+      const authHeader = getAuthorizationHeader(options);
+
+      const configApi = {
+        method: options.method,
+        maxBodyLength: Infinity,
+        url: options.url,
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader,
+        },
+        data: JSON.stringify(payload),
       };
-    }
-  } catch (error) {
-    console.log("error");
-    if (error.hasOwnProperty("customError")) {
-      throw error;
-    } else {
-      throw {
+      console.log("configApi", configApi);
+
+      axios
+        .request(configApi)
+        .then((response) => {
+          console.log("response", response.status);
+          console.log(JSON.stringify(response.data));
+          resolve("success");
+        })
+        .catch((error) => {
+          console.log(error.response.status);
+          console.log(error.response.data);
+          reject({
+            customError: true,
+            msg: error?.response?.data?.["o:errorDetails"][0]?.detail.replace(
+              /'/g,
+              "`"
+            ),
+            payload: JSON.stringify(payload),
+            response: JSON.stringify(error.response.data).replace(/'/g, "`"),
+          });
+        });
+    } catch (error) {
+      console.log("error:createInvoice:main:catch", error);
+      reject({
+        customError: true,
         msg: "Netsuit AR Api Failed",
-      };
+        response: "",
+      });
     }
-  }
+  });
 }
 
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
@@ -348,7 +355,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     );
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
-      query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
+      query += ` SET internal_id = 1234, processed = 'P', `;
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
@@ -363,12 +370,13 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
 }
 
 async function updateInvoiceId(connections, query) {
-  try {
-    const result = await connections.execute(query);
-    console.log("result", result);
-    return result;
-  } catch (error) {
-    if (query.length > 0) {
+  for (let index = 0; index < query.length; index++) {
+    const element = query[index];
+    try {
+      const result = await connections.execute(element);
+      console.log("result", result);
+    } catch (error) {
+      console.log("error:updateInvoiceId", error);
       await sendDevNotification(
         source_system,
         "AR",
@@ -377,23 +385,18 @@ async function updateInvoiceId(connections, query) {
         error
       );
     }
-    throw {
-      customError: true,
-      msg: "Invoice is created But failed to update internal_id",
-      query,
-    };
   }
 }
 
 function getHardcodeData() {
   const data = {
-    source_system: "3",
+    source_system: "5",
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
-    location: { head: "18", line: "EXT ID: Take from DB" },
+    location: { head: "88", line: "**" },
   };
   return data;
 }
