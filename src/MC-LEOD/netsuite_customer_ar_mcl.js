@@ -164,7 +164,7 @@ async function putCustomer(connections, customerData, customer_id) {
                     processed = '', 
                     customer_internal_id = '${customerData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id is NULL`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id = ''`;
     console.log("updateQuery", updateQuery);
     const result2 = await connections.execute(updateQuery);
     console.log("result", result2);
