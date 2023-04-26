@@ -327,12 +327,12 @@ function createInvoice(payload) {
           console.log(error.response.data);
           reject({
             customError: true,
-            msg: error.response.data["o:errorDetails"][0].detail.replaceAll(
-              "'",
+            msg: error?.response?.data?.["o:errorDetails"][0]?.detail.replace(
+              /'/g,
               "`"
             ),
             payload: JSON.stringify(payload),
-            response: JSON.stringify(error.response.data).replaceAll("'", "`"),
+            response: JSON.stringify(error.response.data).replace(/'/g, "`"),
           });
         });
     } catch (error) {
