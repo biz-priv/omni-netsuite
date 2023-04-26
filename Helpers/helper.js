@@ -60,7 +60,7 @@ function getConfig(source_system, env) {
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
-    TMS: {
+    OL: {
       account: env.NETSUIT_AR_ACCOUNT,
       apiVersion: "2021_2",
       accountSpecificUrl: true,
