@@ -146,8 +146,11 @@ async function getReportData(
     let query = "";
     if (type === "AP") {
       // AP
+      const table = ["OL"].includes(sourceSystem)
+        ? "dw_uat.interface_ap_api_logs"
+        : "interface_ap_api_logs";
       const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
-              from interface_ap_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
+              from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
               error_msg NOT LIKE '%Vendor not found%'`;
 
       const nonVenErrdata = await executeQuery(
@@ -156,7 +159,7 @@ async function getReportData(
         queryNonVenErr
       );
       console.log("nonVenErrdata", nonVenErrdata.length);
-      const queryVenErr = `select vendor_id from interface_ap_api_logs where source_system = '${sourceSystem}' 
+      const queryVenErr = `select vendor_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Vendor not found%'`;
       const querySelectors = `ia.subsidiary, iam.source_system, 'Vendor not found. (vendor_id: '||iam.vendor_id||') Subsidiary: '||ia.subsidiary as error_msg`;
       let mainQuery = "";
@@ -242,8 +245,11 @@ async function getReportData(
       }
     } else if (type === "AR") {
       // AR
+      const table = ["OL"].includes(sourceSystem)
+        ? "dw_uat.interface_ar_api_logs"
+        : "interface_ar_api_logs";
       const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
-              from interface_ar_api_logs where source_system = '${sourceSystem}' and is_report_sent ='N' and 
+              from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
               error_msg NOT LIKE '%Customer not found%'`;
       const nonCuErrdata = await executeQuery(
         connections,
@@ -252,7 +258,7 @@ async function getReportData(
       );
       console.log("nonCuErrdata", nonCuErrdata.length);
 
-      const queryCuErr = `select customer_id from interface_ar_api_logs where source_system = '${sourceSystem}' 
+      const queryCuErr = `select customer_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Customer not found%'`;
       const querySelectors = `subsidiary, source_system, 'Customer not found. (customer_id: '||customer_id||') Subsidiary: '||subsidiary as error_msg`;
       let mainQuery = "";
