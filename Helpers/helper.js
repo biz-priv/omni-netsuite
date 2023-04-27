@@ -207,7 +207,7 @@ async function createAPFailedRecords(
   item,
   error,
   dbType = "redshift",
-  arDbNamePrev = null
+  apDbNamePrev = null
 ) {
   try {
     const formatData = {
@@ -255,7 +255,7 @@ async function createAPFailedRecords(
     });
     tableStr = objKyes.join(",");
 
-    const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
+    const dbPrev = apDbNamePrev != null ? apDbNamePrev : "";
     const query = `INSERT INTO ${dbPrev}interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
     if (dbType === "redshift") {

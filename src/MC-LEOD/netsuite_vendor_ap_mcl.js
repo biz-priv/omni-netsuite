@@ -1,27 +1,21 @@
 const AWS = require("aws-sdk");
-const nodemailer = require("nodemailer");
 const pgp = require("pg-promise");
 const mysql = require("mysql2/promise");
 var NsApiWrapper = require("netsuite-rest");
-
 const dbc = pgp({ capSQL: true });
-const NetSuite = require("node-suitetalk");
 const {
   getConfig,
   getConnectionToRds,
   createAPFailedRecords,
   sendDevNotification,
 } = require("../../Helpers/helper");
-const Configuration = NetSuite.Configuration;
-const Service = NetSuite.Service;
-const Search = NetSuite.Search;
 
 let userConfig = "";
 
 let totalCountPerLoop = 5;
 const today = getCustomDate();
-const arDbNamePrev = "dw_uat.";
-const arDbName = arDbNamePrev + "interface_ap";
+const apDbNamePrev = "dw_uat.";
+const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "OL";
 
 module.exports.handler = async (event, context, callback) => {
@@ -42,13 +36,12 @@ module.exports.handler = async (event, context, callback) => {
      * Get connections
      */
     const connections = await getConnectionToRds(process.env);
-    console.log("connections", connections)
 
     /**
      * Get data from db
      */
     const vendorList = await getVendorData(connections);
-    console.log("vendorList", vendorList, vendorList.length);
+    console.log("vendorList",vendorList.length);
     currentCount = vendorList.length;
 
     for (let i = 0; i < vendorList.length; i++) {
@@ -83,14 +76,14 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
-            await createAPFailedRecords(connections, singleItem, error);
+            await createAPFailedRecords(connections, singleItem, error, "mysql",apDbNamePrev);
             // }
           }
         } catch (error) {
           await sendDevNotification(
             source_system,
             "AP",
-            "netsuite_vendor_ap_wt for loop vendor id =" + vendor_id,
+            "netsuite_vendor_ap_mcl for loop vendor id =" + vendor_id,
             singleItem,
             error
           );
@@ -178,8 +171,10 @@ async function checkOldProcessIsRunning() {
 
 async function getVendorData(connections) {
   try {
-    const query = `SELECT distinct vendor_id FROM ${arDbName}
-                    where source_system = '${source_system}' 
+    const query = `SELECT distinct vendor_id FROM ${apDbName}
+                    where ((vendor_internal_id = '' and processed_date is null) or
+                            (vendor_internal_id = '' and processed_date < '${today}'))
+                    and source_system = '${source_system}' 
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const executeQuery = await connections.execute(query);
@@ -197,20 +192,23 @@ async function getVendorData(connections) {
 
 async function getDataByVendorId(connections, vendor_id) {
   try {
-    const query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-    left join interface_ap_master iam on 
-    ia.invoice_nbr = iam.invoice_nbr and
-    ia.invoice_type = iam.invoice_type and 
-    ia.vendor_id = iam.vendor_id and 
-    ia.gc_code = iam.gc_code and 
-    ia.source_system = iam.source_system and 
-    iam.file_nbr = ia.file_nbr 
-    where ia.source_system = '${source_system}' and  ia.vendor_id = '${vendor_id}' limit 1`;
+    const query = 
+    // `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
+    // left join interface_ap_master iam on 
+    // ia.invoice_nbr = iam.invoice_nbr and
+    // ia.invoice_type = iam.invoice_type and 
+    // ia.vendor_id = iam.vendor_id and 
+    // ia.gc_code = iam.gc_code and 
+    // ia.source_system = iam.source_system and 
+    // iam.file_nbr = ia.file_nbr/
+    `select * from ${apDbName} 
+    where source_system = '${source_system}' and  vendor_id = '${vendor_id}' limit 1`;
+    console.log("query",query)
     const result = await connections.query(query);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
-    return result[0];
+    return result[0][0];
   } catch (error) {
     throw "getDataByVendorId: No data found.";
   }
@@ -218,21 +216,19 @@ async function getDataByVendorId(connections, vendor_id) {
 
 async function putVendor(connections, vendorData, vendor_id) {
   try {
-    let upsertQuery = `INSERT INTO dw_uat.netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
+    let upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
                   VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','') ON DUPLICATE KEY
                   UPDATE vendor_id='${vendorData.entityId}',vendor_internal_id='${vendorData.entityInternalId}',
                   curr_cd='',currency_internal_id='';`;
     console.log("upsertQuery", upsertQuery)
     const result1 = await connections.execute(upsertQuery);
-    console.log("result1", result1)
-    updateQuery = `UPDATE  ${arDbName} SET
+    updateQuery = `UPDATE  ${apDbName} SET
                     processed = '',
                     vendor_internal_id = '${vendorData.entityInternalId}', 
                     processed_date = '${today}' 
                     WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
     console.log("updateQuery", updateQuery)
     const result2 = await connections.execute(updateQuery);
-    console.log("result2", result2)
     return result2
   } catch (error) {
     console.log(error)
@@ -243,26 +239,19 @@ async function putVendor(connections, vendorData, vendor_id) {
 function getVendor(entityId) {
   return new Promise((resolve, reject) => {
     const NsApi = new NsApiWrapper({
-      consumer_key:
-        "9199a46736cf74115dd8386d88cca574bcadb512938b356608b5467134242058",
-      consumer_secret_key:
-        "110d6c1a46443ae2a6457ede5f2370b8b9bbb9940da258f33de17c583ed76f29",
-      token: "64c75fcd6f0d1b2c3fd3c7a019bdd2ff538491181e372d08f64234e4af035eb6",
-      token_secret:
-        "6bd2ec556dc6de9fec72128aea46c21c9673d6714038e43d432a5b47404f6b1e",
-      realm: "1238234_SB1",
-      //,base_url: 'base_url' // optional
+      consumer_key: userConfig.token.consumer_key,
+      consumer_secret_key: userConfig.token.consumer_secret,
+      token: userConfig.token.token_key,
+      token_secret: userConfig.token.token_secret,
+      realm: userConfig.account,
     });
     NsApi.request({
       path: `record/v1/vendor/eid:${entityId}`,
     })
       .then((response) => {
-        console.log("response", JSON.stringify(response.data))
         const recordList = response.data;
-        console.log(recordList.id)
         if (recordList && recordList.id) {
           const record = recordList;
-          console.log("record", record)
           resolve({
             entityId: record.entityId,
             entityInternalId: record.id,
@@ -270,83 +259,22 @@ function getVendor(entityId) {
         } else {
           reject({
             customError: true,
-            msg: `Customer not found. (customer_id: ${entityId})`,
+            msg: `Vendor not found. (vendor_id: ${entityId})`,
           });
         }
       })
       .catch((err) => {
-        console.log("error", err)
         reject({
           customError: true,
-          msg: `Customer API failed. (customer_id: ${entityId})`,
+          msg: `Vendor API failed. (vendor_id: ${entityId})`,
         });
       });
   });
 }
 
-
-// function getVendor(entityId) {
-//   return new Promise((resolve, reject) => {
-//     const config = new Configuration(userConfig);
-//     const service = new Service(config);
-//     service
-//       .init()
-//       .then((/**/) => {
-//         // Set search preferences
-//         const searchPreferences = new Search.SearchPreferences();
-//         searchPreferences.pageSize = 50;
-//         service.setSearchPreferences(searchPreferences);
-
-//         // Create basic search
-//         const search = new Search.Basic.CustomerSearchBasic();
-//         search._name = "VendorSearchBasic";
-
-//         const nameStringField = new Search.Fields.SearchStringField();
-//         nameStringField.field = "entityId";
-//         nameStringField.operator = "is";
-//         nameStringField.searchValue = entityId;
-
-//         search.searchFields.push(nameStringField);
-
-//         return service.search(search);
-//       })
-//       .then((result, raw, soapHeader) => {
-//         if (result && result?.searchResult?.recordList?.record.length > 0) {
-//           const recordList = result.searchResult.recordList.record;
-//           let record = recordList.filter(
-//             (e) => e.entityId.toUpperCase() == entityId.toUpperCase()
-//           );
-//           if (record.length > 0) {
-//             record = record[0];
-//             resolve({
-//               entityId: record.entityId,
-//               entityInternalId: record["$attributes"].internalId,
-//             });
-//           } else {
-//             reject({
-//               customError: true,
-//               msg: `Vendor not found. (vendor_id: ${entityId})`,
-//             });
-//           }
-//         } else {
-//           reject({
-//             customError: true,
-//             msg: `Vendor not found. (vendor_id: ${entityId})`,
-//           });
-//         }
-//       })
-//       .catch((err) => {
-//         reject({
-//           customError: false,
-//           msg: `Vendor Api failed. (vendor_id: ${entityId})`,
-//         });
-//       });
-//   });
-// }
-
 async function updateFailedRecords(connections, vendor_id) {
   try {
-    let query = `UPDATE interface_ap_master SET 
+    let query = `UPDATE ${apDbName} SET 
                   processed = 'F',
                   processed_date = '${today}' 
                   WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
