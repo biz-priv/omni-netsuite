@@ -114,11 +114,11 @@ module.exports.handler = async (event, context, callback) => {
 
 async function getCustomerData(connections) {
   try {
-    const query = `SELECT distinct customer_id FROM ${arDbName}
-                    where ((customer_internal_id = '' and processed_date is null) or
-                            (customer_internal_id = '' and processed_date < '${today}'))
+    const query = `SELECT distinct customer_id FROM ${arDbName} 
+                    where ((customer_internal_id is null and processed_date is null) or
+                          (customer_internal_id is null and processed_date < '${today}'))
                           and source_system = '${source_system}'
-                    limit ${totalCountPerLoop + 1}`;
+                          limit ${totalCountPerLoop + 1}`;
 
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -161,10 +161,10 @@ async function putCustomer(connections, customerData, customer_id) {
     //we wil check netsuite customer or vendor, if we get data we will check the internal id and if internal id is diff we will update
     //if we not get the data we will insert the data in the netsuite table
     const updateQuery = `UPDATE ${arDbName} SET 
-                    processed = '', 
+                    processed = null, 
                     customer_internal_id = '${customerData.entityInternalId}', 
                     processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id = ''`;
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id is null`;
     console.log("updateQuery", updateQuery);
     const result2 = await connections.execute(updateQuery);
     console.log("result", result2);
@@ -219,7 +219,7 @@ async function updateFailedRecords(connections, cus_id) {
     let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id = '';`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id is null;`;
     console.log("query", query);
     const result = await connections.execute(query);
     console.log("result", result);
