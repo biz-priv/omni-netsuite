@@ -154,10 +154,10 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr, invoice_type, file_nbr FROM ${arDbName} where 
-                    ((internal_id is null and processed != 'F' and customer_internal_id != '') or
-                     (customer_internal_id != '' and processed ='F' and processed_date < '${today}'))
-                    and source_system = '${source_system}' and invoice_nbr != ''
-                    limit ${totalCountPerLoop + 1}`;
+                  ((internal_id is null and processed is null and customer_internal_id is not null) or
+                  (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
+                  and source_system = '${source_system}' and invoice_nbr is not null
+                  limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
@@ -349,7 +349,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     }
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
-              and invoice_type = '${item.invoice_type}' ;`;
+              and invoice_type = '${item.invoice_type}' and file_nbr = '${item.file_nbr}' ;`;
     console.log("query", query);
     return query;
   } catch (error) {
