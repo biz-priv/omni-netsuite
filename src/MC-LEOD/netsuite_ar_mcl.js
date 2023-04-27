@@ -65,7 +65,6 @@ module.exports.handler = async (event, context, callback) => {
         })
       );
       queryData = [...queryData, ...data];
-      // queryData += data.join("");
     }
 
     console.log("queryData", queryData);
@@ -109,19 +108,9 @@ async function mainProcess(item, invoiceDataList) {
     // console.log("singleItem", singleItem);
 
     /**
-     * get customer from netsuit
-     */
-    let customerData = {
-      entityId: singleItem.customer_id,
-      entityInternalId: singleItem.customer_internal_id,
-      currency: singleItem.curr_cd,
-      currencyInternalId: singleItem.currency_internal_id,
-    };
-
-    /**
      * Make Json payload
      */
-    const jsonPayload = await makeJsonPayload(dataList, customerData);
+    const jsonPayload = await makeJsonPayload(dataList);
 
     /**
      * create Netsuit Invoice
@@ -201,7 +190,7 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
   }
 }
 
-async function makeJsonPayload(data, customerData) {
+async function makeJsonPayload(data) {
   try {
     const singleItem = data[0];
     // console.log("singleItem", singleItem)
@@ -209,47 +198,46 @@ async function makeJsonPayload(data, customerData) {
     // console.log("hardcode", hardcode)
 
     /**
-     * Line level details.
-     */
-    const item = data.map((e) => {
-      return {
-        item: e.internal_id ?? "",
-        description: e?.charge_cd_desc ?? "",
-        amount: parseFloat(e.total)?.toFixed(2) ?? "",
-        rate: parseFloat(e.rate)?.toFixed(2) ?? "",
-        department: hardcode.department.line ?? "",
-        class: hardcode.class.head ?? "",
-        location: e.handling_stn ?? "",
-        custcol_hawb: e.housebill_nbr ?? "",
-        custcol3: e.sales_person ?? "",
-        custcol5: e.master_bill_nbr ?? "",
-        custcol2: {
-          id: 15,
-          refName: e.controlling_stn ?? "",
-        },
-        custcol1: e.ready_date ? e.ready_date.toISOString() : "",
-      };
-    });
-
-    /**
      * head level details
      */
     const payload = {
-      entity: customerData.entityInternalId ?? "",
-      trandate: dateFormat(singleItem.invoice_date) ?? "",
       tranid: singleItem.invoice_nbr ?? "",
-      department: hardcode.department.head ?? "",
-      class: hardcode.class.head ?? "",
-      location: hardcode.location.head ?? "",
+      trandate: dateFormat(singleItem.invoice_date) ?? "",
+      department: hardcode.department.head,
+      class: hardcode.class.head,
+      location: hardcode.location.head,
+      custbody_source_system: hardcode.source_system,
+      entity: singleItem.customer_internal_id ?? "",
       subsidiary: singleItem.subsidiary ?? "",
-      currency: customerData.currencyInternalId ?? "",
+      currency: singleItem.currency_internal_id ?? "",
       otherrefnum: singleItem.file_nbr ?? "",
+      custbody_mode: singleItem?.mode_name ?? "",
+      custbody_service_level: singleItem?.service_level ?? "",
       custbody18: singleItem.finalized_date ?? "",
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
-      custbody_source_system: hardcode.source_system ?? "",
       item: {
-        items: item,
+        items: data.map((e) => {
+          return {
+            item: e.charge_cd_internal_id ?? "",
+            description: e?.charge_cd_desc ?? "",
+            amount: +parseFloat(e.total).toFixed(2) ?? "",
+            rate: +parseFloat(e.rate).toFixed(2) ?? "",
+            department: hardcode.department.line ?? "",
+            class:
+              hardcode.class.line[
+                e.business_segment.split(":")[1].trim().toLowerCase()
+              ],
+            location: hardcode.location.line,
+            custcol_hawb: e.housebill_nbr ?? "",
+            custcol3: e.sales_person ?? "",
+            custcol5: e.master_bill_nbr ?? "",
+            custcol2: {
+              refName: e.controlling_stn ?? "",
+            },
+            custcol1: e.ready_date ? e.ready_date.toISOString() : "",
+          };
+        }),
       },
     };
 
@@ -390,13 +378,13 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "5",
+    source_system: "6",
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
-    location: { head: "88", line: "**" },
+    location: { head: "88", line: "88" },
   };
   return data;
 }
