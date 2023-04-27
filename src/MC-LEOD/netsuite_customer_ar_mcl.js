@@ -208,7 +208,7 @@ function getcustomer(entityId) {
         console.log("error", err);
         reject({
           customError: true,
-          msg: `Customer API failed. (customer_id: ${entityId})`,
+          msg: `Customer not found. (customer_id: ${entityId})`,
         });
       });
   });
