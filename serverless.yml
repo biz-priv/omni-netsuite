@@ -143,6 +143,8 @@ stepFunctions:
 
     netsuite-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ar-mcl-state-machine.yml):stateMachine}
     netsuite-customer-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-customer-ar-mcl-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-vendor-ap-mcl-state-machine.yml):stateMachine}
+    netsuite-ap-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ap-mcl-state-machine.yml):stateMachine}
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
