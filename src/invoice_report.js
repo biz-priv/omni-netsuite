@@ -116,7 +116,10 @@ async function generateCsvAndMail(
     console.log("error:generateCsvAndMail", error);
     await sendDevNotification(
       "INVOICE-REPOR-" + sourceSystem,
-      reportType,
+      "type value:- " +
+        type +
+        "and intercompanyType value:-" +
+        intercompanyType,
       "invoice_report generateCsvAndMail",
       {},
       error
@@ -173,7 +176,7 @@ async function getReportData(
         iam.gc_code = ia.gc_code and 
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr 
-        where iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
+        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
       } else if (sourceSystem == "WT") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ${querySelectors}
@@ -185,7 +188,7 @@ async function getReportData(
         iam.gc_code = ia.gc_code and 
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr 
-        where iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
+        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
@@ -197,7 +200,7 @@ async function getReportData(
         iam.gc_code = ia.gc_code and 
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr
-        where iam.processed ='F' and iam.vendor_id in (${queryVenErr})  
+        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})  
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "M1") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type,${querySelectors}
@@ -209,11 +212,11 @@ async function getReportData(
         iam.gc_code = ia.gc_code and
         iam.source_system = ia.source_system and
         iam.file_nbr = ia.file_nbr
-        where iam.processed ='F' and iam.vendor_id in (${queryVenErr})
+        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select distinct invoice_nbr, invoice_type, file_nbr, ${querySelectors}
-        from dw_uat.interface_ap where processed ='F' and vendor_id in (${queryVenErr})`;
+        mainQuery = `select distinct invoice_nbr,vendor_id, invoice_type, file_nbr, subsidiary, source_system, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})`;
       }
 
       console.log("mainQuery", mainQuery);
@@ -264,23 +267,23 @@ async function getReportData(
 
       const queryCuErr = `select customer_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Customer not found%'`;
-      const querySelectors = `subsidiary, source_system, 'Customer not found. (customer_id: '||customer_id||') Subsidiary: '||subsidiary as error_msg`;
+      const querySelectors = `subsidiary, source_system, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg`;
       let mainQuery = "";
       if (sourceSystem == "TR") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
-        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "WT") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
-        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
-        from interface_ar_cw where processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar_cw where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "M1") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
-        from interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "OL") {
         mainQuery = `select distinct invoice_nbr, invoice_type, file_nbr, ${querySelectors}
-        from dw_uat.interface_ar where processed ='F' and customer_id in (${queryCuErr})`;
+        from dw_uat.interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       }
       console.log("mainQuery", mainQuery);
       const data = await executeQuery(connections, sourceSystem, mainQuery);

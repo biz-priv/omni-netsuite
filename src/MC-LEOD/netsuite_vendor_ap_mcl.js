@@ -1,6 +1,5 @@
 const AWS = require("aws-sdk");
 const pgp = require("pg-promise");
-const mysql = require("mysql2/promise");
 var NsApiWrapper = require("netsuite-rest");
 const dbc = pgp({ capSQL: true });
 const {
@@ -68,14 +67,6 @@ module.exports.handler = async (event, context, callback) => {
              */
             singleItem = await getDataByVendorId(connections, vendor_id);
             await updateFailedRecords(connections, vendor_id);
-            /**
-             * check if same error from dynamo db
-             * true if already notification sent
-             * false if it is new
-             */
-            // const checkError = await checkSameError(singleItem);
-            // if (!checkError) {
-            await recordErrorResponse(singleItem, error);
             await createAPFailedRecords(
               connections,
               singleItem,
@@ -83,7 +74,6 @@ module.exports.handler = async (event, context, callback) => {
               "mysql",
               apDbNamePrev
             );
-            // }
           }
         } catch (error) {
           await sendDevNotification(
@@ -185,6 +175,7 @@ function getVendor(entityId) {
         }
       })
       .catch((err) => {
+        console.log("err", err);
         reject({
           customError: true,
           msg: `Vendor not found. (vendor_id: ${entityId})`,
