@@ -109,6 +109,8 @@ functions:
 
   netsuite-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-ar-mcl.yml):function}
   netsuite-customer-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-customer-ar-mcl.yml):function}
+  netsuite-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-ap-mcl.yml):function}
+  netsuite-vendor-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-vendor-ap-mcl.yml):function}
 
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}

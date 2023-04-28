@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/MC-LEOD/netsuite_vendor_ap_mcl.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-vendor-ap-mcl-${self:provider.stage}
+  description: MCL Netsuite AP vendor  api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/MC-LEOD/netsuite_vendor_ap_mcl.js
+      - Helpers/**
+  # environment:
+  #   NETSUITE_AP_WT_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ap-wt-state-machine-${self:provider.stage}
+  #   NETSUITE_AP_WT_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-wt-state-machine-${self:provider.stage}
