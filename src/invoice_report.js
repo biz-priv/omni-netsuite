@@ -211,7 +211,11 @@ async function getReportData(
         iam.file_nbr = ia.file_nbr
         where iam.processed ='F' and iam.vendor_id in (${queryVenErr})
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
+      } else if (sourceSystem == "OL") {
+        mainQuery = `select distinct invoice_nbr, invoice_type, file_nbr, ${querySelectors}
+        from dw_uat.interface_ap where processed ='F' and vendor_id in (${queryVenErr})`;
       }
+
       console.log("mainQuery", mainQuery);
       const data = await executeQuery(connections, sourceSystem, mainQuery);
       console.log("data", data.length);

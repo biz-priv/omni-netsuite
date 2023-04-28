@@ -178,9 +178,8 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
 
     const executeQuery = await connections.execute(query);
     const result = executeQuery[0];
-
     console.log("result", result);
-    if (!result || result.length == 0 || !result[0].customer_id) {
+    if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result;
@@ -193,9 +192,7 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
 async function makeJsonPayload(data) {
   try {
     const singleItem = data[0];
-    // console.log("singleItem", singleItem)
     const hardcode = getHardcodeData();
-    // console.log("hardcode", hardcode)
 
     /**
      * head level details
@@ -286,7 +283,12 @@ function createInvoice(payload) {
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: "https://1238234-sb1.suitetalk.api.netsuite.com/services/rest/record/v1/invoice",
+        url: `https://${userConfig.account
+          .toLowerCase()
+          .split("_")
+          .join(
+            "-"
+          )}.suitetalk.api.netsuite.com/services/rest/record/v1/invoice`,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -336,11 +338,7 @@ function createInvoice(payload) {
 
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
-    console.log(
-      "invoice_nbr " + item.invoice_type,
-      item.invoice_nbr,
-      invoiceId
-    );
+    console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = 1234, processed = 'P', `;
@@ -361,15 +359,14 @@ async function updateInvoiceId(connections, query) {
   for (let index = 0; index < query.length; index++) {
     const element = query[index];
     try {
-      const result = await connections.execute(element);
-      console.log("result", result);
+      await connections.execute(element);
     } catch (error) {
       console.log("error:updateInvoiceId", error);
       await sendDevNotification(
         source_system,
         "AR",
-        "netsuite_ar_wt updateInvoiceId",
-        "Invoice is created But failed to update internal_id " + query,
+        "netsuite_ar_mcl updateInvoiceId",
+        "Invoice is created But failed to update internal_id " + element,
         error
       );
     }

@@ -1,16 +1,13 @@
 ---
 stateMachine:
-  name: ${self:service}-netsuite-customer-ar-mcl-state-machine-${self:provider.stage}
-  # events:
-  #   - schedule:
-  #       rate: cron(0 7 * * ? *) #  UTC:- 7:00 AM / 2:00 am CST
+  name: ${self:service}-netsuite-ap-mcl-state-machine-${self:provider.stage}
   definition:
-    Comment: "State machine to update netsuit customer AR mcl internal details"
+    Comment: "State machine to create netsuit AP mcl invoice"
     StartAt: PublishEvents
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-customer-ar-mcl-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-ap-mcl-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice

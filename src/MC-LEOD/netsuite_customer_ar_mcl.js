@@ -15,6 +15,7 @@ const today = getCustomDate();
 const arDbNamePrev = "dw_uat.";
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "OL";
+
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
   const checkIsRunning = await checkOldProcessIsRunning();
@@ -55,12 +56,7 @@ module.exports.handler = async (event, context, callback) => {
         /**
          * Update customer details into DB
          */
-        const putcustomer = await putCustomer(
-          connections,
-          customerData,
-          customer_id
-        );
-        console.log("putCustomer", putcustomer);
+        await putCustomer(connections, customerData, customer_id);
         console.log("count", i + 1);
       } catch (error) {
         let singleItem = "";
@@ -135,7 +131,9 @@ async function getCustomerData(connections) {
 
 async function getDataByCustomerId(connections, cus_id) {
   try {
-    const query = `SELECT * FROM ${arDbName} where customer_id = '${cus_id}' limit 1`;
+    const query = `SELECT * FROM ${arDbName} 
+                    where source_system = '${source_system}' and customer_id = '${cus_id}' 
+                    limit 1`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
@@ -146,31 +144,6 @@ async function getDataByCustomerId(connections, cus_id) {
     return result[0];
   } catch (error) {
     throw "getDataByCustomerId: No data found.";
-  }
-}
-
-async function putCustomer(connections, customerData, customer_id) {
-  try {
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
-                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','') ON DUPLICATE KEY
-                  UPDATE customer_id='${customerData.entityId}',customer_internal_id='${customerData.entityInternalId}',
-                  curr_cd='',currency_internal_id='';`;
-    console.log("query", upsertQuery);
-    const result1 = await connections.execute(upsertQuery);
-    console.log("result1", result1);
-    //we wil check netsuite customer or vendor, if we get data we will check the internal id and if internal id is diff we will update
-    //if we not get the data we will insert the data in the netsuite table
-    const updateQuery = `UPDATE ${arDbName} SET 
-                    processed = null, 
-                    customer_internal_id = '${customerData.entityInternalId}', 
-                    processed_date = '${today}' 
-                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id is null`;
-    console.log("updateQuery", updateQuery);
-    const result2 = await connections.execute(updateQuery);
-    console.log("result", result2);
-    return result2;
-  } catch (error) {
-    throw "Customer Update Failed";
   }
 }
 
@@ -187,12 +160,9 @@ function getcustomer(entityId) {
       path: `record/v1/customer/eid:${entityId}`,
     })
       .then((response) => {
-        console.log("response", JSON.stringify(response.data));
         const recordList = response.data;
-        console.log(recordList.id);
         if (recordList && recordList.id) {
           const record = recordList;
-          console.log("record", record);
           resolve({
             entityId: record.entityId,
             entityInternalId: record.id,
@@ -214,12 +184,33 @@ function getcustomer(entityId) {
   });
 }
 
+async function putCustomer(connections, customerData, customer_id) {
+  try {
+    const upsertQuery = `INSERT INTO dw_uat.netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
+                  VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','') ON DUPLICATE KEY
+                  UPDATE customer_id='${customerData.entityId}',customer_internal_id='${customerData.entityInternalId}',
+                  curr_cd='',currency_internal_id='';`;
+    console.log("query", upsertQuery);
+    await connections.execute(upsertQuery);
+
+    const updateQuery = `UPDATE ${arDbName} SET 
+                    processed = null, 
+                    customer_internal_id = '${customerData.entityInternalId}', 
+                    processed_date = '${today}' 
+                    WHERE customer_id = '${customer_id}' and source_system = '${source_system}' and customer_internal_id is null`;
+    console.log("updateQuery", updateQuery);
+    await connections.execute(updateQuery);
+  } catch (error) {
+    throw "Customer Update Failed";
+  }
+}
+
 async function updateFailedRecords(connections, cus_id) {
   try {
     let query = `UPDATE ${arDbName}  
                   SET processed = 'F',
                   processed_date = '${today}' 
-                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id is null;`;
+                  WHERE customer_id = '${cus_id}' and source_system = '${source_system}' and customer_internal_id is null`;
     console.log("query", query);
     const result = await connections.execute(query);
     console.log("result", result);

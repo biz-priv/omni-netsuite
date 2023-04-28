@@ -20,12 +20,12 @@ const source_system = "OL";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
@@ -41,18 +41,18 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const vendorList = await getVendorData(connections);
-    console.log("vendorList",vendorList.length);
+    console.log("vendorList", vendorList.length);
     currentCount = vendorList.length;
 
     for (let i = 0; i < vendorList.length; i++) {
       const vendor_id = vendorList[i].vendor_id;
-      console.log("vendor_id", vendor_id)
+      console.log("vendor_id", vendor_id);
       try {
         /**
          * get vendor from netsuit
          */
         const vendorData = await getVendor(vendor_id);
-        console.log("vendorData", vendorData)
+        console.log("vendorData", vendorData);
 
         /**
          * Update vendor details into DB
@@ -76,7 +76,13 @@ module.exports.handler = async (event, context, callback) => {
             // const checkError = await checkSameError(singleItem);
             // if (!checkError) {
             await recordErrorResponse(singleItem, error);
-            await createAPFailedRecords(connections, singleItem, error, "mysql",apDbNamePrev);
+            await createAPFailedRecords(
+              connections,
+              singleItem,
+              error,
+              "mysql",
+              apDbNamePrev
+            );
             // }
           }
         } catch (error) {
@@ -103,7 +109,7 @@ module.exports.handler = async (event, context, callback) => {
   if (hasMoreData == "false") {
     try {
       await startNetsuitInvoiceStep();
-    } catch (error) { }
+    } catch (error) {}
     dbc.end();
     return { hasMoreData };
   } else {
@@ -112,13 +118,128 @@ module.exports.handler = async (event, context, callback) => {
   }
 };
 
+async function getVendorData(connections) {
+  try {
+    const query = `SELECT distinct vendor_id FROM ${apDbName}
+                    where ((vendor_internal_id is null and processed_date is null) or
+                            (vendor_internal_id is null and processed_date < '${today}'))
+                    and source_system = '${source_system}' 
+                    limit ${totalCountPerLoop + 1}`;
+    console.log("query", query);
+    const [rows] = await connections.execute(query);
+    const result = rows;
+    console.log("result", result);
+    if (!result || result.length == 0) {
+      throw "No data found";
+    }
+    return result;
+  } catch (error) {
+    console.log(error, "error");
+    throw "getVendorData: No data found.";
+  }
+}
+
+async function getDataByVendorId(connections, vendor_id) {
+  try {
+    const query = `select * from ${apDbName} 
+                    where source_system = '${source_system}' and vendor_id = '${vendor_id}' 
+                    limit 1`;
+    console.log("query", query);
+    const [rows] = await connections.execute(query);
+    const result = rows;
+    console.log("result", result);
+    if (!result || result.length == 0) {
+      throw "No data found.";
+    }
+    return result[0];
+  } catch (error) {
+    throw "getDataByVendorId: No data found.";
+  }
+}
+
+function getVendor(entityId) {
+  return new Promise((resolve, reject) => {
+    const NsApi = new NsApiWrapper({
+      consumer_key: userConfig.token.consumer_key,
+      consumer_secret_key: userConfig.token.consumer_secret,
+      token: userConfig.token.token_key,
+      token_secret: userConfig.token.token_secret,
+      realm: userConfig.account,
+    });
+    NsApi.request({
+      path: `record/v1/vendor/eid:${entityId}`,
+    })
+      .then((response) => {
+        const recordList = response.data;
+        if (recordList && recordList.id) {
+          const record = recordList;
+          resolve({
+            entityId: record.entityId,
+            entityInternalId: record.id,
+          });
+        } else {
+          reject({
+            customError: true,
+            msg: `Vendor not found. (vendor_id: ${entityId})`,
+          });
+        }
+      })
+      .catch((err) => {
+        reject({
+          customError: true,
+          msg: `Vendor not found. (vendor_id: ${entityId})`,
+        });
+      });
+  });
+}
+
+async function putVendor(connections, vendorData, vendor_id) {
+  try {
+    const upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
+                  VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','') ON DUPLICATE KEY
+                  UPDATE vendor_id='${vendorData.entityId}',vendor_internal_id='${vendorData.entityInternalId}',
+                  curr_cd='',currency_internal_id='';`;
+    console.log("upsertQuery", upsertQuery);
+    await connections.execute(upsertQuery);
+
+    const updateQuery = `UPDATE  ${apDbName} SET
+                    processed = null,
+                    vendor_internal_id = '${vendorData.entityInternalId}', 
+                    processed_date = '${today}' 
+                    WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id is null;`;
+    await connections.execute(updateQuery);
+  } catch (error) {
+    console.log(error);
+    throw "Vendor Update Failed";
+  }
+}
+
+async function updateFailedRecords(connections, vendor_id) {
+  try {
+    let query = `UPDATE ${apDbName} SET 
+                  processed = 'F',
+                  processed_date = '${today}' 
+                  WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id is null`;
+    const result = await connections.query(query);
+    return result;
+  } catch (error) {}
+}
+
+function getCustomDate() {
+  const date = new Date();
+  let ye = new Intl.DateTimeFormat("en", { year: "numeric" }).format(date);
+  let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
+  let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
+  return `${ye}-${mo}-${da}`;
+}
+
 async function checkOldProcessIsRunning() {
   return new Promise((resolve, reject) => {
     try {
       //WT AP vendor
-      const vendorArn = process.env.NETSUITE_AP_WT_VENDOR_STEP_ARN;
+      const vendorArn = process.env.NETSUITE_AP_MCL_VENDOR_STEP_ARN;
       //WT AP
-      const wtApArn = process.env.NETSUITE_AP_WT_STEP_ARN;
+      const wtApArn = process.env.NETSUITE_MCL_AP_STEP_ARN;
 
       const status = "RUNNING";
       const stepfunctions = new AWS.StepFunctions();
@@ -169,246 +290,11 @@ async function checkOldProcessIsRunning() {
   });
 }
 
-async function getVendorData(connections) {
-  try {
-    const query = `SELECT distinct vendor_id FROM ${apDbName}
-                    where ((vendor_internal_id = '' and processed_date is null) or
-                            (vendor_internal_id = '' and processed_date < '${today}'))
-                    and source_system = '${source_system}' 
-                    limit ${totalCountPerLoop + 1}`;
-    console.log("query", query);
-    const executeQuery = await connections.execute(query);
-    const result = executeQuery[0]
-    console.log("result", result)
-    if (!result || result.length == 0) {
-      throw "No data found";
-    }
-    return result;
-  } catch (error) {
-    console.log(error, "error")
-    throw "getVendorData: No data found.";
-  }
-}
-
-async function getDataByVendorId(connections, vendor_id) {
-  try {
-    const query = 
-    // `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
-    // left join interface_ap_master iam on 
-    // ia.invoice_nbr = iam.invoice_nbr and
-    // ia.invoice_type = iam.invoice_type and 
-    // ia.vendor_id = iam.vendor_id and 
-    // ia.gc_code = iam.gc_code and 
-    // ia.source_system = iam.source_system and 
-    // iam.file_nbr = ia.file_nbr/
-    `select * from ${apDbName} 
-    where source_system = '${source_system}' and  vendor_id = '${vendor_id}' limit 1`;
-    console.log("query",query)
-    const result = await connections.query(query);
-    if (!result || result.length == 0) {
-      throw "No data found.";
-    }
-    return result[0][0];
-  } catch (error) {
-    throw "getDataByVendorId: No data found.";
-  }
-}
-
-async function putVendor(connections, vendorData, vendor_id) {
-  try {
-    let upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
-                  VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','') ON DUPLICATE KEY
-                  UPDATE vendor_id='${vendorData.entityId}',vendor_internal_id='${vendorData.entityInternalId}',
-                  curr_cd='',currency_internal_id='';`;
-    console.log("upsertQuery", upsertQuery)
-    const result1 = await connections.execute(upsertQuery);
-    updateQuery = `UPDATE  ${apDbName} SET
-                    processed = '',
-                    vendor_internal_id = '${vendorData.entityInternalId}', 
-                    processed_date = '${today}' 
-                    WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
-    console.log("updateQuery", updateQuery)
-    const result2 = await connections.execute(updateQuery);
-    return result2
-  } catch (error) {
-    console.log(error)
-    throw "Vendor Update Failed";
-  }
-}
-
-function getVendor(entityId) {
-  return new Promise((resolve, reject) => {
-    const NsApi = new NsApiWrapper({
-      consumer_key: userConfig.token.consumer_key,
-      consumer_secret_key: userConfig.token.consumer_secret,
-      token: userConfig.token.token_key,
-      token_secret: userConfig.token.token_secret,
-      realm: userConfig.account,
-    });
-    NsApi.request({
-      path: `record/v1/vendor/eid:${entityId}`,
-    })
-      .then((response) => {
-        const recordList = response.data;
-        if (recordList && recordList.id) {
-          const record = recordList;
-          resolve({
-            entityId: record.entityId,
-            entityInternalId: record.id,
-          });
-        } else {
-          reject({
-            customError: true,
-            msg: `Vendor not found. (vendor_id: ${entityId})`,
-          });
-        }
-      })
-      .catch((err) => {
-        reject({
-          customError: true,
-          msg: `Vendor API failed. (vendor_id: ${entityId})`,
-        });
-      });
-  });
-}
-
-async function updateFailedRecords(connections, vendor_id) {
-  try {
-    let query = `UPDATE ${apDbName} SET 
-                  processed = 'F',
-                  processed_date = '${today}' 
-                  WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id = '';`;
-    const result = await connections.query(query);
-    return result;
-  } catch (error) { }
-}
-
-async function recordErrorResponse(item, error) {
-  try {
-    // let documentClient = new AWS.DynamoDB.DocumentClient({
-    //   region: process.env.REGION,
-    // });
-    const data = {
-      id: item.invoice_nbr + item.invoice_type,
-      invoice_nbr: item.invoice_nbr,
-      vendor_id: item.vendor_id,
-      subsidiary: item.subsidiary,
-      invoice_type: item.invoice_type,
-      source_system: item.source_system,
-      invoice_date: item.invoice_date.toLocaleString(),
-      errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
-      payload: error?.payload,
-      response: error?.response,
-      status: "error",
-      created_at: new Date().toLocaleString(),
-    };
-    // const params = {
-    //   TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-    //   Item: data,
-    // };
-    // await documentClient.put(params).promise();
-    await sendMail(data);
-  } catch (e) { }
-}
-
-function sendMail(data) {
-  return {};
-  return new Promise((resolve, reject) => {
-    try {
-      let errorObj = JSON.parse(JSON.stringify(data));
-      delete errorObj["payload"];
-      delete errorObj["response"];
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.NETSUIT_AR_ERROR_EMAIL_USER,
-          pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
-        },
-      });
-
-      const message = {
-        from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
-        html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Netsuite Error</title>
-        </head>
-        <body>
-          <h3>Error msg:- ${errorObj.errorDescription} </h3>
-          <p> Error Obj:- </p> <pre> ${JSON.stringify(errorObj, null, 4)} </pre>
-          <p> Payload:- </p> <pre>${data?.payload ?? "No Payload"}</pre>
-          <p> Response:- </p> <pre>${data.response ?? "No Response"}</pre>
-        </body>
-        </html>
-        `,
-      };
-      transporter.sendMail(message, function (err, info) {
-        resolve(true);
-      });
-    } catch (error) {
-      resolve(true);
-    }
-  });
-}
-
-function getCustomDate() {
-  const date = new Date();
-  let ye = new Intl.DateTimeFormat("en", { year: "numeric" }).format(date);
-  let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
-  let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
-  return `${ye}-${mo}-${da}`;
-}
-
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-      FilterExpression:
-        "#vendor_id = :vendor_id AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#vendor_id": "vendor_id",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":vendor_id": singleItem.vendor_id,
-        ":errorDescription": `Vendor not found. (vendor_id: ${singleItem.vendor_id})`,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
-}
-
 async function startNetsuitInvoiceStep() {
   return new Promise((resolve, reject) => {
     try {
       const params = {
-        stateMachineArn: process.env.NETSUITE_AP_WT_STEP_ARN,
+        stateMachineArn: process.env.NETSUITE_MCL_AP_STEP_ARN,
         input: JSON.stringify({}),
       };
       const stepfunctions = new AWS.StepFunctions();
