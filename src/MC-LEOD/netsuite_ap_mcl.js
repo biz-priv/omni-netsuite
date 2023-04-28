@@ -4,12 +4,12 @@ const OAuth = require("oauth-1.0a");
 const axios = require("axios");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
-const lineItemPayload = require("../../Helpers/netsuit_line_items_AP.json");
 const {
   getConfig,
   getConnectionToRds,
   createAPFailedRecords,
   triggerReportLambda,
+  sendDevNotification,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -122,7 +122,7 @@ module.exports.handler = async (event, context, callback) => {
             dbc.end();
             await triggerReportLambda(
               process.env.NETSUIT_INVOICE_REPORT,
-              "WT_AP"
+              "OL_AP"
             );
             return { hasMoreData: "false" };
           }
@@ -243,7 +243,7 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log("error", error);
     dbc.end();
-    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
     return { hasMoreData: "false" };
   }
 };
@@ -537,22 +537,22 @@ function createInvoice(payload) {
  * @param {*} data
  */
 async function createInvoiceAndUpdateLineItems(invoiceId, data) {
-  try {
-    const lineItemXml = await makeJsonForLineItems(
-      invoiceId,
-      JSON.parse(JSON.stringify(lineItemPayload)),
-      data
-    );
-    await axios.post(process.env.NETSUIT_AR_API_ENDPOINT, lineItemXml, {
-      headers: {
-        Accept: "text/xml",
-        "Content-Type": "text/xml; charset=utf-8",
-        SOAPAction: "update",
-      },
-    });
-  } catch (error) {
-    console.log("error", error);
-  }
+  // try {
+  //   const lineItemXml = await makeJsonForLineItems(
+  //     invoiceId,
+  //     JSON.parse(JSON.stringify(lineItemPayload)),
+  //     data
+  //   );
+  //   await axios.post(process.env.NETSUIT_AR_API_ENDPOINT, lineItemXml, {
+  //     headers: {
+  //       Accept: "text/xml",
+  //       "Content-Type": "text/xml; charset=utf-8",
+  //       SOAPAction: "update",
+  //     },
+  //   });
+  // } catch (error) {
+  //   console.log("error", error);
+  // }
 }
 
 /**
@@ -640,39 +640,4 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
-}
-
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem, error) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-      FilterExpression:
-        "#invoice_nbr = :invoice_nbr AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#invoice_nbr": "invoice_nbr",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":invoice_nbr": singleItem.invoice_nbr,
-        ":errorDescription": error?.msg,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
 }
