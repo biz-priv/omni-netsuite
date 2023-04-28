@@ -69,15 +69,6 @@ function getConfig(source_system, env) {
         consumer_secret: env.NETSUIT_MCL_CONSUMER_SECRET,
         token_key: env.NETSUIT_MCL_TOKEN_KEY,
         token_secret: env.NETSUIT_MCL_TOKEN_SECRET,
-
-        // consumer_key:
-        //   "9199a46736cf74115dd8386d88cca574bcadb512938b356608b5467134242058",
-        // consumer_secret:
-        //   "110d6c1a46443ae2a6457ede5f2370b8b9bbb9940da258f33de17c583ed76f29",
-        // token_key:
-        //   "64c75fcd6f0d1b2c3fd3c7a019bdd2ff538491181e372d08f64234e4af035eb6",
-        // token_secret:
-        //   "6bd2ec556dc6de9fec72128aea46c21c9673d6714038e43d432a5b47404f6b1e",
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
@@ -207,7 +198,7 @@ async function createAPFailedRecords(
   item,
   error,
   dbType = "redshift",
-  arDbNamePrev = null
+  apDbNamePrev = null
 ) {
   try {
     const formatData = {
@@ -255,7 +246,7 @@ async function createAPFailedRecords(
     });
     tableStr = objKyes.join(",");
 
-    const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
+    const dbPrev = apDbNamePrev != null ? apDbNamePrev : "";
     const query = `INSERT INTO ${dbPrev}interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
     // console.log("query", query);
     if (dbType === "redshift") {
