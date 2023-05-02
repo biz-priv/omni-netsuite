@@ -185,10 +185,11 @@ module.exports.handler = async (event, context, callback) => {
       try {
         orderData = await getDataGroupBy(connections);
       } catch (error) {
-        return {
-          hasMoreData: "true",
-          queryOperator: queryOperator == "<=" ? ">" : "<=",
-        };
+        return { hasMoreData: "false" };
+        // return {
+        //   hasMoreData: "true",
+        //   queryOperator: queryOperator == "<=" ? ">" : "<=",
+        // };
       }
 
       try {
@@ -235,11 +236,20 @@ module.exports.handler = async (event, context, callback) => {
        */
       await updateInvoiceId(connections, queryData);
 
-      if (currentCount < totalCountPerLoop) {
-        queryOperator = ">";
+      // if (currentCount < totalCountPerLoop) {
+      //   queryOperator = ">";
+      // }
+      // dbc.end();
+      // return { hasMoreData: "true", queryOperator };
+      let hasMoreData = "false";
+      if (currentCount > totalCountPerLoop) {
+        hasMoreData = "true";
+      } else {
+        await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
+        hasMoreData = "false";
       }
       dbc.end();
-      return { hasMoreData: "true", queryOperator };
+      return { hasMoreData };
     }
   } catch (error) {
     console.log("error", error);
