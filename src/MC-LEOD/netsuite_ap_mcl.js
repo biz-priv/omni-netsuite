@@ -185,10 +185,11 @@ module.exports.handler = async (event, context, callback) => {
       try {
         orderData = await getDataGroupBy(connections);
       } catch (error) {
-        return {
-          hasMoreData: "true",
-          queryOperator: queryOperator == "<=" ? ">" : "<=",
-        };
+        return { hasMoreData: "false" };
+        // return {
+        //   hasMoreData: "true",
+        //   queryOperator: queryOperator == "<=" ? ">" : "<=",
+        // };
       }
 
       try {
