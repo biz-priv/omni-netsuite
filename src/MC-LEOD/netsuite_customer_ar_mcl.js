@@ -188,8 +188,7 @@ async function putCustomer(connections, customerData, customer_id) {
   try {
     const upsertQuery = `INSERT INTO dw_uat.netsuit_customer (customer_id, customer_internal_id, curr_cd, currency_internal_id )
                   VALUES ('${customerData.entityId}', '${customerData.entityInternalId}','','') ON DUPLICATE KEY
-                  UPDATE customer_id='${customerData.entityId}',customer_internal_id='${customerData.entityInternalId}',
-                  curr_cd='',currency_internal_id='';`;
+                  UPDATE customer_internal_id='${customerData.entityInternalId}', curr_cd='',currency_internal_id='';`;
     console.log("query", upsertQuery);
     await connections.execute(upsertQuery);
 
