@@ -408,7 +408,7 @@ async function makeJsonPayload(data) {
       class: hardcode.class.head,
       department: hardcode.department.head,
       location: hardcode.location.head,
-      custbody9: singleItem.housebill_nbr ?? "",
+      custbody9: singleItem.file_nbr ?? "",
       custbody17: singleItem.email ?? "",
       custbody_source_system: hardcode.source_system,
       custbody_omni_po_hawb: singleItem.housebill_nbr ?? "",
@@ -441,6 +441,9 @@ async function makeJsonPayload(data) {
         }),
       },
     };
+    if (singleItem.invoice_type == "IN") {
+      payload.approvalStatus = { id: "2" };
+    }
 
     console.log("payload", JSON.stringify(payload));
     return payload;
