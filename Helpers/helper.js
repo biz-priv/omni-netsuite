@@ -348,7 +348,7 @@ function sendDevNotification(
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "kazi.ali@bizcloudexperts.com,priyanka@bizcloudexperts.com,mish@bizcloudexperts.com,ashish.akshantal@bizcloudexperts.com",
+        to: "abdul.rashed@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
         subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>

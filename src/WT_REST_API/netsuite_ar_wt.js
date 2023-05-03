@@ -113,7 +113,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * create Netsuit Invoice
      */
-    const invoiceId = await createInvoice(jsonPayload);
+    const invoiceId = await createInvoice(jsonPayload, singleItem);
     console.log("invoiceId", invoiceId);
 
     /**
@@ -272,9 +272,11 @@ function getAuthorizationHeader(options) {
   );
 }
 
-function createInvoice(payload) {
+function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
+      const invTypeEndpoiont =
+        singleItem.invoice_type == "IN" ? "invoice" : "creditMemo";
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
@@ -286,7 +288,7 @@ function createInvoice(payload) {
           .split("_")
           .join(
             "-"
-          )}.suitetalk.api.netsuite.com/services/rest/record/v1/invoice`,
+          )}.suitetalk.api.netsuite.com/services/rest/record/v1/${invTypeEndpoiont}`,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
