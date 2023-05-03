@@ -296,7 +296,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * create invoice
      */
-    const invoiceId = await createInvoice(jsonPayload);
+    const invoiceId = await createInvoice(jsonPayload, singleItem);
 
     if (queryOperator == ">") {
       queryInvoiceId = invoiceId;
