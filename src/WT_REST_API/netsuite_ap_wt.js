@@ -402,7 +402,9 @@ async function makeJsonPayload(data) {
     const payload = {
       entity: singleItem.vendor_internal_id ?? "",
       subsidiary: singleItem.subsidiary ?? "",
-      trandate: dateFormat(singleItem.invoice_date) ?? "",
+      trandate: singleItem.invoice_date
+        ? dateFormat(singleItem.invoice_date)
+        : null,
       tranid: singleItem.invoice_nbr ?? "",
       currency: singleItem.currency_internal_id ?? "",
       class: hardcode.class.head,
@@ -615,7 +617,7 @@ async function updateInvoiceId(connections, query) {
       await sendDevNotification(
         source_system,
         "AP",
-        "netsuite_ap_mcl updateInvoiceId",
+        "netsuite_ap_wt updateInvoiceId",
         "Invoice is created But failed to update internal_id " + element,
         error
       );
@@ -650,15 +652,19 @@ function getHardcodeData(isIntercompany = false) {
 }
 
 function dateFormat(param) {
-  const date = new Date(param);
-  return (
-    date.getFullYear() +
-    "-" +
-    ("00" + (date.getMonth() + 1)).slice(-2) +
-    "-" +
-    ("00" + date.getDate()).slice(-2) +
-    "T11:05:03.000Z"
-  );
+  try {
+    const date = new Date(param);
+    return (
+      date.getFullYear() +
+      "-" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "-" +
+      ("00" + date.getDate()).slice(-2) +
+      "T11:05:03.000Z"
+    );
+  } catch (error) {
+    return null;
+  }
 }
 
 function getCustomDate() {

@@ -199,7 +199,9 @@ async function makeJsonPayload(data) {
      */
     const payload = {
       tranid: singleItem.invoice_nbr ?? "",
-      trandate: dateFormat(singleItem.invoice_date) ?? "",
+      trandate: singleItem.invoice_date
+        ? dateFormat(singleItem.invoice_date)
+        : null,
       department: hardcode.department.head,
       class: hardcode.class.head,
       location: hardcode.location.head,
@@ -210,7 +212,7 @@ async function makeJsonPayload(data) {
       otherrefnum: singleItem.file_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
-      custbody18: singleItem.finalized_date ?? "",
+      custbody18: singleItem.finalized_date ?? null,
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
       item: {
@@ -232,7 +234,7 @@ async function makeJsonPayload(data) {
             custcol2: {
               refName: e.controlling_stn ?? "",
             },
-            custcol1: e.ready_date ? e.ready_date.toISOString() : "",
+            custcol1: e.ready_date ? e.ready_date.toISOString() : null,
           };
         }),
       },
@@ -389,15 +391,19 @@ function getHardcodeData() {
 }
 
 function dateFormat(param) {
-  const date = new Date(param);
-  return (
-    date.getFullYear() +
-    "-" +
-    ("00" + (date.getMonth() + 1)).slice(-2) +
-    "-" +
-    ("00" + date.getDate()).slice(-2) +
-    "T11:05:03.000Z"
-  );
+  try {
+    const date = new Date(param);
+    return (
+      date.getFullYear() +
+      "-" +
+      ("00" + (date.getMonth() + 1)).slice(-2) +
+      "-" +
+      ("00" + date.getDate()).slice(-2) +
+      "T11:05:03.000Z"
+    );
+  } catch (error) {
+    return null;
+  }
 }
 
 function getCustomDate() {
