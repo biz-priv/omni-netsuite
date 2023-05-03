@@ -427,7 +427,9 @@ async function makeJsonPayload(data) {
               hardcode.class.line[
                 e.business_segment.split(":")[1].trim().toLowerCase()
               ],
-            location: hardcode.location.line,
+            location: {
+              refName: e.handling_stn ?? "",
+            },
             custcol_hawb: e.housebill_nbr ?? "",
             custcol3: e.sales_person ?? "",
             custcol5: e.master_bill_nbr ?? "",
