@@ -79,7 +79,6 @@ module.exports.handler = async (event, context, callback) => {
              * true if already notification sent
              * false if it is new
              */
-            await recordErrorResponse(singleItem, error);
             await createAPFailedRecords(connections, singleItem, error);
           }
         } catch (error) {
@@ -236,84 +235,6 @@ async function updateFailedRecords(connections, vendor_id) {
     const result = await connections.query(query);
     return result;
   } catch (error) {}
-}
-
-async function recordErrorResponse(item, error) {
-  try {
-    // let documentClient = new AWS.DynamoDB.DocumentClient({
-    //   region: process.env.REGION,
-    // });
-    const data = {
-      id: item.invoice_nbr + item.invoice_type,
-      invoice_nbr: item.invoice_nbr,
-      vendor_id: item.vendor_id,
-      subsidiary: item.subsidiary,
-      invoice_type: item.invoice_type,
-      source_system: item.source_system,
-      invoice_date: item.invoice_date.toLocaleString(),
-      errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
-      payload: error?.payload,
-      response: error?.response,
-      status: "error",
-      created_at: new Date().toLocaleString(),
-    };
-    // const params = {
-    //   TableName: process.env.NETSUIT_AP_ERROR_TABLE,
-    //   Item: data,
-    // };
-    // await documentClient.put(params).promise();
-    await sendMail(data);
-  } catch (e) {}
-}
-
-function sendMail(data) {
-  return {};
-  return new Promise((resolve, reject) => {
-    try {
-      let errorObj = JSON.parse(JSON.stringify(data));
-      delete errorObj["payload"];
-      delete errorObj["response"];
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.NETSUIT_AR_ERROR_EMAIL_USER,
-          pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
-        },
-      });
-
-      const message = {
-        from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com",
-        subject: `${source_system} - Netsuite AP ${process.env.STAGE.toUpperCase()} Invoices - Error`,
-        html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Netsuite Error</title>
-        </head>
-        <body>
-          <h3>Error msg:- ${errorObj.errorDescription} </h3>
-          <p> Error Obj:- </p> <pre> ${JSON.stringify(errorObj, null, 4)} </pre>
-          <p> Payload:- </p> <pre>${data?.payload ?? "No Payload"}</pre>
-          <p> Response:- </p> <pre>${data.response ?? "No Response"}</pre>
-        </body>
-        </html>
-        `,
-      };
-      transporter.sendMail(message, function (err, info) {
-        resolve(true);
-      });
-    } catch (error) {
-      resolve(true);
-    }
-  });
 }
 
 function getCustomDate() {

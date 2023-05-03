@@ -175,7 +175,6 @@ async function mainProcess(connections, item) {
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(connections, item, "F");
       await createIntercompanyFailedRecords(connections, item, error);
-      // await sendMail(error);
     } else {
       await sendDevNotification(
         "INVOICE-INTERCOMPANY",
@@ -248,57 +247,6 @@ function getAuthorizationHeader(url) {
   } catch (error) {
     throw error;
   }
-}
-
-function sendMail(data) {
-  return {};
-  return new Promise((resolve, reject) => {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: process.env.NETSUIT_AR_ERROR_EMAIL_USER,
-          pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
-        },
-      });
-
-      const message = {
-        from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com",
-        // to: "kazi.ali@bizcloudexperts.com",
-        subject: `Netsuite CW Intercompany ${process.env.STAGE.toUpperCase()} Invoices - Error`,
-        html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Netsuite Error</title>
-        </head>
-        <body>
-          <h3>Error msg:- ${data?.data?.error?.message ?? ""} </h3>
-          <p> Error Obj:- </p> <pre> ${JSON.stringify(data, null, 4)} </pre>
-        </body>
-        </html>
-        `,
-      };
-
-      transporter.sendMail(message, function (err, info) {
-        if (err) {
-          resolve(true);
-        } else {
-          resolve(true);
-        }
-      });
-    } catch (error) {
-      console.log("mail:error", error);
-      resolve(true);
-    }
-  });
 }
 
 function getCustomDate() {

@@ -69,16 +69,7 @@ module.exports.handler = async (event, context, callback) => {
              */
             singleItem = await getDataByCustomerId(connections, customer_id);
             await updateFailedRecords(connections, customer_id);
-            /**
-             * check if same error from dynamo db
-             * true if already notification sent
-             * false if it is new
-             */
-            // const checkError = await checkSameError(singleItem);
-            // if (!checkError) {
-            await recordErrorResponse(singleItem, error);
             await createARFailedRecords(connections, singleItem, error);
-            // }
           }
         } catch (error) {
           await sendDevNotification(
@@ -226,127 +217,12 @@ async function updateFailedRecords(connections, cus_id) {
   } catch (error) {}
 }
 
-async function recordErrorResponse(item, error) {
-  try {
-    // let documentClient = new AWS.DynamoDB.DocumentClient({
-    //   region: process.env.REGION,
-    // });
-    const data = {
-      id: item.invoice_nbr + item.invoice_type,
-      invoice_nbr: item.invoice_nbr,
-      customer_id: item.customer_id,
-      subsidiary: item.subsidiary,
-      source_system: item.source_system,
-      invoice_type: item.invoice_type,
-      invoice_date: item.invoice_date.toLocaleString(),
-      charge_cd_internal_id: item.charge_cd_internal_id,
-      errorDescription: error?.msg + "Subsidiary: " + item.subsidiary,
-      payload: error?.payload,
-      response: error?.response,
-      invoiceId: error?.invoiceId,
-      status: "error",
-      created_at: new Date().toLocaleString(),
-    };
-    // const params = {
-    //   TableName: process.env.NETSUIT_AR_ERROR_TABLE,
-    //   Item: data,
-    // };
-    // await documentClient.put(params).promise();
-    await sendMail(data);
-  } catch (e) {}
-}
-
-function sendMail(data) {
-  return {};
-  return new Promise((resolve, reject) => {
-    try {
-      let errorObj = JSON.parse(JSON.stringify(data));
-      delete errorObj["payload"];
-      delete errorObj["response"];
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: process.env.NETSUIT_AR_ERROR_EMAIL_USER,
-          pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
-        },
-      });
-
-      const message = {
-        from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        // to: "kazi.ali@bizcloudexperts.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,mish@bizcloudexperts.com,psotelo@omnilogistics.com",
-        subject: `${source_system} - Netsuite AR ${process.env.STAGE.toUpperCase()} Invoices - Error`,
-        html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Netsuite Error</title>
-        </head>
-        <body>
-          <h3>Error msg:- ${errorObj.errorDescription} </h3>
-          <p> Error Obj:- </p> <pre> ${JSON.stringify(errorObj, null, 4)} </pre>
-          <p> Payload:- </p> <pre>${data?.payload ?? "No Payload"}</pre>
-          <p> Response:- </p> <pre>${data.response ?? "No Response"}</pre>
-        </body>
-        </html>
-        `,
-      };
-      transporter.sendMail(message, function (err, info) {
-        resolve(true);
-      });
-    } catch (error) {
-      resolve(true);
-    }
-  });
-}
-
 function getCustomDate() {
   const date = new Date();
   let ye = new Intl.DateTimeFormat("en", { year: "numeric" }).format(date);
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
-}
-
-/**
- * check error already exists or not.
- * @param {*} singleItem
- * @returns
- */
-async function checkSameError(singleItem) {
-  try {
-    const documentClient = new AWS.DynamoDB.DocumentClient({
-      region: process.env.REGION,
-    });
-
-    const params = {
-      TableName: process.env.NETSUIT_AR_ERROR_TABLE,
-      FilterExpression:
-        "#customer_id = :customer_id AND #errorDescription = :errorDescription",
-      ExpressionAttributeNames: {
-        "#customer_id": "customer_id",
-        "#errorDescription": "errorDescription",
-      },
-      ExpressionAttributeValues: {
-        ":customer_id": singleItem.customer_id,
-        ":errorDescription": `Customer not found. (customer_id: ${singleItem.customer_id})`,
-      },
-    };
-    const res = await documentClient.scan(params).promise();
-    if (res && res.Count && res.Count == 1) {
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    return false;
-  }
 }
 
 async function startNetsuitInvoiceStep() {
