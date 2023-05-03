@@ -70,6 +70,7 @@ module.exports.handler = async (event, context, callback) => {
      * will work on this if section if rest can't handle more than 500 line items.
      */
     if (queryOperator == ">") {
+      return { hasMoreData: "false" };
       // Update 500 line items per process
       console.log("> start");
 
@@ -184,10 +185,11 @@ module.exports.handler = async (event, context, callback) => {
       try {
         orderData = await getDataGroupBy(connections);
       } catch (error) {
-        return {
-          hasMoreData: "true",
-          queryOperator: queryOperator == "<=" ? ">" : "<=",
-        };
+        return { hasMoreData: "false" };
+        // return {
+        //   hasMoreData: "true",
+        //   queryOperator: queryOperator == "<=" ? ">" : "<=",
+        // };
       }
 
       try {
@@ -215,7 +217,7 @@ module.exports.handler = async (event, context, callback) => {
        * 15 simultaneous process
        */
       const perLoop = 15;
-      let queryData = "";
+      let queryData = [];
       for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
         let newArray = orderData.slice(
           index * perLoop,
@@ -226,7 +228,7 @@ module.exports.handler = async (event, context, callback) => {
             return await mainProcess(item, invoiceDataList);
           })
         );
-        queryData += data.join("");
+        queryData = [...queryData, ...data];
       }
 
       /**
@@ -234,16 +236,25 @@ module.exports.handler = async (event, context, callback) => {
        */
       await updateInvoiceId(connections, queryData);
 
-      if (currentCount < totalCountPerLoop) {
-        queryOperator = ">";
+      // if (currentCount < totalCountPerLoop) {
+      //   queryOperator = ">";
+      // }
+      // dbc.end();
+      // return { hasMoreData: "true", queryOperator };
+      let hasMoreData = "false";
+      if (currentCount > totalCountPerLoop) {
+        hasMoreData = "true";
+      } else {
+        await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
+        hasMoreData = "false";
       }
       dbc.end();
-      return { hasMoreData: "true", queryOperator };
+      return { hasMoreData };
     }
   } catch (error) {
     console.log("error", error);
     dbc.end();
-    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
     return { hasMoreData: "false" };
   }
 };
@@ -295,9 +306,7 @@ async function mainProcess(item, invoiceDataList) {
      * update invoice id
      */
     const getQuery = getUpdateQuery(singleItem, invoiceId);
-    getUpdateQueryList += getQuery;
-
-    return getUpdateQueryList;
+    return getQuery;
   } catch (error) {
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
@@ -342,7 +351,7 @@ async function getDataGroupBy(connections) {
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
                     (vendor_internal_id is not null and processed ='F' and processed_date < '${today}'))
-                    source_system = '${source_system}' and invoice_nbr != ''
+                    and source_system = '${source_system}' and invoice_nbr != ''
                     GROUP BY invoice_nbr, vendor_id, invoice_type
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
@@ -351,7 +360,7 @@ async function getDataGroupBy(connections) {
     if (!result || result.length == 0) {
       throw "No data found.";
     }
-    return result[0];
+    return result;
   } catch (error) {
     throw "No data found.";
   }
@@ -375,7 +384,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
     if (!result || result.length == 0) {
       throw "No data found.";
     }
-    return result[0];
+    return result;
   } catch (error) {
     console.log("error1", error);
     throw "getInvoiceNbrData: No data found.";
@@ -483,7 +492,7 @@ function createInvoice(payload) {
           .split("_")
           .join(
             "-"
-          )}.suitetalk.api.netsuite.com/services/rest/record/v1/invoice`,
+          )}.suitetalk.api.netsuite.com/services/rest/record/v1/vendorBill`,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -571,8 +580,11 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
-    query += ` processed_date = '${today}'  WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' and invoice_type = '${item.invoice_type}'
-              and vendor_id = '${item.vendor_id}';`;
+    query += ` processed_date = '${today}'  
+                WHERE source_system = '${source_system}' and 
+                      invoice_nbr = '${item.invoice_nbr}' and 
+                      invoice_type = '${item.invoice_type}'and 
+                      vendor_id = '${item.vendor_id}'`;
 
     return query;
   } catch (error) {
@@ -609,17 +621,25 @@ async function updateInvoiceId(connections, query) {
  * @param {*} source_system
  * @returns
  */
-function getHardcodeData() {
+
+function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "6",
+    source_system: "3",
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
-    department: { head: "15", line: "1" },
-    location: { head: "88", line: "88" },
+    department: {
+      default: { head: "15", line: "2" },
+      intercompany: { head: "15", line: "1" },
+    },
+    location: { head: "18", line: "EXT ID: Take from DB" },
   };
-  return data;
+  const departmentType = isIntercompany ? "intercompany" : "default";
+  return {
+    ...data,
+    department: data.department[departmentType],
+  };
 }
 
 function dateFormat(param) {

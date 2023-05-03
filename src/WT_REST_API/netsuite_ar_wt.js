@@ -98,9 +98,7 @@ async function mainProcess(item, invoiceDataList) {
      */
     const dataList = invoiceDataList.filter((e) => {
       return (
-        e.invoice_nbr == item.invoice_nbr &&
-        e.invoice_type == item.invoice_type &&
-        e.file_nbr == item.file_nbr
+        e.invoice_nbr == item.invoice_nbr && e.invoice_type == item.invoice_type
       );
     });
 
@@ -153,8 +151,10 @@ async function mainProcess(item, invoiceDataList) {
 
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT distinct invoice_nbr, invoice_type, file_nbr FROM ${arDbName} where 
-                   source_system = '${source_system}' and invoice_nbr is not null
+    const query = `SELECT distinct invoice_nbr, invoice_type FROM ${arDbName} where 
+                  ((internal_id is null and processed is null and customer_internal_id is not null) or
+                  (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
+                  and source_system = '${source_system}' and invoice_nbr is not null
                   limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -345,7 +345,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     }
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
-              and invoice_type = '${item.invoice_type}' and file_nbr = '${item.file_nbr}' ;`;
+              and invoice_type = '${item.invoice_type}';`;
     console.log("query", query);
     return query;
   } catch (error) {
@@ -373,13 +373,13 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "6",
+    source_system: "3",
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
-    location: { head: "88", line: "88" },
+    location: { head: "18", line: "EXT ID: Take from DB" },
   };
   return data;
 }
