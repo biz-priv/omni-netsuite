@@ -18,7 +18,7 @@ let connections = "";
 
 const apDbNamePrev = "dw_uat.";
 const apDbName = apDbNamePrev + "interface_ap";
-const source_system = "OL";
+const source_system = "WT";
 
 const today = getCustomDate();
 const lineItemPerProcess = 500;
@@ -245,7 +245,7 @@ module.exports.handler = async (event, context, callback) => {
       if (currentCount > totalCountPerLoop) {
         hasMoreData = "true";
       } else {
-        await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
+        await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
         hasMoreData = "false";
       }
       dbc.end();
@@ -254,7 +254,7 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log("error", error);
     dbc.end();
-    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
     return { hasMoreData: "false" };
   }
 };
@@ -296,7 +296,7 @@ async function mainProcess(item, invoiceDataList) {
     /**
      * create invoice
      */
-    const invoiceId = await createInvoice(jsonPayload);
+    const invoiceId = await createInvoice(jsonPayload, singleItem);
 
     if (queryOperator == ">") {
       queryInvoiceId = invoiceId;
@@ -347,12 +347,12 @@ async function getDataGroupBy(connections) {
     //                 GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr
     //                 having tc ${queryOperator} ${lineItemPerProcess}
     //                 limit ${totalCountPerLoop + 1}`;
-    const query = `SELECT invoice_nbr, vendor_id, invoice_type, file_nbr
+    const query = `SELECT invoice_nbr, vendor_id, invoice_type
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
                     (vendor_internal_id is not null and processed ='F' and processed_date < '${today}'))
                     and source_system = '${source_system}' and invoice_nbr != ''
-                    GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr
+                    GROUP BY invoice_nbr, vendor_id, invoice_type
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -586,8 +586,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
                 WHERE source_system = '${source_system}' and 
                       invoice_nbr = '${item.invoice_nbr}' and 
                       invoice_type = '${item.invoice_type}'and 
-                      vendor_id = '${item.vendor_id}' and 
-                      file_nbr = '${item.file_nbr}'`;
+                      vendor_id = '${item.vendor_id}'`;
 
     return query;
   } catch (error) {
@@ -624,17 +623,25 @@ async function updateInvoiceId(connections, query) {
  * @param {*} source_system
  * @returns
  */
-function getHardcodeData() {
+
+function getHardcodeData(isIntercompany = false) {
   const data = {
-    source_system: "6",
+    source_system: "3",
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
-    department: { head: "15", line: "1" },
-    location: { head: "88", line: "88" },
+    department: {
+      default: { head: "15", line: "2" },
+      intercompany: { head: "15", line: "1" },
+    },
+    location: { head: "18", line: "EXT ID: Take from DB" },
   };
-  return data;
+  const departmentType = isIntercompany ? "intercompany" : "default";
+  return {
+    ...data,
+    department: data.department[departmentType],
+  };
 }
 
 function dateFormat(param) {

@@ -1,6 +1,6 @@
 ---
 function:
-  handler: src/WT/netsuite_ar_wt.handler
+  handler: src/WT_REST_API/netsuite_ar_wt.handler
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ar-wt-${self:provider.stage}
@@ -10,5 +10,5 @@ function:
   timeout: 900
   package:
     include:
-      - src/WT/netsuite_ar_wt.js
+      - src/WT_REST_API/netsuite_ar_wt.js
       - Helpers/**
