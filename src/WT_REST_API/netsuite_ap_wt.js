@@ -274,8 +274,7 @@ async function mainProcess(item, invoiceDataList) {
       return (
         e.invoice_nbr == item.invoice_nbr &&
         e.vendor_id == item.vendor_id &&
-        e.invoice_type == item.invoice_type &&
-        e.file_nbr == item.file_nbr
+        e.invoice_type == item.invoice_type
       );
     });
     console.log("dataList", dataList.length);
@@ -341,12 +340,6 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
-    // const query = `SELECT invoice_nbr, vendor_id, invoice_type, file_nbr, COUNT(*) as tc
-    //                 FROM ${apDbName}
-    //                 WHERE  source_system = '${source_system}' and invoice_nbr != ''
-    //                 GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr
-    //                 having tc ${queryOperator} ${lineItemPerProcess}
-    //                 limit ${totalCountPerLoop + 1}`;
     const query = `SELECT invoice_nbr, vendor_id, invoice_type
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
@@ -377,8 +370,8 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
       query += ` invoice_nbr in (${invoice_nbr.join(",")})`;
     }
 
-    const executeQuery = await connections.execute(query);
-    const result = executeQuery[0];
+    const [rows] = await connections.execute(query);
+    const result = rows;
     console.log("result", result);
 
     if (!result || result.length == 0) {
