@@ -36,6 +36,8 @@ const mailList = {
   },
 };
 
+const REST_SS = ["OL", "WT"];
+
 module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
     reportType = "";
@@ -47,7 +49,7 @@ module.exports.handler = async (event, context, callback) => {
     sourceSystem = eventData[0];
     reportType = eventData[1];
 
-    if (["OL"].includes(sourceSystem)) {
+    if (REST_SS.includes(sourceSystem)) {
       connections = await getConnectionToRds(process.env);
     } else {
       connections = dbc(getConnection(process.env));
@@ -128,7 +130,7 @@ async function generateCsvAndMail(
 }
 async function executeQuery(connections, sourceSystem, queryData) {
   try {
-    if (["OL"].includes(sourceSystem)) {
+    if (REST_SS.includes(sourceSystem)) {
       const [rows] = await connections.execute(queryData);
       return rows;
     } else {
@@ -149,7 +151,7 @@ async function getReportData(
     let query = "";
     if (type === "AP") {
       // AP
-      const table = ["OL"].includes(sourceSystem)
+      const table = REST_SS.includes(sourceSystem)
         ? "dw_uat.interface_ap_api_logs"
         : "interface_ap_api_logs";
       const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
@@ -179,17 +181,9 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ${querySelectors}
-        FROM interface_ap_master iam
-        LEFT JOIN interface_ap ia ON 
-        iam.invoice_nbr = ia.invoice_nbr and 
-        iam.invoice_type = ia.invoice_type and 
-        iam.vendor_id = ia.vendor_id and 
-        iam.gc_code = ia.gc_code and 
-        iam.source_system = ia.source_system and 
-        iam.file_nbr = ia.file_nbr 
-        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
+        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        GROUP BY invoice_nbr, vendor_id, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
         FROM interface_ap_master_cw iam
@@ -215,8 +209,9 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select distinct invoice_nbr,vendor_id, invoice_type, file_nbr, subsidiary, source_system, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})`;
+        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr;`;
       }
 
       console.log("mainQuery", mainQuery);
@@ -252,7 +247,7 @@ async function getReportData(
       }
     } else if (type === "AR") {
       // AR
-      const table = ["OL"].includes(sourceSystem)
+      const table = REST_SS.includes(sourceSystem)
         ? "dw_uat.interface_ar_api_logs"
         : "interface_ar_api_logs";
       const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
@@ -273,8 +268,9 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
-        from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
+        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+                      from dw_uat.interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
+                      GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
         from interface_ar_cw where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
@@ -282,8 +278,9 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select distinct invoice_nbr, invoice_type, file_nbr, ${querySelectors}
-        from dw_uat.interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
+        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from dw_uat.interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})
+        GROUP BY invoice_nbr, invoice_type, file_nbr;`;
       }
       console.log("mainQuery", mainQuery);
       const data = await executeQuery(connections, sourceSystem, mainQuery);
@@ -383,20 +380,27 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
   try {
     let table = "";
     if (type === "AP") {
-      table = ["OL"].includes(sourceSystem)
+      table = REST_SS.includes(sourceSystem)
         ? "dw_uat.interface_ap_api_logs"
         : "interface_ap_api_logs";
     } else if (type === "AR") {
-      table = ["OL"].includes(sourceSystem)
+      table = REST_SS.includes(sourceSystem)
         ? "dw_uat.interface_ar_api_logs"
         : "interface_ar_api_logs";
     } else {
       table = "interface_intercompany_api_logs";
     }
+
+    if (REST_SS.includes(sourceSystem)) {
+      const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      const [rows] = await connections.execute(maxIdQuery);
+      console.log("maxId:rows", rows);
+      maxId = rows[0].maxId;
+    }
     const query = `Update ${table} set 
-                  is_report_sent ='P', 
-                  report_sent_time = '${moment().format("YYYY-MM-DD H:m:s")}' 
-                  where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
+                    is_report_sent ='P', 
+                    report_sent_time = '${moment().format("YYYY-MM-DD H:m:s")}' 
+                    where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
     console.log("query", query);
     return await executeQuery(connections, sourceSystem, query);
   } catch (error) {
