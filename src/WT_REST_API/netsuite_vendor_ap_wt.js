@@ -188,8 +188,7 @@ async function putVendor(connections, vendorData, vendor_id) {
   try {
     const upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (vendor_id, vendor_internal_id, curr_cd, currency_internal_id)
                   VALUES ('${vendorData.entityId}', '${vendorData.entityInternalId}','','') ON DUPLICATE KEY
-                  UPDATE vendor_id='${vendorData.entityId}',vendor_internal_id='${vendorData.entityInternalId}',
-                  curr_cd='',currency_internal_id='';`;
+                  UPDATE vendor_internal_id='${vendorData.entityInternalId}',curr_cd='',currency_internal_id='';`;
     console.log("upsertQuery", upsertQuery);
     await connections.execute(upsertQuery);
 
