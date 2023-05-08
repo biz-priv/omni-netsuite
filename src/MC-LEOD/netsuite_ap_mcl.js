@@ -248,12 +248,12 @@ module.exports.handler = async (event, context, callback) => {
         await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
         hasMoreData = "false";
       }
-      dbc.end();
+      // dbc.end();
       return { hasMoreData };
     }
   } catch (error) {
     console.log("error", error);
-    dbc.end();
+    // dbc.end();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
     return { hasMoreData: "false" };
   }
@@ -451,6 +451,18 @@ async function makeJsonPayload(data) {
     return payload;
   } catch (error) {
     console.log("error payload", error);
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_MCL payload error",
+      data[0],
+      error
+    );
+    throw {
+      customError: true,
+      msg: "Unable to make payload",
+      data: data[0],
+    };
   }
 }
 
