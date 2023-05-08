@@ -446,6 +446,18 @@ async function makeJsonPayload(data) {
     return payload;
   } catch (error) {
     console.log("error payload", error);
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_wt payload error",
+      data[0],
+      error
+    );
+    throw {
+      customError: true,
+      msg: "Unable to make payload",
+      data: data[0],
+    };
   }
 }
 
