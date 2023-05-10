@@ -341,12 +341,6 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
-    // const query = `SELECT invoice_nbr, vendor_id, invoice_type, file_nbr, COUNT(*) as tc
-    //                 FROM ${apDbName}
-    //                 WHERE  source_system = '${source_system}' and invoice_nbr != ''
-    //                 GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr
-    //                 having tc ${queryOperator} ${lineItemPerProcess}
-    //                 limit ${totalCountPerLoop + 1}`;
     const query = `SELECT invoice_nbr, vendor_id, invoice_type, file_nbr
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
@@ -400,11 +394,19 @@ async function makeJsonPayload(data) {
      * head level details
      */
     const payload = {
+      custbody_mfc_omni_unique_key:
+        singleItem.invoice_nbr +
+        "-" +
+        singleItem.vendor_id +
+        "-" +
+        singleItem.invoice_type +
+        "-" +
+        singleItem.file_nbr, //invoice_nbr, vendor_id, invoice_type, file_nbr
       entity: singleItem.vendor_internal_id ?? "",
       subsidiary: singleItem.subsidiary ?? "",
       trandate: singleItem.invoice_date
         ? dateFormat(singleItem.invoice_date)
-        : null,
+        : "",
       tranid: singleItem.invoice_nbr ?? "",
       currency: singleItem.currency_internal_id ?? "",
       class: hardcode.class.head,
@@ -416,32 +418,30 @@ async function makeJsonPayload(data) {
       custbody_omni_po_hawb: singleItem.housebill_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
-      item: {
-        items: data.map((e) => {
-          return {
-            taxcode: e.tax_code_internal_id ?? "",
-            item: e.charge_cd_internal_id ?? "",
-            description: e.charge_cd_desc ?? "",
-            amount: +parseFloat(e.total).toFixed(2) ?? "",
-            rate: +parseFloat(e.rate).toFixed(2) ?? "",
-            department: hardcode.department.line ?? "",
-            class:
-              hardcode.class.line[
-                e.business_segment.split(":")[1].trim().toLowerCase()
-              ],
-            location: hardcode.location.line,
-            custcol_hawb: e.housebill_nbr ?? "",
-            custcol3: e.sales_person ?? "",
-            custcol5: e.master_bill_nbr ?? "",
-            custcol2: {
-              refName: e.controlling_stn ?? "",
-            },
-            custcol4: e.ref_nbr ?? "",
-            custcol_riv_consol_nbr: e.consol_nbr ?? "",
-            custcol_finalizedby: e.finalizedby ?? "",
-          };
-        }),
-      },
+      item: data.map((e) => {
+        return {
+          taxcode: e.tax_code_internal_id ?? "",
+          item: e.charge_cd_internal_id ?? "",
+          description: e.charge_cd_desc ?? "",
+          amount: +parseFloat(e.total).toFixed(2) ?? "",
+          rate: +parseFloat(e.rate).toFixed(2) ?? "",
+          department: hardcode.department.line ?? "",
+          class:
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
+          location: hardcode.location.line,
+          custcol_hawb: e.housebill_nbr ?? "",
+          custcol3: e.sales_person ?? "",
+          custcol5: e.master_bill_nbr ?? "",
+          custcol2: {
+            refName: e.controlling_stn ?? "",
+          },
+          custcol4: e.ref_nbr ?? "",
+          custcol_riv_consol_nbr: e.consol_nbr ?? "",
+          custcol_finalizedby: e.finalizedby ?? "",
+        };
+      }),
     };
     if (singleItem.invoice_type == "IN") {
       payload.approvalStatus = { id: "2" };
@@ -499,7 +499,9 @@ function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
       const invTypeEndpoiont =
-        singleItem.invoice_type == "IN" ? "vendorBill" : "vendorCredit";
+        singleItem.invoice_type == "IN"
+          ? "customdeploy_mfc_rl_mcleod_vb"
+          : "customdeploy_mfc_rl_mcleod_vc";
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
@@ -511,7 +513,7 @@ function createInvoice(payload, singleItem) {
           .split("_")
           .join(
             "-"
-          )}.suitetalk.api.netsuite.com/services/rest/record/v1/${invTypeEndpoiont}`,
+          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -533,17 +535,23 @@ function createInvoice(payload, singleItem) {
         .then((response) => {
           console.log("response", response.status);
           console.log(JSON.stringify(response.data));
-          resolve("success");
+          if (response.status === 200 && response.data.status === "Success") {
+            resolve(response.data.id);
+          } else {
+            reject({
+              customError: true,
+              msg: response.data.reason.replace(/'/g, "`"),
+              payload: JSON.stringify(payload),
+              response: JSON.stringify(response.data).replace(/'/g, "`"),
+            });
+          }
         })
         .catch((error) => {
           console.log(error.response.status);
           console.log(error.response.data);
           reject({
             customError: true,
-            msg: error?.response?.data?.["o:errorDetails"][0]?.detail.replace(
-              /'/g,
-              "`"
-            ),
+            msg: error.response.data.reason.replace(/'/g, "`"),
             payload: JSON.stringify(payload),
             response: JSON.stringify(error.response.data).replace(/'/g, "`"),
           });
@@ -595,7 +603,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${apDbName} `;
     if (isSuccess) {
-      query += ` SET internal_id = '1234', processed = 'P', `;
+      query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
@@ -605,7 +613,6 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
                       invoice_type = '${item.invoice_type}'and 
                       vendor_id = '${item.vendor_id}' and 
                       file_nbr = '${item.file_nbr}'`;
-
     return query;
   } catch (error) {
     return "";

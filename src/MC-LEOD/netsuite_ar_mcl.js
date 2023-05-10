@@ -198,10 +198,16 @@ async function makeJsonPayload(data) {
      * head level details
      */
     const payload = {
+      custbody_mfc_omni_unique_key:
+        singleItem.invoice_nbr +
+        "-" +
+        singleItem.invoice_type +
+        "-" +
+        singleItem.file_nbr, //invoice_nbr, invoice_type, file_nbr
       tranid: singleItem.invoice_nbr ?? "",
       trandate: singleItem.invoice_date
         ? dateFormat(singleItem.invoice_date)
-        : null,
+        : "",
       department: hardcode.department.head,
       class: hardcode.class.head,
       location: hardcode.location.head,
@@ -212,32 +218,30 @@ async function makeJsonPayload(data) {
       otherrefnum: singleItem.file_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
-      custbody18: singleItem.finalized_date ?? null,
+      custbody18: singleItem.finalized_date ?? "",
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
-      item: {
-        items: data.map((e) => {
-          return {
-            item: e.charge_cd_internal_id ?? "",
-            description: e?.charge_cd_desc ?? "",
-            amount: +parseFloat(e.total).toFixed(2) ?? "",
-            rate: +parseFloat(e.rate).toFixed(2) ?? "",
-            department: hardcode.department.line ?? "",
-            class:
-              hardcode.class.line[
-                e.business_segment.split(":")[1].trim().toLowerCase()
-              ],
-            location: hardcode.location.line,
-            custcol_hawb: e.housebill_nbr ?? "",
-            custcol3: e.sales_person ?? "",
-            custcol5: e.master_bill_nbr ?? "",
-            custcol2: {
-              refName: e.controlling_stn ?? "",
-            },
-            custcol1: e.ready_date ? e.ready_date.toISOString() : null,
-          };
-        }),
-      },
+      item: data.map((e) => {
+        return {
+          item: e.charge_cd_internal_id ?? "",
+          description: e?.charge_cd_desc ?? "",
+          amount: +parseFloat(e.total).toFixed(2) ?? "",
+          rate: +parseFloat(e.rate).toFixed(2) ?? "",
+          department: hardcode.department.line ?? "",
+          class:
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
+          location: hardcode.location.line,
+          custcol_hawb: e.housebill_nbr ?? "",
+          custcol3: e.sales_person ?? "",
+          custcol5: e.master_bill_nbr ?? "",
+          custcol2: {
+            refName: e.controlling_stn ?? "",
+          },
+          custcol1: e.ready_date ? e.ready_date.toISOString() : "",
+        };
+      }),
     };
 
     console.log("payload", JSON.stringify(payload));
@@ -292,7 +296,9 @@ function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
       const invTypeEndpoiont =
-        singleItem.invoice_type == "IN" ? "invoice" : "creditMemo";
+        singleItem.invoice_type == "IN"
+          ? "customdeploy_mfc_rl_mcleod_inv"
+          : "customdeploy_mfc_rl_mcleod_cm";
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
@@ -304,7 +310,7 @@ function createInvoice(payload, singleItem) {
           .split("_")
           .join(
             "-"
-          )}.suitetalk.api.netsuite.com/services/rest/record/v1/${invTypeEndpoiont}`,
+          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -326,17 +332,23 @@ function createInvoice(payload, singleItem) {
         .then((response) => {
           console.log("response", response.status);
           console.log(JSON.stringify(response.data));
-          resolve("success");
+          if (response.status === 200 && response.data.status === "Success") {
+            resolve(response.data.id);
+          } else {
+            reject({
+              customError: true,
+              msg: response.data.reason.replace(/'/g, "`"),
+              payload: JSON.stringify(payload),
+              response: JSON.stringify(response.data).replace(/'/g, "`"),
+            });
+          }
         })
         .catch((error) => {
           console.log(error.response.status);
           console.log(error.response.data);
           reject({
             customError: true,
-            msg: error?.response?.data?.["o:errorDetails"][0]?.detail.replace(
-              /'/g,
-              "`"
-            ),
+            msg: error.response.data.reason.replace(/'/g, "`"),
             payload: JSON.stringify(payload),
             response: JSON.stringify(error.response.data).replace(/'/g, "`"),
           });
@@ -357,7 +369,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
-      query += ` SET internal_id = 1234, processed = 'P', `;
+      query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
     } else {
       query += ` SET internal_id = null, processed = 'F', `;
     }
@@ -367,6 +379,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     console.log("query", query);
     return query;
   } catch (error) {
+    console.log("error:getUpdateQuery", error, item, invoiceId);
     return "";
   }
 }
