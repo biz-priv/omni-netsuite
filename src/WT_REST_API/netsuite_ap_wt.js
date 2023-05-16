@@ -70,12 +70,11 @@ module.exports.handler = async (event, context, callback) => {
      * will work on this if section if rest can't handle more than 500 line items.
      */
     if (queryOperator == ">") {
-      return { hasMoreData: "false" };
       // Update 500 line items per process
       console.log("> start");
 
       totalCountPerLoop = 0;
-      if (queryInvoiceId != null && queryInvoiceId.length > 0) {
+      if (queryInvoiceId != null && queryInvoiceId.toString().length > 0) {
         console.log(">if");
 
         try {
@@ -84,15 +83,20 @@ module.exports.handler = async (event, context, callback) => {
             queryInvoiceNbr,
             true
           );
-          await createInvoiceAndUpdateLineItems(
-            queryInvoiceId,
-            invoiceDataList
-          );
+
+          try {
+            await createInvoiceAndUpdateLineItems(
+              queryInvoiceId,
+              invoiceDataList
+            );
+          } catch (error) {
+            console.log("work later");
+          }
 
           if (lineItemPerProcess >= invoiceDataList.length) {
             throw "Next Process";
           } else {
-            dbc.end();
+            //dbc.end();
             return {
               hasMoreData: "true",
               queryOperator,
@@ -104,7 +108,7 @@ module.exports.handler = async (event, context, callback) => {
             };
           }
         } catch (error) {
-          dbc.end();
+          //dbc.end();
           return {
             hasMoreData: "true",
             queryOperator,
@@ -120,10 +124,10 @@ module.exports.handler = async (event, context, callback) => {
             orderData = await getDataGroupBy(connections);
             console.log("orderData", orderData.length);
           } catch (error) {
-            dbc.end();
+            //dbc.end();
             await triggerReportLambda(
               process.env.NETSUIT_INVOICE_REPORT,
-              "OL_AP"
+              "WT_AP"
             );
             return { hasMoreData: "false" };
           }
@@ -142,7 +146,7 @@ module.exports.handler = async (event, context, callback) => {
            */
           const queryData = await mainProcess(orderData[0], invoiceDataList);
           // console.log("queryData", queryData);
-          await updateInvoiceId(connections, queryData);
+          await updateInvoiceId(connections, [queryData]);
 
           /**
            * if items <= 501 process next invoice
@@ -152,9 +156,19 @@ module.exports.handler = async (event, context, callback) => {
             invoiceDataList.length <= lineItemPerProcess ||
             queryInvoiceId == null
           ) {
+            console.log("next invoice");
             throw "Next Invoice";
           } else {
-            dbc.end();
+            console.log("next exec", {
+              hasMoreData: "true",
+              queryOperator,
+              queryOffset: queryOffset + lineItemPerProcess + 1,
+              queryInvoiceId,
+              queryInvoiceNbr: queryInvoiceNbr,
+              queryinvoiceType: orderData[0].invoice_type,
+              queryVendorId,
+            });
+
             return {
               hasMoreData: "true",
               queryOperator,
@@ -167,7 +181,7 @@ module.exports.handler = async (event, context, callback) => {
           }
         } catch (error) {
           console.log("error", error);
-          dbc.end();
+          //dbc.end();
           return {
             hasMoreData: "true",
             queryOperator,
@@ -185,11 +199,10 @@ module.exports.handler = async (event, context, callback) => {
       try {
         orderData = await getDataGroupBy(connections);
       } catch (error) {
-        return { hasMoreData: "false" };
-        // return {
-        //   hasMoreData: "true",
-        //   queryOperator: queryOperator == "<=" ? ">" : "<=",
-        // };
+        return {
+          hasMoreData: "true",
+          queryOperator: queryOperator == "<=" ? ">" : "<=",
+        };
       }
 
       try {
@@ -236,24 +249,24 @@ module.exports.handler = async (event, context, callback) => {
        */
       await updateInvoiceId(connections, queryData);
 
-      // if (currentCount < totalCountPerLoop) {
-      //   queryOperator = ">";
-      // }
-      // dbc.end();
-      // return { hasMoreData: "true", queryOperator };
-      let hasMoreData = "false";
-      if (currentCount > totalCountPerLoop) {
-        hasMoreData = "true";
-      } else {
-        await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
-        hasMoreData = "false";
+      if (currentCount < totalCountPerLoop) {
+        queryOperator = ">";
       }
-      dbc.end();
-      return { hasMoreData };
+      //dbc.end();
+      return { hasMoreData: "true", queryOperator };
+      // let hasMoreData = "false";
+      // if (currentCount > totalCountPerLoop) {
+      //   hasMoreData = "true";
+      // } else {
+      //   await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
+      //   hasMoreData = "false";
+      // }
+      // //dbc.end();
+      // return { hasMoreData };
     }
   } catch (error) {
     console.log("error", error);
-    dbc.end();
+    //dbc.end();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
     return { hasMoreData: "false" };
   }
@@ -278,7 +291,6 @@ async function mainProcess(item, invoiceDataList) {
       );
     });
     console.log("dataList", dataList.length);
-    let getUpdateQueryList = "";
 
     /**
      * set single item and customer data
@@ -298,7 +310,7 @@ async function mainProcess(item, invoiceDataList) {
     const invoiceId = await createInvoice(jsonPayload, singleItem);
 
     if (queryOperator == ">") {
-      queryInvoiceId = invoiceId;
+      queryInvoiceId = invoiceId.toString();
     }
 
     /**
@@ -340,12 +352,13 @@ async function mainProcess(item, invoiceDataList) {
  */
 async function getDataGroupBy(connections) {
   try {
-    const query = `SELECT invoice_nbr, vendor_id, invoice_type
+    const query = `SELECT invoice_nbr, vendor_id, invoice_type, count(*) as tc
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
                     (vendor_internal_id is not null and processed ='F' and processed_date < '${today}'))
                     and source_system = '${source_system}' and invoice_nbr != ''
                     GROUP BY invoice_nbr, vendor_id, invoice_type
+                    having tc ${queryOperator} ${lineItemPerProcess} 
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -372,8 +385,6 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
 
     const [rows] = await connections.execute(query);
     const result = rows;
-    console.log("result", result);
-
     if (!result || result.length == 0) {
       throw "No data found.";
     }
@@ -417,6 +428,7 @@ async function makeJsonPayload(data) {
       custbody_service_level: singleItem?.service_level ?? "",
       item: data.map((e) => {
         return {
+          // custcol_mfc_line_unique_key:"",
           taxcode: e.tax_code_internal_id ?? "",
           item: e.charge_cd_internal_id ?? "",
           description: e.charge_cd_desc ?? "",
@@ -443,20 +455,20 @@ async function makeJsonPayload(data) {
       }),
     };
     if (singleItem.invoice_type == "IN") {
-      payload.approvalStatus = { id: "2" };
+      payload.approvalStatus = "2";
     }
 
     console.log("payload", JSON.stringify(payload));
     return payload;
   } catch (error) {
     console.log("error payload", error);
-    await sendDevNotification(
-      source_system,
-      "AP",
-      "netsuite_ap_wt payload error",
-      data[0],
-      error
-    );
+    // await sendDevNotification(
+    //   source_system,
+    //   "AP",
+    //   "netsuite_ap_wt payload error",
+    //   data[0],
+    //   error
+    // );
     throw {
       customError: true,
       msg: "Unable to make payload",
@@ -566,28 +578,180 @@ function createInvoice(payload, singleItem) {
   });
 }
 
-/**
- * work on this function later
- * @param {*} invoiceId
- * @param {*} data
- */
-async function createInvoiceAndUpdateLineItems(invoiceId, data) {
-  // try {
-  //   const lineItemXml = await makeJsonForLineItems(
-  //     invoiceId,
-  //     JSON.parse(JSON.stringify(lineItemPayload)),
-  //     data
-  //   );
-  //   await axios.post(process.env.NETSUIT_AR_API_ENDPOINT, lineItemXml, {
-  //     headers: {
-  //       Accept: "text/xml",
-  //       "Content-Type": "text/xml; charset=utf-8",
-  //       SOAPAction: "update",
-  //     },
-  //   });
-  // } catch (error) {
-  //   console.log("error", error);
-  // }
+// function deleteInvoice(internalId) {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       const options = {
+//         consumer_key: userConfig.token.consumer_key,
+//         consumer_secret_key: userConfig.token.consumer_secret,
+//         token: userConfig.token.token_key,
+//         token_secret: userConfig.token.token_secret,
+//         realm: userConfig.account,
+//         url: `https://${userConfig.account
+//           .toLowerCase()
+//           .split("_")
+//           .join(
+//             "-"
+//           )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${internalId}`,
+//         method: "PUT",
+//       };
+//       const authHeader = getAuthorizationHeader(options);
+//       const configApi = {
+//         method: options.method,
+//         maxBodyLength: Infinity,
+//         url: options.url,
+//         headers: {
+//           "Content-Type": "application/json",
+//           ...authHeader,
+//         },
+//         data: JSON.stringify(payload),
+//       };
+//       axios
+//         .request(configApi)
+//         .then((response) => {
+//           console.log("response", response.status);
+//           console.log(JSON.stringify(response.data));
+//           resolve(true);
+//         })
+//         .catch((error) => {
+//           console.log(error.response.status);
+//           console.log(error.response.data);
+//           resolve(true);
+//         });
+//     } catch (error) {
+//       console.log("error", error);
+//     }
+//   });
+// }
+
+function makeLineItemsJsonPayload(invoiceId, data) {
+  try {
+    const hardcode = getHardcodeData();
+
+    /**
+     * head level details
+     */
+    const payload = {
+      id: invoiceId,
+      item: data.map((e) => {
+        return {
+          // custcol_mfc_line_unique_key:"",
+          taxcode: e.tax_code_internal_id ?? "",
+          item: e.charge_cd_internal_id ?? "",
+          description: e.charge_cd_desc ?? "",
+          amount: +parseFloat(e.total).toFixed(2) ?? "",
+          rate: +parseFloat(e.rate).toFixed(2) ?? "",
+          department: hardcode.department.line ?? "",
+          class:
+            hardcode.class.line[
+              e.business_segment.split(":")[1].trim().toLowerCase()
+            ],
+          location: {
+            refName: e.handling_stn ?? "",
+          },
+          custcol_hawb: e.housebill_nbr ?? "",
+          custcol3: e.sales_person ?? "",
+          custcol5: e.master_bill_nbr ?? "",
+          custcol2: {
+            refName: e.controlling_stn ?? "",
+          },
+          custcol4: e.ref_nbr ?? "",
+          custcol_riv_consol_nbr: e.consol_nbr ?? "",
+          custcol_finalizedby: e.finalizedby ?? "",
+        };
+      }),
+    };
+    return payload;
+  } catch (error) {
+    console.log("error payload", error);
+    // await sendDevNotification(
+    //   source_system,
+    //   "AP",
+    //   "netsuite_ap_MCL payload error",
+    //   data[0],
+    //   error
+    // );
+    // throw {
+    //   customError: true,
+    //   msg: "Unable to make payload",
+    //   data: data[0],
+    // };
+  }
+}
+
+function createInvoiceAndUpdateLineItems(invoiceId, data) {
+  return new Promise((resolve, reject) => {
+    try {
+      const invTypeEndpoiont =
+        data[0].invoice_type == "IN"
+          ? "customdeploy_mfc_rl_mcleod_vb"
+          : "customdeploy_mfc_rl_mcleod_vc";
+      const options = {
+        consumer_key: userConfig.token.consumer_key,
+        consumer_secret_key: userConfig.token.consumer_secret,
+        token: userConfig.token.token_key,
+        token_secret: userConfig.token.token_secret,
+        realm: userConfig.account,
+        url: `https://${userConfig.account
+          .toLowerCase()
+          .split("_")
+          .join(
+            "-"
+          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        method: "PUT",
+      };
+      const authHeader = getAuthorizationHeader(options);
+
+      const payload = makeLineItemsJsonPayload(invoiceId, data);
+      console.log("payload", JSON.stringify(payload));
+
+      const configApi = {
+        method: options.method,
+        maxBodyLength: Infinity,
+        url: options.url,
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader,
+        },
+        data: JSON.stringify(payload),
+      };
+      console.log("configApi", configApi);
+
+      axios
+        .request(configApi)
+        .then((response) => {
+          console.log("response", response.status);
+          console.log(JSON.stringify(response.data));
+          if (response.status === 200 && response.data.status === "Success") {
+            resolve(response.data.id);
+          } else {
+            reject({
+              customError: true,
+              msg: response.data.reason.replace(/'/g, "`"),
+              payload: JSON.stringify(payload),
+              response: JSON.stringify(response.data).replace(/'/g, "`"),
+            });
+          }
+        })
+        .catch((error) => {
+          console.log(error.response.status);
+          console.log(error.response.data);
+          reject({
+            customError: true,
+            msg: error.response.data.reason.replace(/'/g, "`"),
+            payload: JSON.stringify(payload),
+            response: JSON.stringify(error.response.data).replace(/'/g, "`"),
+          });
+        });
+    } catch (error) {
+      console.log("error:createInvoice:main:catch", error);
+      reject({
+        customError: true,
+        msg: "Netsuit AP Api Failed",
+        response: "",
+      });
+    }
+  });
 }
 
 /**
@@ -627,17 +791,18 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
 async function updateInvoiceId(connections, query) {
   for (let index = 0; index < query.length; index++) {
     const element = query[index];
+    console.log("element", element);
     try {
       await connections.execute(element);
     } catch (error) {
       console.log("error:updateInvoiceId", error);
-      await sendDevNotification(
-        source_system,
-        "AP",
-        "netsuite_ap_wt updateInvoiceId",
-        "Invoice is created But failed to update internal_id " + element,
-        error
-      );
+      // await sendDevNotification(
+      //   source_system,
+      //   "AP",
+      //   "netsuite_ap_wt updateInvoiceId",
+      //   "Invoice is created But failed to update internal_id " + element,
+      //   error
+      // );
     }
   }
 }
