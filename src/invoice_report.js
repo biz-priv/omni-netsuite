@@ -10,8 +10,10 @@ const {
 } = require("../Helpers/helper");
 const mailList = {
   WT: {
-    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    AR: "ar@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com,bcastilleja@omnilogistics.com,justinwong@omnilogistics.com,kreynolds@omnilogistics.com,MMensik@omnilogistics.com,smcgrew@omnilogistics.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,thamilton@omnilogistics.com,cvyas@omnilogistics.com,mlaw@omnilogistics.com,iqbal.layek@bizcloudexperts.com,tmella@omnilogistics.com,dschneir@omnilogistics.com",
+    AP: "psotelo@omnilogistics.com,nivarra@omnilogistics.com,cralston@omnilogistics.com,vbibi@omnilogistics.com,justinwong@omnilogistics.com,vstrickland@omnilogistics.com,kiranv@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,marcochong.hkg@trinityworld.com,cvyas@omnilogistics.com,jomendez@omnilogistics.com,mlaw@omnilogistics.com,rlawal@omnilogistics.com,croberson@omnilogistics.com,tmella@omnilogistics.com,dschneir@omnilogistics.com",
   },
   CW: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -26,8 +28,10 @@ const mailList = {
     AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
   },
   OL: {
-    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    AR: "ar@omnilogistics.com,psotelo@omnilogistics.com,vbibi@omnilogistics.com,bcastilleja@omnilogistics.com,justinwong@omnilogistics.com,kreynolds@omnilogistics.com,MMensik@omnilogistics.com,smcgrew@omnilogistics.com,kiranv@bizcloudexperts.com,priyanka@bizcloudexperts.com,thamilton@omnilogistics.com,cvyas@omnilogistics.com,mlaw@omnilogistics.com,iqbal.layek@bizcloudexperts.com,tmella@omnilogistics.com,dschneir@omnilogistics.com",
+    AP: "psotelo@omnilogistics.com,nivarra@omnilogistics.com,cralston@omnilogistics.com,vbibi@omnilogistics.com,justinwong@omnilogistics.com,vstrickland@omnilogistics.com,kiranv@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com,priyanka@bizcloudexperts.com,wwaller@omnilogistics.com,marcochong.hkg@trinityworld.com,cvyas@omnilogistics.com,jomendez@omnilogistics.com,mlaw@omnilogistics.com,rlawal@omnilogistics.com,croberson@omnilogistics.com,tmella@omnilogistics.com,dschneir@omnilogistics.com",
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
