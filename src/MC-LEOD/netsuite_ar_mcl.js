@@ -2,8 +2,8 @@ const AWS = require("aws-sdk");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 const axios = require("axios");
-const pgp = require("pg-promise");
-const dbc = pgp({ capSQL: true });
+// const pgp = require("pg-promise");
+// const dbc = pgp({ capSQL: true });
 const {
   getConfig,
   getConnectionToRds,
@@ -76,10 +76,10 @@ module.exports.handler = async (event, context, callback) => {
       await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
       hasMoreData = "false";
     }
-    dbc.end();
+    // dbc.end();
     return { hasMoreData };
   } catch (error) {
-    dbc.end();
+    // dbc.end();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
     return { hasMoreData: "false" };
   }
