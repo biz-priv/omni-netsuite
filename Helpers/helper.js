@@ -83,16 +83,24 @@ function getConfig(source_system, env) {
  */
 function getConnection(env) {
   try {
+    // DEV/PROD
     const dbUser = env.USER;
     const dbPassword = env.PASS;
     const dbHost = env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
     const dbPort = env.PORT;
     const dbName = env.DBNAME;
+
+    //LOCAl test
+    // const dbUser = "bceuser1";
+    // const dbPassword = "BizCloudExp1";
+    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    // const dbPort = env.PORT;
+    // const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
   } catch (error) {
+    console.log("connection error:-  ", error);
     throw "DB Connection Error";
   }
 }
@@ -296,6 +304,45 @@ async function createIntercompanyFailedRecords(connections, item, error) {
 }
 
 /**
+ * handle error logs Intercompany
+ */
+async function createIntracompanyFailedRecords(connections, item, error) {
+  try {
+    console.log("error*******", error);
+    const formatData = {
+      source_system: "WT-OL",
+      invoice_nbr: item[0].invoice_nbr,
+      housebill_nbr: item[0].housebill_nbr,
+      payload: error.payload,
+      error_msg: error.msg,
+      error_response: error.response,
+      is_report_sent: "N",
+      current_dt: moment().format("YYYY-MM-DD"),
+    };
+    console.log("formatData", formatData);
+
+    return {};
+
+    let tableStr = "";
+    let valueStr = "";
+    let objKyes = Object.keys(formatData);
+    objKyes.map((e, i) => {
+      if (i > 0) {
+        valueStr += ",";
+      }
+      valueStr += "'" + formatData[e] + "'";
+    });
+    tableStr = objKyes.join(",");
+
+    const query = `INSERT INTO interface_intercompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    console.log("query", query);
+    await connections.query(query);
+  } catch (error) {
+    console.log("createIntercompanyFailedRecords:error", error);
+  }
+}
+
+/**
  * send report lambda trigger function
  */
 function triggerReportLambda(functionName, payloadData) {
@@ -393,4 +440,5 @@ module.exports = {
   createIntercompanyFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  createIntracompanyFailedRecords,
 };

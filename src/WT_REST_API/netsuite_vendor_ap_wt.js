@@ -114,7 +114,7 @@ async function getVendorData(connections) {
     const query = `SELECT distinct vendor_id FROM ${apDbName}
                     where ((vendor_internal_id is null and processed_date is null) or
                             (vendor_internal_id is null and processed_date < '${today}'))
-                    and source_system = '${source_system}' 
+                    and source_system = '${source_system}' and vendor_id is not null
                     limit ${totalCountPerLoop + 1}`;
     console.log("query", query);
     const [rows] = await connections.execute(query);

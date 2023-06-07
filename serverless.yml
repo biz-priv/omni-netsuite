@@ -116,6 +116,8 @@ functions:
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
+  intera-company-wt-mcl: ${file(config/functions/INTRA-COMPANY/intera-company-wt-mcl.yml):function}
+
   invoice-report: ${file(config/functions/invoice-report.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
 
@@ -148,3 +150,5 @@ stepFunctions:
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
+
+    intera-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intera-company-wt-mcl-state-machine.yml):stateMachine}
