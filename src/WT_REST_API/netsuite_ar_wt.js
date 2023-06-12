@@ -216,6 +216,7 @@ async function makeJsonPayload(data) {
       custbody18: singleItem.finalized_date ?? "",
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
+      custbody25: singleItem.zip_code ?? "",
       item: data.map((e) => {
         return {
           // custcol_mfc_line_unique_key:"",
