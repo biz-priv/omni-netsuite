@@ -42,7 +42,12 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get invoice internal ids from
      */
-    const invoiceData = await getUniqueRecords();
+    // const invoiceData = await getUniqueRecords();
+
+    const invoiceData = [
+      { invoice_nbr: "0001889", housebill_nbr: "7482074" },
+      { invoice_nbr: "0001890", housebill_nbr: "7482073" },
+    ];
     console.log("invoiceData", invoiceData, invoiceData.length);
     currentCount = invoiceData.length;
 
@@ -62,7 +67,7 @@ module.exports.handler = async (event, context, callback) => {
     } else {
       // await triggerReportLambda(
       //   process.env.NETSUIT_INVOICE_REPORT,
-      //   "CW_INTERCOMPANY"
+      //   "OLWT_INTRACOMPANY"
       // );
       hasMoreData = "false";
     }
@@ -73,7 +78,7 @@ module.exports.handler = async (event, context, callback) => {
     // dbc.end();
     // await triggerReportLambda(
     //   process.env.NETSUIT_INVOICE_REPORT,
-    //   "CW_INTERCOMPANY"
+    //   "OLWT_INTRACOMPANY"
     // );
     return { hasMoreData: "false" };
   }
@@ -138,7 +143,7 @@ async function getRecordDetails(item) {
         housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
         null as debit,rate as credit,'40017'  as account_num
         from dw_uat.interface_ar_intracompany) main 
-        where invoice_nbr='${item.invoice_nbr}' and housebill_nbr='${item.housebill_nbr}'`;
+        where invoice_nbr='${item.invoice_nbr}' or housebill_nbr='${item.housebill_nbr}'`;
 
     console.log("query", query);
     const [rows] = await connections.execute(query);
@@ -168,38 +173,12 @@ async function mainProcess(item, itemUniqueKey) {
       await updateAPandAr(item, null, "F");
       await createIntracompanyFailedRecords(connections, item, error);
     } else {
-      // await sendDevNotification(
-      //   "INVOICE-INTERCOMPANY",
-      //   "CW",
-      //   "netsuite_intercompany mainProcess",
-      //   item,
-      //   error
-      // );
     }
   }
 }
 
 async function makeJsonPayload(data) {
   try {
-    // const wtHC = {
-    //   source_system: "3",
-    //   class: {
-    //     head: "9",
-    //     line: getBusinessSegment(process.env.STAGE),
-    //   },
-    //   department: { head: "15", line: "2" },
-    //   location: { head: "18", line: "EXT ID: Take from DB" },
-    // };
-    // const mclArHC = {
-    //   source_system: "6",
-    //   class: {
-    //     head: "9",
-    //     line: getBusinessSegment(process.env.STAGE),
-    //   },
-    //   department: { head: "15", line: "1" },
-    //   location: { head: "88", line: "88" },
-    // };
-
     const bgs = getBusinessSegment(process.env.STAGE);
     const acc_internal_ids = {
       40017: 3023,
@@ -241,13 +220,6 @@ async function makeJsonPayload(data) {
     return payload;
   } catch (error) {
     console.log("error payload", error);
-    // await sendDevNotification(
-    //   source_system,
-    //   "AR",
-    //   "netsuite_ar_MCL_intra_company payload error",
-    //   data[0],
-    //   error
-    // );
     throw {
       customError: true,
       msg: "Unable to make payload",
@@ -368,7 +340,7 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                   internal_id = ${
                     internal_id == null ? null : "'" + internal_id + "'"
                   }
-                  where invoice_nbr = '${item[0].invoice_nbr}' and 
+                  where invoice_nbr = '${item[0].invoice_nbr}' or 
                   housebill_nbr = '${item[0].housebill_nbr}';
                 `;
     console.log("query1", query1);
@@ -380,7 +352,7 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                 internal_id = ${
                   internal_id == null ? null : "'" + internal_id + "'"
                 }
-                where invoice_nbr = '${item[0].invoice_nbr}' and 
+                where invoice_nbr = '${item[0].invoice_nbr}' or 
                 housebill_nbr = '${item[0].housebill_nbr}';
               `;
     console.log("query2", query2);
