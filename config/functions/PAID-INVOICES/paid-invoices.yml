@@ -1,0 +1,14 @@
+---
+function:
+  handler: src/PAID-INVOICES/paid_invoices.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: netsuite-paid-invoices-${self:provider.stage}
+  description: Netsuite paid invoices api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/PAID-INVOICES/paid_invoices.js
+      - Helpers/**

@@ -112,14 +112,19 @@ functions:
   # netsuite-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-ap-mcl.yml):function}
   # netsuite-vendor-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-vendor-ap-mcl.yml):function}
 
+  #intar company fn
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
+  #intra company fn
   intera-company-wt-mcl: ${file(config/functions/INTRA-COMPANY/intera-company-wt-mcl.yml):function}
 
+  #report fn
   invoice-report: ${file(config/functions/invoice-report.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
+
+  netsuite-paid-invoices: ${file(config/functions/PAID-INVOICES/paid-invoices.yml):function}
 
 stepFunctions:
   stateMachines:

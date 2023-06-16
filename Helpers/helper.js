@@ -84,18 +84,18 @@ function getConfig(source_system, env) {
 function getConnection(env) {
   try {
     // DEV/PROD
-    const dbUser = env.USER;
-    const dbPassword = env.PASS;
-    const dbHost = env.HOST;
-    const dbPort = env.PORT;
-    const dbName = env.DBNAME;
-
-    //LOCAl test
-    // const dbUser = "bceuser1";
-    // const dbPassword = "BizCloudExp1";
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    // const dbUser = env.USER;
+    // const dbPassword = env.PASS;
+    // const dbHost = env.HOST;
     // const dbPort = env.PORT;
     // const dbName = env.DBNAME;
+
+    //LOCAl test
+    const dbUser = "bceuser1";
+    const dbPassword = "BizCloudExp1";
+    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbPort = env.PORT;
+    const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
@@ -304,16 +304,16 @@ async function createIntercompanyFailedRecords(connections, item, error) {
 }
 
 /**
- * handle error logs Intercompany
+ * handle error logs Intera-company
  */
 async function createIntracompanyFailedRecords(connections, item, error) {
   try {
     console.log("error*******", error);
     const formatData = {
       source_system: "WT-OL",
-      invoice_nbr: item[0].invoice_nbr,
-      housebill_nbr: item[0].housebill_nbr,
-      payload: error.payload,
+      invoice_nbr: item?.[0].invoice_nbr,
+      housebill_nbr: item?.[0].housebill_nbr,
+      // payload: JSON.stringify(error.payload),
       error_msg: error.msg,
       error_response: error.response,
       is_report_sent: "N",
@@ -334,7 +334,7 @@ async function createIntracompanyFailedRecords(connections, item, error) {
     });
     tableStr = objKyes.join(",");
 
-    const query = `INSERT INTO interface_intercompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    const query = `INSERT INTO interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
     console.log("query", query);
     await connections.query(query);
   } catch (error) {
@@ -431,6 +431,38 @@ function sendDevNotification(
   });
 }
 
+function getAuthorizationHeader(options) {
+  const crypto = require("crypto");
+  const OAuth = require("oauth-1.0a");
+
+  const oauth = OAuth({
+    consumer: {
+      key: options.consumer_key,
+      secret: options.consumer_secret_key,
+    },
+    realm: options.realm,
+    signature_method: "HMAC-SHA256",
+    hash_function(base_string, key) {
+      return crypto
+        .createHmac("sha256", key)
+        .update(base_string)
+        .digest("base64");
+    },
+  });
+  return oauth.toHeader(
+    oauth.authorize(
+      {
+        url: options.url,
+        method: options.method,
+      },
+      {
+        key: options.token,
+        secret: options.token_secret,
+      }
+    )
+  );
+}
+
 module.exports = {
   getConfig,
   getConnection,
@@ -441,4 +473,5 @@ module.exports = {
   triggerReportLambda,
   sendDevNotification,
   createIntracompanyFailedRecords,
+  getAuthorizationHeader,
 };
