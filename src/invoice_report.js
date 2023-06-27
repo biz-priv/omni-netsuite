@@ -39,9 +39,12 @@ const mailList = {
     TR:
       process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",natalief.hkg@trinityworld.com",
   },
+  INTRACOMPANY: {
+    WT: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com,sreddy@bizcloudexperts.com"
+  },
 };
 
-const REST_SS = ["OL", "WT"];
+const REST_SS = ["OL", "WT", "CW"];
 
 module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
@@ -53,7 +56,7 @@ module.exports.handler = async (event, context, callback) => {
     const eventData = event.invPayload.split("_");
     sourceSystem = eventData[0];
     reportType = eventData[1];
-
+    console.log(sourceSystem, "----", reportType);
     if (REST_SS.includes(sourceSystem)) {
       connections = await getConnectionToRds(process.env);
     } else {
@@ -64,7 +67,10 @@ module.exports.handler = async (event, context, callback) => {
       await generateCsvAndMail(connections, sourceSystem, "AR");
     } else if (reportType === "AP") {
       await generateCsvAndMail(connections, sourceSystem, "AP");
-    } else {
+    } else if (reportType === "INTRACOMPANY") {
+      await generateCsvAndMail(connections, sourceSystem, "INTRACOMPANY")
+    }
+    else {
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AP");
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AR");
     }
@@ -86,30 +92,36 @@ async function generateCsvAndMail(
   connections,
   sourceSystem,
   type,
-  intercompanyType = null
+  intercompanyType = null,
+  intracompanyType = null
 ) {
   try {
+    console.log(sourceSystem, '---', type, '---', intracompanyType);
     const data = await getReportData(
       connections,
       sourceSystem,
       type,
-      intercompanyType
+      intercompanyType,
+      intracompanyType
     );
     if (!data || data.length == 0) return;
     /**
      * create csv
      */
     const fields = Object.keys(data[0]);
+    console.log('fields', fields);
     const opts = { fields };
+    console.log("opts", opts);
     const csv = parse(data, opts);
+    console.log("csv", csv);
 
     /**
      * send mail
      */
-    const filename = `Netsuite-${sourceSystem}-${type}-${
-      process.env.STAGE
-    }-report-${moment().format("DD-MM-YYYY")}.csv`;
-    await sendMail(filename, csv, sourceSystem, type, intercompanyType);
+    const filename = `Netsuite-${sourceSystem}-${type}-${process.env.STAGE
+      }-report-${moment().format("DD-MM-YYYY")}.csv`;
+    console.log("filename", filename);
+    await sendMail(filename, csv, sourceSystem, type, intercompanyType, intracompanyType);
 
     /**
      * Update rows
@@ -124,9 +136,11 @@ async function generateCsvAndMail(
     await sendDevNotification(
       "INVOICE-REPOR-" + sourceSystem,
       "type value:- " +
-        type +
-        "and intercompanyType value:-" +
-        intercompanyType,
+      type +
+      "and intercompanyType value:-" +
+      intercompanyType +
+      "and intracompanyType value:-" +
+      intracompanyType,
       "invoice_report generateCsvAndMail",
       {},
       error
@@ -320,7 +334,15 @@ async function getReportData(
       } else {
         return nonCuErrdata;
       }
-    } else {
+    }
+    else if (type === "INTRACOMPANY") {
+      query = `select iial.* from dw_uat.interface_intracompany_api_logs iial where is_report_sent ='N'`
+      console.log("query:getReportData", query);
+      const data = await executeQuery(connections, sourceSystem, query);
+      console.log("query:data", data.length);
+      return data;
+    }
+    else {
       // INTERCOMPANY
       if (sourceSystem === "CW") {
         if (intercompanyType === "AP") {
@@ -383,6 +405,7 @@ async function getReportData(
 
 async function updateReportData(connections, sourceSystem, type, maxId) {
   try {
+    console.log(sourceSystem, "++++", type, "======", maxId);
     let table = "";
     if (type === "AP") {
       table = REST_SS.includes(sourceSystem)
@@ -392,15 +415,21 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
       table = REST_SS.includes(sourceSystem)
         ? "dw_uat.interface_ar_api_logs"
         : "interface_ar_api_logs";
-    } else {
+    }
+    else if (type === "INTRACOMPANY") {
+      table = "dw_uat.interface_intracompany_api_logs"
+    }
+    else {
       table = "interface_intercompany_api_logs";
     }
 
     if (REST_SS.includes(sourceSystem)) {
       const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      console.log("maxIdQuery", maxIdQuery);
       const [rows] = await connections.execute(maxIdQuery);
       console.log("maxId:rows", rows);
       maxId = rows[0].maxId;
+      console.log("maxId", maxId);
     }
     const query = `Update ${table} set 
                     is_report_sent ='P', 
@@ -419,10 +448,17 @@ function sendMail(
   content,
   sourceSystem,
   type,
-  intercompanyType = null
+  intercompanyType = null,
+  intracompanyType = null
 ) {
   return new Promise((resolve, reject) => {
     try {
+      console.log("sourceSystem:", sourceSystem + "\n" +
+        "filename:", filename + "\n" +
+      "type:", type + "\n" +
+      "intercompanyType:", intercompanyType + "\n" +
+      "intracompanyType:", intracompanyType);
+      console.log(mailList[type][sourceSystem]);
       const transporter = nodemailer.createTransport({
         host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
         port: 587,
@@ -432,15 +468,14 @@ function sendMail(
           pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
         },
       });
-      const title = `Netsuite ${sourceSystem} ${type} ${
-        intercompanyType ? intercompanyType : ""
-      } Report ${process.env.STAGE.toUpperCase()}`;
-
+      const title = `Netsuite ${sourceSystem} ${type} ${intercompanyType ? intercompanyType : "" || intracompanyType ? intracompanyType : ""
+        } Report ${process.env.STAGE.toUpperCase()}`;
+      console.log("title", title);
       const message = {
         from: `${title} <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: "abdul.rashed@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+        //  to: "abdul.rashed@bizcloudexperts.com",
         to:
-          type === "INTERCOMPANY"
+          type === "INTERCOMPANY" || type === "INTRACOMPANY"
             ? mailList[type][sourceSystem]
             : mailList[sourceSystem][type],
         subject: title,

@@ -16,8 +16,8 @@ const today = moment().format("DD/MM/yyyy");
 // const fromDate = moment().subtract(30, "d").format("DD/MM/yyyy");
 // const toDate = today;
 
-const fromDate = "05/01/2022";
-const toDate = "05/02/2022";
+const fromDate = "06/21/2023";
+const toDate = "06/22/2023";
 // 05/01/2022
 //05/02/2022
 
@@ -51,17 +51,12 @@ function getPaidInvoiceData() {
   return new Promise((resolve, reject) => {
     try {
       const options = {
-        consumer_key: userConfig.token.consumer_key,
-        consumer_secret_key: userConfig.token.consumer_secret,
-        token: userConfig.token.token_key,
-        token_secret: userConfig.token.token_secret,
-        realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=845&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
+        consumer_key: 'dc5a854e86c5bd48417c26ec1287cb5577f19d147acb48415e95ceb475ce04a5',
+        consumer_secret_key: '4c53c17215ace3a0d0cb2530685c3609488ab7b8a2e3c3c0fe499779bd6c108a',
+        token: '57c7ad8e5b88cdf0f4614066cc17822c3e57b5cfa596e54b6bbfa2dc2f7c4c4b',
+        token_secret: '35b585473e5352b8120c7da0865fc6e4c3315a91e96458296fb091c35f2d4d81',
+        realm: '1238234',
+        url: `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=724&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
         method: "GET",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -116,21 +111,44 @@ function getPaidInvoiceData() {
 async function insertToDB(item) {
   try {
     // console.log(item);
+    const itemData = item;
+    const formatData= {
+      internalid: itemData.internalid,
+      type: itemData.type,
+      datecreated: itemData.datecreated,
+      tranid: itemData.tranid,
+      amount: itemData.amount,
+      custbody_riv_entity_cpnyname: itemData.custbody_riv_entity_cpnyname.replace(/'/g, "`"),
+      custbody9: itemData.custbody9,
+      duedate: itemData.duedate,
+      custbody_source_system: itemData.custbody_source_system,
+      payingtransaction: itemData.payingtransaction,
+      amountremaining: itemData.amountremaining,
+      created_at: itemData.created_at
+    }
+
+    // console.log("formatData", JSON.stringify(formatData));
 
     let tableStr = "";
     let valueStr = "";
     let updateStr = "";
 
     let objKyes = Object.keys(item);
+    // console.log("objKyes",objKyes);
     objKyes.map((e, i) => {
+      // console.log("e",e,"i",i);
       if (i > 0) {
         valueStr += ",";
+        // console.log("valueStr", valueStr);
         updateStr += e != "customer_id" ? "," : "";
+        // console.log("updateStr", updateStr);
       }
       if (e != "customer_id") {
-        updateStr += e + "='" + item[e] + "'";
+        updateStr += e + "='" + formatData[e] + "'";
+        // console.log("updateStr1", updateStr);
       }
-      valueStr += "'" + item[e] + "'";
+      valueStr += "'" + formatData[e] + "'";
+      // console.log("valueStr1", valueStr);
     });
     tableStr = objKyes.join(",");
 

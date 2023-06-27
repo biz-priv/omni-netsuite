@@ -84,18 +84,18 @@ function getConfig(source_system, env) {
 function getConnection(env) {
   try {
     // DEV/PROD
-    // const dbUser = env.USER;
-    // const dbPassword = env.PASS;
-    // const dbHost = env.HOST;
-    // const dbPort = env.PORT;
-    // const dbName = env.DBNAME;
-
-    //LOCAl test
-    const dbUser = "bceuser1";
-    const dbPassword = "BizCloudExp1";
-    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbUser = env.USER;
+    const dbPassword = env.PASS;
+    const dbHost = env.HOST;
     const dbPort = env.PORT;
     const dbName = env.DBNAME;
+
+    //LOCAl test
+    // const dbUser = "bceuser1";
+    // const dbPassword = "BizCloudExp1";
+    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    // const dbPort = env.PORT;
+    // const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
@@ -109,9 +109,9 @@ async function getConnectionToRds(env) {
   try {
     const dbUser = env.db_username;
     const dbPassword = env.db_password;
-    // const dbHost = env.db_host
-    const dbHost =
-      "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
+    const dbHost = env.db_host
+    // const dbHost =
+    //   "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
     const dbPort = env.db_port;
     const dbName = env.db_name;
     const connection = await mysql.createConnection({
@@ -306,23 +306,20 @@ async function createIntercompanyFailedRecords(connections, item, error) {
 /**
  * handle error logs Intera-company
  */
-async function createIntracompanyFailedRecords(connections, item, error) {
+async function createIntracompanyFailedRecords(connections,source_system, item, error) {
   try {
     console.log("error*******", error);
     const formatData = {
-      source_system: "WT-OL",
+      source_system: source_system,
       invoice_nbr: item?.[0].invoice_nbr,
       housebill_nbr: item?.[0].housebill_nbr,
       // payload: JSON.stringify(error.payload),
-      error_msg: error.msg,
-      error_response: error.response,
+      error_msg: error.msg.replace(/"/g, "`"),
+      response: error.response,
       is_report_sent: "N",
       current_dt: moment().format("YYYY-MM-DD"),
     };
-    console.log("formatData", formatData);
-
-    return {};
-
+    // console.log("formatData", formatData);
     let tableStr = "";
     let valueStr = "";
     let objKyes = Object.keys(formatData);
@@ -334,7 +331,7 @@ async function createIntracompanyFailedRecords(connections, item, error) {
     });
     tableStr = objKyes.join(",");
 
-    const query = `INSERT INTO interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    const query = `INSERT INTO dw_uat.interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
     console.log("query", query);
     await connections.query(query);
   } catch (error) {

@@ -11,6 +11,8 @@ const {
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
+const payload_source_system = ["CW", "WT"]
+
 let userConfig = "";
 let connections = "";
 
@@ -24,12 +26,12 @@ const apDbName = "interface_ap_intracompany";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
 
   let hasMoreData = "false";
   let currentCount = 0;
@@ -42,12 +44,8 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * Get invoice internal ids from
      */
-    // const invoiceData = await getUniqueRecords();
+    const invoiceData = await getUniqueRecords();
 
-    const invoiceData = [
-      { invoice_nbr: "0001889", housebill_nbr: "7482074" },
-      { invoice_nbr: "0001890", housebill_nbr: "7482073" },
-    ];
     console.log("invoiceData", invoiceData, invoiceData.length);
     currentCount = invoiceData.length;
 
@@ -58,17 +56,20 @@ module.exports.handler = async (event, context, callback) => {
 
       const records = await getRecordDetails(item);
 
-      await mainProcess(records, itemUniqueKey);
+      await mainProcess(item.source_system,records, itemUniqueKey);
       console.log("count", i + 1);
     }
 
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
-      // await triggerReportLambda(
-      //   process.env.NETSUIT_INVOICE_REPORT,
-      //   "OLWT_INTRACOMPANY"
-      // );
+      await Promise.all(payload_source_system.map(async (e) => {
+        await triggerReportLambda(
+          process.env.NETSUIT_INVOICE_REPORT,
+          `${e}_INTRACOMPANY`
+        );
+      }))
+
       hasMoreData = "false";
     }
     // dbc.end();
@@ -76,10 +77,12 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log("error:handler", error);
     // dbc.end();
-    // await triggerReportLambda(
-    //   process.env.NETSUIT_INVOICE_REPORT,
-    //   "OLWT_INTRACOMPANY"
-    // );
+    await Promise.all(payload_source_system.map(async (e) => {
+      await triggerReportLambda(
+        process.env.NETSUIT_INVOICE_REPORT,
+        `${e}_INTRACOMPANY`
+      );
+    }))
     return { hasMoreData: "false" };
   }
 };
@@ -90,28 +93,25 @@ module.exports.handler = async (event, context, callback) => {
  */
 async function getUniqueRecords() {
   try {
-    // const query = `select distinct ap.invoice_nbr,ap.housebill_nbr
-    //     from dw_uat.interface_ap_intracompany ap
-    //     join dw_uat.interface_ar_intracompany ar
-    //     on ap.housebill_nbr =ar.housebill_nbr and ap.invoice_nbr =ar.invoice_nbr
-    //     where (
-    //             (ap.internal_id is null and ap.processed is null and
-    //               ar.internal_id is null and ar.processed is null)
-    //             or
-    //             (ap.processed ='F' and ap.processed_date <= '${today}' and
-    //               ap.processed ='F' and ap.processed_date <= '${today}')
-    //           )
-    //     limit ${totalCountPerLoop + 1}`;
-
-    const query = `select distinct ap.invoice_nbr,ap.housebill_nbr
+    const query = `select distinct ar.invoice_nbr,ar.housebill_nbr,ap.source_system
         from dw_uat.interface_ap_intracompany ap
         join dw_uat.interface_ar_intracompany ar
-        on ap.invoice_nbr =ar.invoice_nbr where ap.internal_id is null`;
+        on ap.internal_ref_nbr =ar.housebill_nbr and ap.invoice_nbr =ar.invoice_nbr and ap.pairing_available_flag ='Y' 
+        and ar.pairing_available_flag ='Y'
+        where (
+                (ap.internal_id is null and ap.processed is null and
+                  ar.internal_id is null and ar.processed is null)
+                or
+                (ap.processed ='F' and ap.processed_date <= '${today}' and
+                  ar.processed ='F' and ar.processed_date <= '${today}')
+              )
+        limit ${totalCountPerLoop + 1}`;
+
 
     console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    console.log("result", result);
+    // console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
@@ -124,31 +124,32 @@ async function getUniqueRecords() {
 
 async function getRecordDetails(item) {
   try {
+    // console.log("item",item)
     const query = `select * from (select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
-        housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
-        rate as debit,null as credit,'40017' as account_num
-        from dw_uat.interface_ap_intracompany
-        union
-        select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
-        housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
-        null as debit,rate as credit,'71200' as account_num
-        from dw_uat.interface_ap_intracompany
-        union
-        select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
-        housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
-        rate as debit,null as credit,'71200'  as account_num
-        from dw_uat.interface_ar_intracompany
-        union
-        select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
-        housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
-        null as debit,rate as credit,'40017'  as account_num
-        from dw_uat.interface_ar_intracompany) main 
-        where invoice_nbr='${item.invoice_nbr}' or housebill_nbr='${item.housebill_nbr}'`;
+      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
+      rate as debit,null as credit,'40017' as account_num
+      from dw_uat.interface_ap_intracompany where pairing_available_flag='Y'
+      union
+      select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
+      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
+      null as debit,rate as credit,'71200' as account_num
+      from dw_uat.interface_ap_intracompany where pairing_available_flag='Y'
+      union
+      select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
+      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
+      rate as debit,null as credit,'71200'  as account_num
+      from dw_uat.interface_ar_intracompany where pairing_available_flag='Y'
+      union
+      select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
+      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
+      null as debit,rate as credit,'40017'  as account_num
+      from dw_uat.interface_ar_intracompany where pairing_available_flag='Y') main
+      where invoice_nbr='${item.invoice_nbr}' and consol_housebill_nbr='${item.housebill_nbr}'`;
 
     console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    console.log("result", result);
+    // console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
@@ -159,7 +160,7 @@ async function getRecordDetails(item) {
   }
 }
 
-async function mainProcess(item, itemUniqueKey) {
+async function mainProcess(source_system,item, itemUniqueKey) {
   try {
     const payload = await makeJsonPayload(item);
     console.log("payload", payload);
@@ -171,7 +172,7 @@ async function mainProcess(item, itemUniqueKey) {
     console.log("error:mainProcess", error);
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(item, null, "F");
-      await createIntracompanyFailedRecords(connections, item, error);
+      await createIntracompanyFailedRecords(connections,source_system ,item, error);
     } else {
     }
   }
@@ -188,7 +189,7 @@ async function makeJsonPayload(data) {
     /**
      * head level details
      */
-    const singleItem = data.filter((e) => e.source_system === "WT")[0];
+    const singleItem = data.filter((e) => e.source_system === "WT" || "CW")[0];
 
     const payload = {
       custbody_mfc_omni_unique_key:
@@ -337,9 +338,8 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                   UPDATE dw_uat.interface_ar_intracompany set 
                   processed = '${processed}', 
                   processed_date = '${today}',
-                  internal_id = ${
-                    internal_id == null ? null : "'" + internal_id + "'"
-                  }
+                  internal_id = ${internal_id == null ? null : "'" + internal_id + "'"
+      }
                   where invoice_nbr = '${item[0].invoice_nbr}' or 
                   housebill_nbr = '${item[0].housebill_nbr}';
                 `;
@@ -349,9 +349,8 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                 UPDATE dw_uat.interface_ap_intracompany set 
                 processed = '${processed}', 
                 processed_date = '${today}',
-                internal_id = ${
-                  internal_id == null ? null : "'" + internal_id + "'"
-                }
+                internal_id = ${internal_id == null ? null : "'" + internal_id + "'"
+      }
                 where invoice_nbr = '${item[0].invoice_nbr}' or 
                 housebill_nbr = '${item[0].housebill_nbr}';
               `;
