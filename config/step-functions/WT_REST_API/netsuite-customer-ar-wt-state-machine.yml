@@ -1,6 +1,6 @@
 ---
 stateMachine:
-  name: netsuite-customer-ar-wt-restlet-${self:provider.stage}
+  name: netsuite-customer-ar-wt-restlet-state-machine-${self:provider.stage}
   events:
     - schedule: 
         rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST

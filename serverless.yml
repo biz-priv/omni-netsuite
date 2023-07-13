@@ -145,8 +145,8 @@ stepFunctions:
 
     netsuite-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ar-wt-state-machine.yml):stateMachine}
     netsuite-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ap-wt-state-machine.yml):stateMachine}
-    netsuite-customer-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
-    netsuite-vendor-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
+    netsuite-customer-ar-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
     netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
