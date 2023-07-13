@@ -13,6 +13,3 @@ test.json
 config/functions/CW_RESTLET_API/*
 config/step-functions/CW_RESTLET_API/*
 src/CW_RESTLET_API/*
-config/step-functions/WT_REST_API/*
-config/step-functions/INTRA-COMPANY
-src/netsuite_intercompany.js

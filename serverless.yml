@@ -143,6 +143,11 @@ stepFunctions:
     netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
     netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
+    netsuite-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ar-wt-state-machine.yml):stateMachine}
+    netsuite-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ap-wt-state-machine.yml):stateMachine}
+    netsuite-customer-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
+
     netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
     netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
@@ -171,4 +176,4 @@ stepFunctions:
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
 
-    # intra-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intra-company-wt-mcl-state-machine.yml):stateMachine}
+    intra-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intra-company-wt-mcl-state-machine.yml):stateMachine}
