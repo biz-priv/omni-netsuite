@@ -1,6 +1,6 @@
 ---
 stateMachine:
-  name: ${self:service}-netsuite-ar-wt-restlet-state-machine-${self:provider.stage}
+  name: netsuite-ar-wt-restlet-state-machine-${self:provider.stage}
   definition:
     Comment: "State machine to create netsuit AR WT restlet invoice"
     StartAt: PublishEvents
