@@ -6,7 +6,7 @@ stateMachine:
         # rate: cron(0 7 * * ? *) #  UTC:- 7:00 AM / 2:00 am CST
         rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
   definition:
-    Comment: "State machine to update netsuite intercompany invoices"
+    Comment: "State machine to update netsuite intracompany invoices"
     StartAt: PublishEvents
     States:
       PublishEvents:

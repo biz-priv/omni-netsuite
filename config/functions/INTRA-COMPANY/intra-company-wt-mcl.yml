@@ -10,7 +10,7 @@ function:
   timeout: 900
   package:
     include:
-      - src/INTRA-COMPANY/intera_company_wt_mcl.js
+      - src/INTRA-COMPANY/intra_company_wt_mcl.js
       - Helpers/**
   environment:
     NETSUITE_INTERCOMPANY_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuit/intercompany/url}
