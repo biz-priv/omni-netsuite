@@ -5,6 +5,7 @@ stateMachine:
     - schedule:
         # rate: cron(0 7 * * ? *) #  UTC:- 7:00 AM / 2:00 am CST
         rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
+        name: netsuit-customer-ar-restlet--${self:provider.stage}
   definition:
     Comment: "State machine to update netsuit customer AR WT restlet internal details"
     StartAt: PublishEvents

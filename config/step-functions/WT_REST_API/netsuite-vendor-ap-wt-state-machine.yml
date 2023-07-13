@@ -10,6 +10,7 @@ stateMachine:
     #     rate: cron(0 1 * * ? *) # GMT:- 1:00 am / CST:- 08:00 pm / IST:- 6:30 am
     - schedule:
         rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
+        name: netsuit-vendor-ar-restlet--${self:provider.stage}
   definition:
     Comment: "State machine to update netsuit vendor AP WT restlet internal ids"
     StartAt: PublishEvents
