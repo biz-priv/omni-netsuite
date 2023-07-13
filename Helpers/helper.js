@@ -308,7 +308,6 @@ async function createIntercompanyFailedRecords(connections, item, error) {
  */
 async function createIntracompanyFailedRecords(connections,source_system, item, error) {
   try {
-    console.log("error*******", error);
     const formatData = {
       source_system: source_system,
       invoice_nbr: item?.[0].invoice_nbr,
@@ -392,7 +391,7 @@ function sendDevNotification(
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "abdul.rashed@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+        to: "abdul.rashed@bizcloudexperts.com",
         subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>

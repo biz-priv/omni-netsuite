@@ -8,6 +8,9 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  events:
+    - schedule: 
+        rate: cron(30 9 * * ? *) #  UTC:- 9:30 AM / 3:00 pm IST
   package:
     include:
       - src/PAID-INVOICES/paid_invoices.js

@@ -21,8 +21,9 @@ const totalCountPerLoop = 15;
 
 // mcl-ar => wt-ap
 const source_system = "OL";
-const arDbName = "interface_ar_intracompany";
-const apDbName = "interface_ap_intracompany";
+const arDbNamePrev = "dw_uat.";s
+const arDbName = arDbNamePrev + "interface_ar_intracompany";
+const apDbName = arDbNamePrev + "interface_ap_intracompany";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -56,7 +57,7 @@ module.exports.handler = async (event, context, callback) => {
 
       const records = await getRecordDetails(item);
 
-      await mainProcess(item.source_system,records, itemUniqueKey);
+      await mainProcess(item.source_system, records, itemUniqueKey);
       console.log("count", i + 1);
     }
 
@@ -94,8 +95,8 @@ module.exports.handler = async (event, context, callback) => {
 async function getUniqueRecords() {
   try {
     const query = `select distinct ar.invoice_nbr,ar.housebill_nbr,ap.source_system
-        from dw_uat.interface_ap_intracompany ap
-        join dw_uat.interface_ar_intracompany ar
+        from ${apDbName} ap
+        join ${arDbName} ar
         on ap.internal_ref_nbr =ar.housebill_nbr and ap.invoice_nbr =ar.invoice_nbr and ap.pairing_available_flag ='Y' 
         and ar.pairing_available_flag ='Y'
         where (
@@ -126,24 +127,28 @@ async function getRecordDetails(item) {
   try {
     // console.log("item",item)
     const query = `select * from (select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
-      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
+      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd,charge_cd_desc ,
+      charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
       rate as debit,null as credit,'40017' as account_num
-      from dw_uat.interface_ap_intracompany where pairing_available_flag='Y'
+      from ${apDbName} where pairing_available_flag='Y'
       union
       select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
-      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
+      housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,'OLN' as handling_stn,charge_cd,charge_cd_desc ,
+      charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
       null as debit,rate as credit,'71200' as account_num
-      from dw_uat.interface_ap_intracompany where pairing_available_flag='Y'
+      from ${apDbName} where pairing_available_flag='Y'
       union
       select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
-      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
+      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd,charge_cd_desc ,
+      charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
       rate as debit,null as credit,'71200'  as account_num
-      from dw_uat.interface_ar_intracompany where pairing_available_flag='Y'
+      from ${arDbName} where pairing_available_flag='Y'
       union
       select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr ,
-      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd ,charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
-      null as debit,rate as credit,'40017'  as account_num
-      from dw_uat.interface_ar_intracompany where pairing_available_flag='Y') main
+      housebill_nbr,housebill_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd,charge_cd_desc ,
+      charge_cd_internal_id,sales_person,invoice_date ,email ,finalized_by,
+      null as debit,rate as credit,'40010'  as account_num
+      from ${arDbName} where pairing_available_flag='Y') main
       where invoice_nbr='${item.invoice_nbr}' and consol_housebill_nbr='${item.housebill_nbr}'`;
 
     console.log("query", query);
@@ -160,7 +165,7 @@ async function getRecordDetails(item) {
   }
 }
 
-async function mainProcess(source_system,item, itemUniqueKey) {
+async function mainProcess(source_system, item, itemUniqueKey) {
   try {
     const payload = await makeJsonPayload(item);
     console.log("payload", payload);
@@ -172,7 +177,7 @@ async function mainProcess(source_system,item, itemUniqueKey) {
     console.log("error:mainProcess", error);
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(item, null, "F");
-      await createIntracompanyFailedRecords(connections,source_system ,item, error);
+      await createIntracompanyFailedRecords(connections, source_system, item, error);
     } else {
     }
   }
@@ -182,8 +187,9 @@ async function makeJsonPayload(data) {
   try {
     const bgs = getBusinessSegment(process.env.STAGE);
     const acc_internal_ids = {
-      40017: 3023,
-      71200: 3030,
+      40017: 3023,// prod:2630
+      71200: 3030,// prod:2629
+      40010: 323, // prod:323
     };
 
     /**
@@ -199,14 +205,15 @@ async function makeJsonPayload(data) {
       currency: {
         refName: singleItem.currency,
       },
-      memo: singleItem.housebill_nbr,
+      custcol4: singleItem.housebill_nbr,
       line: data.map((e) => {
         return {
           custcol_mfc_line_unique_key: e.account_num + "-" + e.id, //check
           account: acc_internal_ids[e.account_num],
           debit: e.debit ?? 0,
           credit: e.credit ?? 0,
-          memo: e.housebill_nbr ?? "",
+          memo: e.charge_cd_desc ?? "",
+          custcol4: e.housebill_nbr ?? "",
           department: e.source_system === "WT" ? "2" : "1",
           class: bgs[e.business_segment.split(":")[1].trim().toLowerCase()],
           location: { refName: e.handling_stn },
@@ -335,7 +342,7 @@ async function updateAPandAr(item, internal_id, processed = "P") {
     console.log("updateAPandAr", item[0], internal_id, processed);
 
     const query1 = `
-                  UPDATE dw_uat.interface_ar_intracompany set 
+                  UPDATE ${arDbName} set 
                   processed = '${processed}', 
                   processed_date = '${today}',
                   internal_id = ${internal_id == null ? null : "'" + internal_id + "'"
@@ -346,7 +353,7 @@ async function updateAPandAr(item, internal_id, processed = "P") {
     console.log("query1", query1);
     await connections.query(query1);
     const query2 = `
-                UPDATE dw_uat.interface_ap_intracompany set 
+                UPDATE ${apDbName} set 
                 processed = '${processed}', 
                 processed_date = '${today}',
                 internal_id = ${internal_id == null ? null : "'" + internal_id + "'"
@@ -360,9 +367,9 @@ async function updateAPandAr(item, internal_id, processed = "P") {
     console.log("error:updateAPandAr", error);
     return {};
     await sendDevNotification(
-      "INVOICE-INTERCOMPANY",
+      "INVOICE-INTRACOMPANY",
       "CW",
-      "netsuite_intercompany updateAPandAr",
+      "netsuite_intracompany updateAPandAr",
       item,
       error
     );
@@ -380,25 +387,25 @@ function getCustomDate() {
 async function checkOldProcessIsRunning() {
   return new Promise((resolve, reject) => {
     try {
-      //intercompant arn
-      const intercompany = process.env.NETSUITE_INTERCOMPANY_ARN;
+      //intracompany arn
+      const intracompany = process.env.NETSUITE_INTRACOMPANY_ARN;
       const status = "RUNNING";
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.listExecutions(
         {
-          stateMachineArn: intercompany,
+          stateMachineArn: intracompany,
           statusFilter: status,
           maxResults: 2,
         },
         (err, data) => {
-          console.log(" Intercompany listExecutions data", data);
+          console.log(" Intracompany listExecutions data", data);
           const venExcList = data.executions;
           if (
             err === null &&
             venExcList.length == 2 &&
             venExcList[1].status === status
           ) {
-            console.log("Intercompany running");
+            console.log("Intracompany running");
             resolve(true);
           } else {
             resolve(false);

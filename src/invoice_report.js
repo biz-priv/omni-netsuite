@@ -13,8 +13,8 @@ const mailList = {
     // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
     // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
 
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
   },
   CW: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -31,8 +31,8 @@ const mailList = {
   OL: {
     // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
     // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
@@ -40,11 +40,13 @@ const mailList = {
       process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",natalief.hkg@trinityworld.com",
   },
   INTRACOMPANY: {
-    WT: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com,sreddy@bizcloudexperts.com"
+    WT: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+    CW: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+
   },
 };
 
-const REST_SS = ["OL", "WT", "CW"];
+const REST_SS = ["OL","WT"];
 
 module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
@@ -58,6 +60,9 @@ module.exports.handler = async (event, context, callback) => {
     reportType = eventData[1];
     console.log(sourceSystem, "----", reportType);
     if (REST_SS.includes(sourceSystem)) {
+      connections = await getConnectionToRds(process.env);
+    }
+    else if (sourceSystem==="CW" && reportType==="INTRACOMPANY"){
       connections = await getConnectionToRds(process.env);
     } else {
       connections = dbc(getConnection(process.env));
@@ -109,18 +114,13 @@ async function generateCsvAndMail(
      * create csv
      */
     const fields = Object.keys(data[0]);
-    console.log('fields', fields);
     const opts = { fields };
-    console.log("opts", opts);
     const csv = parse(data, opts);
-    console.log("csv", csv);
-
     /**
      * send mail
      */
     const filename = `Netsuite-${sourceSystem}-${type}-${process.env.STAGE
       }-report-${moment().format("DD-MM-YYYY")}.csv`;
-    console.log("filename", filename);
     await sendMail(filename, csv, sourceSystem, type, intercompanyType, intracompanyType);
 
     /**
@@ -137,9 +137,9 @@ async function generateCsvAndMail(
       "INVOICE-REPOR-" + sourceSystem,
       "type value:- " +
       type +
-      "and intercompanyType value:-" +
+      " and intercompanyType value:-" +
       intercompanyType +
-      "and intracompanyType value:-" +
+      " and intracompanyType value:-" +
       intracompanyType,
       "invoice_report generateCsvAndMail",
       {},
@@ -336,10 +336,16 @@ async function getReportData(
       }
     }
     else if (type === "INTRACOMPANY") {
-      query = `select iial.* from dw_uat.interface_intracompany_api_logs iial where is_report_sent ='N'`
+      query = `select iial.source_system,iial.invoice_nbr,iial.housebill_nbr,iial.error_msg,iial.response 
+      from dw_uat.interface_intracompany_api_logs iial where is_report_sent ='N' and source_system = '${sourceSystem}'`
       console.log("query:getReportData", query);
+      if (sourceSystem==="CW"){
+        const data = await executeQuery(connections, sourceSystem, query);
+        console.log("query:data", data[0].length);
+        return data[0];
+      }
       const data = await executeQuery(connections, sourceSystem, query);
-      console.log("query:data", data.length);
+      console.log("query:data", data,data.length);
       return data;
     }
     else {
@@ -430,6 +436,12 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
       console.log("maxId:rows", rows);
       maxId = rows[0].maxId;
       console.log("maxId", maxId);
+    }else if (sourceSystem==="CW" && type==="INTRACOMPANY"){
+      const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      console.log("maxIdQuery", maxIdQuery);
+      const [rows] = await connections.execute(maxIdQuery);
+      console.log("maxId:rows", rows);
+      maxId = rows[0].maxId;
     }
     const query = `Update ${table} set 
                     is_report_sent ='P', 
@@ -453,12 +465,6 @@ function sendMail(
 ) {
   return new Promise((resolve, reject) => {
     try {
-      console.log("sourceSystem:", sourceSystem + "\n" +
-        "filename:", filename + "\n" +
-      "type:", type + "\n" +
-      "intercompanyType:", intercompanyType + "\n" +
-      "intracompanyType:", intracompanyType);
-      console.log(mailList[type][sourceSystem]);
       const transporter = nodemailer.createTransport({
         host: process.env.NETSUIT_AR_ERROR_EMAIL_HOST,
         port: 587,

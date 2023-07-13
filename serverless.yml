@@ -92,6 +92,16 @@ functions:
   netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
   netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
 
+  netsuite-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ar-wt.yml):function}
+  netsuite-customer-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-customer-ar-wt.yml):function}
+  netsuite-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ap-wt.yml):function}
+  netsuite-vendor-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-vendor-ap-wt.yml):function}
+
+  netsuite-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ar-cw.yml):function}
+  netsuite-customer-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-customer-ar-cw.yml):function}
+  netsuite-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ap-cw.yml):function}
+  netsuite-vendor-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-vendor-ap-cw.yml):function}
+
   netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
   netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
   netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
@@ -137,6 +147,11 @@ stepFunctions:
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
     netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
     netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+
+    netsuite-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ar-cw-state-machine.yml):stateMachine}
+    netsuite-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ap-cw-state-machine.yml):stateMachine}
+    netsuite-customer-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
 
     netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
     netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
