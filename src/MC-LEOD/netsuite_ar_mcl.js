@@ -390,13 +390,13 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "6",
+    source_system: "5",//dev:"6" prod:"5"
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
-    location: { head: "289", line: "289" },
+    location: { head: "404", line: "404" },//dev:"289" prod:"404"
   };
   return data;
 }
