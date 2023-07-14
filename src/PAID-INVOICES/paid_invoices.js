@@ -17,10 +17,6 @@ const fromDate = moment().subtract(3, "d").format("DD/MM/yyyy");
 const toDate = today;
 const createdDate= moment().format("YYYY-MM-DD HH:mm:ss");
 
-// const fromDate = "07/01/2023";
-// const toDate = "07/01/2023";
-// 05/01/2022
-//05/02/2022
 
 module.exports.handler = async (event, context, callback) => {
   try {
@@ -30,7 +26,7 @@ module.exports.handler = async (event, context, callback) => {
     userConfig = getConfig(source_system, process.env);
     connections = await getConnectionToRds(process.env);
     const data = await getPaidInvoiceData();
-    console.log("data", data.length);
+    console.info("data", data.length);
 
     const perLoop = 100;
     for (let index = 0; index < (data.length + 1) / perLoop; index++) {
@@ -40,11 +36,11 @@ module.exports.handler = async (event, context, callback) => {
           return await insertToDB({ ...item, created_at: createdDate });
         })
       );
-      console.log("exectuted", perLoop, perLoop * (index + 1));
+      console.info("exectuted", perLoop, perLoop * (index + 1));
     }
     return "Success"
   } catch (error) {
-    console.log("error", error);
+    console.error("error", error);
   }
 };
 
@@ -71,18 +67,17 @@ function getPaidInvoiceData() {
           ...authHeader,
         },
       };
-      console.log("configApi", configApi);
 
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
+          console.info("response", response.status);
 
           if (response.status === 200 && response.data.length > 0) {
-            console.log("length", response.data.length);
+            console.info("length", response.data.length);
             resolve(response.data);
           } else {
-            console.log("error");
+            console.error("error");
             reject({
               customError: true,
               msg: response.data.reason.replace(/'/g, "`"),
@@ -91,7 +86,7 @@ function getPaidInvoiceData() {
           }
         })
         .catch((error) => {
-          console.log(error);
+          console.error(error);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -99,7 +94,7 @@ function getPaidInvoiceData() {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit paid invoice Api Failed",
@@ -111,7 +106,6 @@ function getPaidInvoiceData() {
 
 async function insertToDB(item) {
   try {
-    console.log(item);
     const itemData = item;
     const formatData= {
       internal_id: itemData.internalid,
@@ -128,7 +122,6 @@ async function insertToDB(item) {
       load_create_date: itemData.created_at
     }
 
-    // console.log("formatData", JSON.stringify(formatData));
 
     let tableStr = "";
     let valueStr = "";
@@ -146,22 +139,17 @@ async function insertToDB(item) {
       valueStr += "'" + formatData[e] + "'";
     });
     tableStr = objKyes.join(",");
-
-    console.log("tableStr", tableStr);
-    console.log("valueStr", valueStr);
-    console.log("updateStr", updateStr);
     
     const keyValuePairs = updateStr.split(',');
     const filteredKeyValuePairs = keyValuePairs.filter(pair => !pair.includes('internal_id'));
     const updatedUpdateStr = filteredKeyValuePairs.join(',');
-    // const upsertQuery = `INSERT INTO ${dbname}netsuit_paid_invoices (${tableStr})
-    //                     VALUES (${valueStr});`;
+  
     const upsertQuery = `INSERT INTO ${dbname}netsuit_paid_invoices (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updatedUpdateStr};`;
-    console.log("upsertQuery",upsertQuery);
+    console.info("upsertQuery",upsertQuery);
     await connections.execute(upsertQuery);
   } catch (error) {
-    console.log("error", error);
+    console.error("error", error);
   }
 }

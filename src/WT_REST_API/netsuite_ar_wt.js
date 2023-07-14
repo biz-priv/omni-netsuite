@@ -40,13 +40,12 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const orderData = await getDataGroupBy(connections);
-    console.log("orderData", orderData.length, orderData[0]);
+    console.info("orderData", orderData.length);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("invoiceIDs", invoiceIDs);
 
     currentCount = orderData.length;
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
-    console.log("invoiceDataList", invoiceDataList.length);
+    console.info("invoiceDataList", invoiceDataList.length);
 
     /**
      * 5 simultaneous process
@@ -67,7 +66,6 @@ module.exports.handler = async (event, context, callback) => {
       queryData = [...queryData, ...data];
     }
 
-    console.log("queryData", queryData);
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {
@@ -103,7 +101,6 @@ async function mainProcess(item, invoiceDataList) {
     });
 
     singleItem = dataList[0];
-    // console.log("singleItem", singleItem);
 
     /**
      * Make Json payload
@@ -114,7 +111,7 @@ async function mainProcess(item, invoiceDataList) {
      * create Netsuit Invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
-    console.log("invoiceId", invoiceId);
+    console.info("invoiceId", invoiceId);
 
     /**
      * update invoice id
@@ -122,7 +119,7 @@ async function mainProcess(item, invoiceDataList) {
     const getQuery = getUpdateQuery(singleItem, invoiceId);
     return getQuery;
   } catch (error) {
-    console.log("error:process", error);
+    console.error("error:process", error);
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
@@ -157,7 +154,7 @@ async function getDataGroupBy(connections) {
                   and source_system = '${source_system}' and invoice_nbr is not null
                   limit ${totalCountPerLoop + 1}`;
 
-    console.log("query", query);
+    console.info("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
     if (!result || result.length == 0) {
@@ -173,17 +170,16 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
   try {
     const query = `select * from ${arDbName} where source_system = '${source_system}' 
     and invoice_nbr in (${invoice_nbr.join(",")})`;
-    console.log("query", query);
+    console.info("query", query);
 
     const executeQuery = await connections.execute(query);
     const result = executeQuery[0];
-    console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result;
   } catch (error) {
-    console.log("error");
+    console.error("error");
     throw "No data found.";
   }
 }
@@ -244,10 +240,9 @@ async function makeJsonPayload(data) {
       }),
     };
 
-    console.log("payload", JSON.stringify(payload));
     return payload;
   } catch (error) {
-    console.log("error payload", error);
+    console.error("error payload", error);
     await sendDevNotification(
       source_system,
       "AR",
@@ -320,13 +315,11 @@ function createInvoice(payload, singleItem) {
         },
         data: JSON.stringify(payload),
       };
-      console.log("configApi", configApi);
 
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
-          console.log(JSON.stringify(response.data));
+          console.info(JSON.stringify(response.data));
           if (response.status === 200 && response.data.status === "Success") {
             resolve(response.data.id);
           } else {
@@ -339,8 +332,7 @@ function createInvoice(payload, singleItem) {
           }
         })
         .catch((error) => {
-          console.log(error.response.status);
-          console.log(error.response.data);
+          console.error(error.response.data);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -349,7 +341,7 @@ function createInvoice(payload, singleItem) {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit AR Api Failed",
@@ -361,7 +353,6 @@ function createInvoice(payload, singleItem) {
 
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
-    console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
@@ -371,10 +362,10 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
               and invoice_type = '${item.invoice_type}';`;
-    console.log("query", query);
+    console.info("query", query);
     return query;
   } catch (error) {
-    console.log("error:getUpdateQuery", error, item, invoiceId);
+    console.error("error:getUpdateQuery", error, item, invoiceId);
     return "";
   }
 }
@@ -385,7 +376,7 @@ async function updateInvoiceId(connections, query) {
     try {
       await connections.execute(element);
     } catch (error) {
-      console.log("error:updateInvoiceId", error);
+      console.error("error:updateInvoiceId", error);
       await sendDevNotification(
         source_system,
         "AR",

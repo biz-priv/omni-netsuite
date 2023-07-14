@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const axios = require("axios");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
-const nodemailer = require("nodemailer");
 const payload = require("../../Helpers/netsuit_AR.json");
 const {
   getConfig,
@@ -14,7 +13,6 @@ const {
   sendDevNotification,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
-const { log } = require("console");
 
 let userConfig = "";
 let connections = "";
@@ -48,14 +46,13 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const orderData = await getDataGroupBy(connections);
-    console.log("orderData",orderData);
     
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("orderData", orderData.length);
+    console.info("orderData", orderData.length);
     currentCount = orderData.length;
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
-    console.log("invoiceDataList",invoiceDataList);
+    console.info("invoiceDataList",invoiceDataList);
 
     /**
      * 5 simultaneous process
@@ -134,13 +131,12 @@ async function mainProcess(item, invoiceDataList) {
       dataList,
       customerData
     );
-    console.log("xmlPayload",xmlPayload);
 
     /**
      * create Netsuit Invoice
      */
     const invoiceId = await createInvoice(xmlPayload, singleItem.invoice_type);
-    console.log("invoiceId",invoiceId);  
+    console.info("invoiceId",invoiceId);  
 
     /**
      * update invoice id
@@ -175,7 +171,6 @@ async function getDataGroupBy(connections) {
     and source_system = '${source_system}' and invoice_nbr != ''
     order by invoice_nbr,customer_id,invoice_type, gc_code 
     limit ${totalCountPerLoop + 1} `;
-    console.log("query", query);
 
     const result = await connections.query(query);
     if (!result || result.length == 0) {
@@ -242,7 +237,6 @@ async function makeJsonToXml(payload, data, customerData) {
      */
     const auth = getOAuthKeys(userConfig);
     const singleItem = data[0];
-    console.log('singleItem',singleItem.unique_ref_nbr);
     const hardcode = getHardcodeData(
       singleItem.intercompany == "Y" ? true : false
     );
@@ -419,7 +413,6 @@ async function makeJsonToXml(payload, data, customerData) {
     const doc = create(payload);
     return doc.end({ prettyPrint: true });
   } catch (error) {
-    console.log("error",error);
     await sendDevNotification(
       source_system,
       "AR",
@@ -483,7 +476,6 @@ async function createInvoice(soapPayload, type) {
       };
     }
   } catch (error) {
-    console.log("error",error);
     if (error.hasOwnProperty("customError")) {
       throw error;
     } else {
@@ -496,11 +488,6 @@ async function createInvoice(soapPayload, type) {
 
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
-    console.log(
-      "invoice_nbr " + item.invoice_type,
-      item.invoice_nbr,
-      invoiceId
-    );
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
@@ -511,7 +498,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
               and invoice_type = '${item.invoice_type}'and customer_id = '${item.customer_id}' 
               and gc_code = '${item.gc_code}';`;
-
+    console.info("query",query)
     return query;
   } catch (error) {
     return "";
@@ -590,10 +577,10 @@ async function startNextStep() {
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.startExecution(params, (err, data) => {
         if (err) {
-          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN trigger failed");
+          console.info("Netsuit NETSUITE_VENDOR_STEP_ARN trigger failed");
           resolve(false);
         } else {
-          console.log("Netsuit NETSUITE_VENDOR_STEP_ARN started");
+          console.info("Netsuit NETSUITE_VENDOR_STEP_ARN started");
           resolve(true);
         }
       });

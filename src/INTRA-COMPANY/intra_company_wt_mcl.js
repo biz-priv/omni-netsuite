@@ -47,18 +47,17 @@ module.exports.handler = async (event, context, callback) => {
      */
     const invoiceData = await getUniqueRecords();
 
-    console.log("invoiceData", invoiceData, invoiceData.length);
+    console.info("invoiceData", invoiceData.length);
     currentCount = invoiceData.length;
 
     for (let i = 0; i < invoiceData.length; i++) {
       const item = invoiceData[i];
       const itemUniqueKey = item.invoice_nbr;
-      console.log("item", item, itemUniqueKey);
 
       const records = await getRecordDetails(item);
 
       await mainProcess(item.source_system, records, itemUniqueKey);
-      console.log("count", i + 1);
+      console.info("count", i + 1);
     }
 
     if (currentCount > totalCountPerLoop) {
@@ -73,11 +72,9 @@ module.exports.handler = async (event, context, callback) => {
 
       hasMoreData = "false";
     }
-    // dbc.end();
     return { hasMoreData };
   } catch (error) {
-    console.log("error:handler", error);
-    // dbc.end();
+    console.error("error:handler", error);
     await Promise.all(payload_source_system.map(async (e) => {
       await triggerReportLambda(
         process.env.NETSUIT_INVOICE_REPORT,
@@ -109,23 +106,20 @@ async function getUniqueRecords() {
         limit ${totalCountPerLoop + 1}`;
 
 
-    console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    // console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result;
   } catch (error) {
-    console.log("error:getData", error);
+    console.error("error:getData", error);
     throw "No data found.";
   }
 }
 
 async function getRecordDetails(item) {
   try {
-    // console.log("item",item)
     const query = `select * from (select source_system,invoice_nbr,file_nbr ,id,subsidiary,currency ,master_bill_nbr,
       housebill_nbr,internal_ref_nbr as consol_housebill_nbr,business_segment,handling_stn,charge_cd,charge_cd_desc ,
       charge_cd_internal_id,sales_person,invoice_date ,email ,finalizedby,
@@ -151,16 +145,14 @@ async function getRecordDetails(item) {
       from ${arDbName} where pairing_available_flag='Y') main
       where invoice_nbr='${item.invoice_nbr}' and consol_housebill_nbr='${item.housebill_nbr}'`;
 
-    console.log("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    // console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result;
   } catch (error) {
-    console.log("error:getData", error);
+    console.error("error:getData", error);
     throw "No data found.";
   }
 }
@@ -168,13 +160,11 @@ async function getRecordDetails(item) {
 async function mainProcess(source_system, item, itemUniqueKey) {
   try {
     const payload = await makeJsonPayload(item);
-    console.log("payload", payload);
     const internalId = await createInvoice(payload);
-    console.log("internalId", internalId);
 
     await updateAPandAr(item, internalId);
   } catch (error) {
-    console.log("error:mainProcess", error);
+    console.error("error:mainProcess", error);
     if (error.hasOwnProperty("customError")) {
       await updateAPandAr(item, null, "F");
       await createIntracompanyFailedRecords(connections, source_system, item, error);
@@ -208,7 +198,7 @@ async function makeJsonPayload(data) {
       custcol4: singleItem.housebill_nbr,
       line: data.map((e) => {
         return {
-          custcol_mfc_line_unique_key: e.account_num + "-" + e.id, //check
+          custcol_mfc_line_unique_key: e.account_num + "-" + e.id, 
           account: acc_internal_ids[e.account_num],
           debit: e.debit ?? 0,
           credit: e.credit ?? 0,
@@ -224,10 +214,10 @@ async function makeJsonPayload(data) {
         };
       }),
     };
-    console.log("payload", JSON.stringify(payload));
+
     return payload;
   } catch (error) {
-    console.log("error payload", error);
+    console.error("error payload", error);
     throw {
       customError: true,
       msg: "Unable to make payload",
@@ -293,8 +283,7 @@ function createInvoice(payload) {
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
-          console.log(JSON.stringify(response.data));
+          console.error(JSON.stringify(response.data));
           if (response.status === 200 && response.data.status === "Success") {
             resolve(response.data.id);
           } else {
@@ -307,8 +296,7 @@ function createInvoice(payload) {
           }
         })
         .catch((error) => {
-          console.log(error.response.status);
-          console.log(error.response.data);
+          console.error(error.response.data);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -317,7 +305,7 @@ function createInvoice(payload) {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit AR Api Failed",
@@ -334,8 +322,6 @@ function createInvoice(payload) {
  */
 async function updateAPandAr(item, internal_id, processed = "P") {
   try {
-    console.log("updateAPandAr", item[0], internal_id, processed);
-
     const query1 = `
                   UPDATE ${arDbName} set 
                   processed = '${processed}', 
@@ -345,7 +331,7 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                   where invoice_nbr = '${item[0].invoice_nbr}' or 
                   housebill_nbr = '${item[0].housebill_nbr}';
                 `;
-    console.log("query1", query1);
+    console.info("query1", query1);
     await connections.query(query1);
     const query2 = `
                 UPDATE ${apDbName} set 
@@ -356,11 +342,10 @@ async function updateAPandAr(item, internal_id, processed = "P") {
                 where invoice_nbr = '${item[0].invoice_nbr}' or 
                 housebill_nbr = '${item[0].housebill_nbr}';
               `;
-    console.log("query2", query2);
+    console.info("query2", query2);
     await connections.query(query2);
   } catch (error) {
-    console.log("error:updateAPandAr", error);
-    return {};
+    console.error("error:updateAPandAr", error);
     await sendDevNotification(
       "INVOICE-INTRACOMPANY",
       "CW",
@@ -393,14 +378,14 @@ async function checkOldProcessIsRunning() {
           maxResults: 2,
         },
         (err, data) => {
-          console.log(" Intracompany listExecutions data", data);
+          console.info(" Intracompany listExecutions data", data);
           const venExcList = data.executions;
           if (
             err === null &&
             venExcList.length == 2 &&
             venExcList[1].status === status
           ) {
-            console.log("Intracompany running");
+            console.info("Intracompany running");
             resolve(true);
           } else {
             resolve(false);

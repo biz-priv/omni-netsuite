@@ -33,7 +33,7 @@ let queryVendorId = null;
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
 
-  // console.log("event", event);
+  console.info("event", event);
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")
     ? event.totalCountPerLoop
@@ -71,11 +71,11 @@ module.exports.handler = async (event, context, callback) => {
      */
     if (queryOperator == ">") {
       // Update 500 line items per process
-      console.log("> start");
+      console.info("> start");
 
       totalCountPerLoop = 0;
       if (queryInvoiceId != null && queryInvoiceId.toString().length > 0) {
-        console.log(">if");
+        console.info(">if");
 
         try {
           const invoiceDataList = await getInvoiceNbrData(
@@ -90,13 +90,12 @@ module.exports.handler = async (event, context, callback) => {
               invoiceDataList
             );
           } catch (error) {
-            console.log("work later");
+            console.error("work later");
           }
 
           if (lineItemPerProcess >= invoiceDataList.length) {
             throw "Next Process";
           } else {
-            //dbc.end();
             return {
               hasMoreData: "true",
               queryOperator,
@@ -108,23 +107,21 @@ module.exports.handler = async (event, context, callback) => {
             };
           }
         } catch (error) {
-          //dbc.end();
           return {
             hasMoreData: "true",
             queryOperator,
           };
         }
       } else {
-        console.log("> else");
+        console.info("> else");
 
         try {
           let invoiceDataList = [];
           let orderData = [];
           try {
             orderData = await getDataGroupBy(connections);
-            console.log("orderData", orderData.length);
+            console.info("orderData", orderData.length);
           } catch (error) {
-            //dbc.end();
             await triggerReportLambda(
               process.env.NETSUIT_INVOICE_REPORT,
               "WT_AP"
@@ -140,12 +137,11 @@ module.exports.handler = async (event, context, callback) => {
             queryInvoiceNbr,
             true
           );
-          console.log("invoiceDataList", invoiceDataList.length);
+          console.info("invoiceDataList", invoiceDataList.length);
           /**
            * set queryInvoiceId in this process and return update query
            */
           const queryData = await mainProcess(orderData[0], invoiceDataList);
-          // console.log("queryData", queryData);
           await updateInvoiceId(connections, [queryData]);
 
           /**
@@ -156,10 +152,10 @@ module.exports.handler = async (event, context, callback) => {
             invoiceDataList.length <= lineItemPerProcess ||
             queryInvoiceId == null
           ) {
-            console.log("next invoice");
+            console.info("next invoice");
             throw "Next Invoice";
           } else {
-            console.log("next exec", {
+            console.info("next exec", {
               hasMoreData: "true",
               queryOperator,
               queryOffset: queryOffset + lineItemPerProcess + 1,
@@ -180,8 +176,7 @@ module.exports.handler = async (event, context, callback) => {
             };
           }
         } catch (error) {
-          console.log("error", error);
-          //dbc.end();
+          console.error("error", error);
           return {
             hasMoreData: "true",
             queryOperator,
@@ -207,17 +202,17 @@ module.exports.handler = async (event, context, callback) => {
 
       try {
         invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-        console.log("orderData**", orderData.length, orderData);
-        console.log("invoiceIDs", invoiceIDs);
+        console.info("orderData**", orderData.length);
+        console.info("invoiceIDs", invoiceIDs);
         if (orderData.length === 1) {
-          console.log("length==1", orderData);
+          console.info("length==1", orderData);
         }
         currentCount = orderData.length;
         invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
-        console.log("invoiceDataList", invoiceDataList.length);
+        console.info("invoiceDataList", invoiceDataList.length);
       } catch (error) {
-        console.log("error:getInvoiceNbrData:try:catch", error);
-        console.log(
+        console.error("error:getInvoiceNbrData:try:catch", error);
+        console.error(
           "invoiceIDs:try:catch found on getDataGroupBy but not in getInvoiceNbrData",
           invoiceIDs
         );
@@ -252,21 +247,10 @@ module.exports.handler = async (event, context, callback) => {
       if (currentCount < totalCountPerLoop) {
         queryOperator = ">";
       }
-      //dbc.end();
       return { hasMoreData: "true", queryOperator };
-      // let hasMoreData = "false";
-      // if (currentCount > totalCountPerLoop) {
-      //   hasMoreData = "true";
-      // } else {
-      //   await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
-      //   hasMoreData = "false";
-      // }
-      // //dbc.end();
-      // return { hasMoreData };
     }
   } catch (error) {
-    console.log("error", error);
-    //dbc.end();
+    console.error("error", error);
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "WT_AP");
     return { hasMoreData: "false" };
   }
@@ -290,19 +274,16 @@ async function mainProcess(item, invoiceDataList) {
         e.invoice_type == item.invoice_type
       );
     });
-    console.log("dataList", dataList.length);
 
     /**
      * set single item and customer data
      */
     singleItem = dataList[0];
-    console.log("singleItem", singleItem);
 
     /**
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-    console.log("jsonPayload", jsonPayload);
 
     /**
      * create invoice
@@ -360,7 +341,7 @@ async function getDataGroupBy(connections) {
                     GROUP BY invoice_nbr, vendor_id, invoice_type
                     having tc ${queryOperator} ${lineItemPerProcess} 
                     limit ${totalCountPerLoop + 1}`;
-    console.log("query", query);
+    console.info("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
     if (!result || result.length == 0) {
@@ -390,7 +371,7 @@ async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
     }
     return result;
   } catch (error) {
-    console.log("error1", error);
+    console.error("getInvoiceNbrData:error", error);
     throw "getInvoiceNbrData: No data found.";
   }
 }
@@ -458,10 +439,9 @@ async function makeJsonPayload(data) {
       payload.approvalStatus = "2";
     }
 
-    console.log("payload", JSON.stringify(payload));
     return payload;
   } catch (error) {
-    console.log("error payload", error);
+    console.error("error payload", error);
     await sendDevNotification(
       source_system,
       "AP",
@@ -534,13 +514,11 @@ function createInvoice(payload, singleItem) {
         },
         data: JSON.stringify(payload),
       };
-      console.log("configApi", configApi);
 
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
-          console.log(JSON.stringify(response.data));
+          console.info(JSON.stringify(response.data));
           if (response.status === 200 && response.data.status === "Success") {
             resolve(response.data.id);
           } else {
@@ -553,8 +531,7 @@ function createInvoice(payload, singleItem) {
           }
         })
         .catch((error) => {
-          console.log(error.response.status);
-          console.log(error.response.data);
+          console.error(error.response.data);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -563,7 +540,7 @@ function createInvoice(payload, singleItem) {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit AP Api Failed",
@@ -573,51 +550,6 @@ function createInvoice(payload, singleItem) {
   });
 }
 
-// function deleteInvoice(internalId) {
-//   return new Promise((resolve, reject) => {
-//     try {
-//       const options = {
-//         consumer_key: userConfig.token.consumer_key,
-//         consumer_secret_key: userConfig.token.consumer_secret,
-//         token: userConfig.token.token_key,
-//         token_secret: userConfig.token.token_secret,
-//         realm: userConfig.account,
-//         url: `https://${userConfig.account
-//           .toLowerCase()
-//           .split("_")
-//           .join(
-//             "-"
-//           )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${internalId}`,
-//         method: "PUT",
-//       };
-//       const authHeader = getAuthorizationHeader(options);
-//       const configApi = {
-//         method: options.method,
-//         maxBodyLength: Infinity,
-//         url: options.url,
-//         headers: {
-//           "Content-Type": "application/json",
-//           ...authHeader,
-//         },
-//         data: JSON.stringify(payload),
-//       };
-//       axios
-//         .request(configApi)
-//         .then((response) => {
-//           console.log("response", response.status);
-//           console.log(JSON.stringify(response.data));
-//           resolve(true);
-//         })
-//         .catch((error) => {
-//           console.log(error.response.status);
-//           console.log(error.response.data);
-//           resolve(true);
-//         });
-//     } catch (error) {
-//       console.log("error", error);
-//     }
-//   });
-// }
 
 function makeLineItemsJsonPayload(invoiceId, data) {
   try {
@@ -658,19 +590,7 @@ function makeLineItemsJsonPayload(invoiceId, data) {
     };
     return payload;
   } catch (error) {
-    console.log("error payload", error);
-    // await sendDevNotification(
-    //   source_system,
-    //   "AP",
-    //   "netsuite_ap_MCL payload error",
-    //   data[0],
-    //   error
-    // );
-    // throw {
-    //   customError: true,
-    //   msg: "Unable to make payload",
-    //   data: data[0],
-    // };
+    console.info("error payload", error);
   }
 }
 
@@ -693,7 +613,6 @@ function createInvoiceAndUpdateLineItems(invoiceId, data) {
       const authHeader = getAuthorizationHeader(options);
 
       const payload = makeLineItemsJsonPayload(invoiceId, data);
-      console.log("payload", JSON.stringify(payload));
 
       const configApi = {
         method: options.method,
@@ -705,13 +624,11 @@ function createInvoiceAndUpdateLineItems(invoiceId, data) {
         },
         data: JSON.stringify(payload),
       };
-      console.log("configApi", configApi);
 
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
-          console.log(JSON.stringify(response.data));
+          console.info(JSON.stringify(response.data));
           if (response.status === 200 && response.data.status === "Success") {
             resolve(response.data.id);
           } else {
@@ -724,8 +641,7 @@ function createInvoiceAndUpdateLineItems(invoiceId, data) {
           }
         })
         .catch((error) => {
-          console.log(error.response.status);
-          console.log(error.response.data);
+          console.error(error.response.data);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -734,7 +650,7 @@ function createInvoiceAndUpdateLineItems(invoiceId, data) {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit AP Api Failed",
@@ -753,7 +669,6 @@ function createInvoiceAndUpdateLineItems(invoiceId, data) {
  */
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
-    console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${apDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
@@ -765,7 +680,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
                       invoice_nbr = '${item.invoice_nbr}' and 
                       invoice_type = '${item.invoice_type}'and 
                       vendor_id = '${item.vendor_id}'`;
-
+    console.info("query",query)
     return query;
   } catch (error) {
     return "";
@@ -781,18 +696,10 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
 async function updateInvoiceId(connections, query) {
   for (let index = 0; index < query.length; index++) {
     const element = query[index];
-    console.log("element", element);
     try {
       await connections.execute(element);
     } catch (error) {
-      console.log("error:updateInvoiceId", error);
-      // await sendDevNotification(
-      //   source_system,
-      //   "AP",
-      //   "netsuite_ap_wt updateInvoiceId",
-      //   "Invoice is created But failed to update internal_id " + element,
-      //   error
-      // );
+      console.error("error:updateInvoiceId", error);
     }
   }
 }

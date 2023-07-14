@@ -8,8 +8,3 @@ lambdaLayer/lib/nodejs/yarn.lock
 lambdaLayer/lib/nodejs/package-lock.json
 .DS_Store
 doc.txt
-test.js
-test.json
-config/functions/CW_RESTLET_API/*
-config/step-functions/CW_RESTLET_API/*
-src/CW_RESTLET_API/*
