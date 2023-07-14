@@ -85,18 +85,18 @@ function getConfig(source_system, env) {
 function getConnection(env) {
   try {
     // DEV/PROD
-    // const dbUser = env.USER;
-    // const dbPassword = env.PASS;
-    // const dbHost = env.HOST;
-    // const dbPort = env.PORT;
-    // const dbName = env.DBNAME;
-
-   // LOCAl test
-    const dbUser = "bceuser1";
-    const dbPassword = "BizCloudExp1";
-    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbUser = env.USER;
+    const dbPassword = env.PASS;
+    const dbHost = env.HOST;
     const dbPort = env.PORT;
     const dbName = env.DBNAME;
+
+   // LOCAl test
+    // const dbUser = "bceuser1";
+    // const dbPassword = "BizCloudExp1";
+    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    // const dbPort = env.PORT;
+    // const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
@@ -110,9 +110,9 @@ async function getConnectionToRds(env) {
   try {
     const dbUser = env.db_username;
     const dbPassword = env.db_password;
-    // const dbHost = env.db_host
-    const dbHost =
-      "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
+    const dbHost = env.db_host
+    // const dbHost =
+    //   "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
     const dbPort = env.db_port;
     const dbName = env.db_name;
     const connection = await mysql.createConnection({
