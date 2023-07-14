@@ -21,7 +21,7 @@ const totalCountPerLoop = 15;
 
 // mcl-ar => wt-ap
 const source_system = "OL";
-const arDbNamePrev = "dw_uat.";s
+const arDbNamePrev = "dw_uat.";
 const arDbName = arDbNamePrev + "interface_ar_intracompany";
 const apDbName = arDbNamePrev + "interface_ap_intracompany";
 
