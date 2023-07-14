@@ -8,13 +8,14 @@ const {
   sendDevNotification,
   getConnectionToRds,
 } = require("../Helpers/helper");
+const dbname = process.env.DATABASE_NAME;
 const mailList = {
   WT: {
-    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
 
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    // AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    // AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
   },
   CW: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -29,10 +30,10 @@ const mailList = {
     AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
   },
   OL: {
-    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+    // AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
+    // AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,abdul.rashed@bizcloudexperts.com",
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
@@ -40,13 +41,13 @@ const mailList = {
       process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",natalief.hkg@trinityworld.com",
   },
   INTRACOMPANY: {
-    WT: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com",
-    CW: "abdul.rashed@bizcloudexperts.com,priyanka@bizcloudexperts.com",
+    WT: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    CW: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
 
   },
 };
 
-const REST_SS = ["OL","WT"];
+const REST_SS = ["OL", "WT"];
 
 module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
@@ -62,7 +63,7 @@ module.exports.handler = async (event, context, callback) => {
     if (REST_SS.includes(sourceSystem)) {
       connections = await getConnectionToRds(process.env);
     }
-    else if (sourceSystem==="CW" && reportType==="INTRACOMPANY"){
+    else if (sourceSystem === "CW" && reportType === "INTRACOMPANY") {
       connections = await getConnectionToRds(process.env);
     } else {
       connections = dbc(getConnection(process.env));
@@ -171,7 +172,7 @@ async function getReportData(
     if (type === "AP") {
       // AP
       const table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ap_api_logs"
+        ? `${dbname}interface_ap_api_logs`
         : "interface_ap_api_logs";
       const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
               from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
@@ -200,8 +201,8 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
@@ -228,8 +229,8 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr;`;
       }
 
@@ -267,7 +268,7 @@ async function getReportData(
     } else if (type === "AR") {
       // AR
       const table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ar_api_logs"
+        ? `${dbname}interface_ar_api_logs`
         : "interface_ar_api_logs";
       const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
               from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
@@ -287,8 +288,8 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-                      from dw_uat.interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
+        mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+                      from ${dbname}interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
                       GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
@@ -297,8 +298,8 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})
+        mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})
         GROUP BY invoice_nbr, invoice_type, file_nbr;`;
       }
       console.log("mainQuery", mainQuery);
@@ -337,15 +338,15 @@ async function getReportData(
     }
     else if (type === "INTRACOMPANY") {
       query = `select iial.source_system,iial.invoice_nbr,iial.housebill_nbr,iial.error_msg,iial.response 
-      from dw_uat.interface_intracompany_api_logs iial where is_report_sent ='N' and source_system = '${sourceSystem}'`
+      from ${dbname}interface_intracompany_api_logs iial where is_report_sent ='N' and source_system = '${sourceSystem}'`
       console.log("query:getReportData", query);
-      if (sourceSystem==="CW"){
+      if (sourceSystem === "CW") {
         const data = await executeQuery(connections, sourceSystem, query);
         console.log("query:data", data[0].length);
         return data[0];
       }
       const data = await executeQuery(connections, sourceSystem, query);
-      console.log("query:data", data,data.length);
+      console.log("query:data", data, data.length);
       return data;
     }
     else {
@@ -415,15 +416,15 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
     let table = "";
     if (type === "AP") {
       table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ap_api_logs"
+        ? `${dbname}interface_ap_api_logs`
         : "interface_ap_api_logs";
     } else if (type === "AR") {
       table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ar_api_logs"
+        ? `${dbname}interface_ar_api_logs`
         : "interface_ar_api_logs";
     }
     else if (type === "INTRACOMPANY") {
-      table = "dw_uat.interface_intracompany_api_logs"
+      table = `${dbname}interface_intracompany_api_logs`
     }
     else {
       table = "interface_intercompany_api_logs";
@@ -436,7 +437,7 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
       console.log("maxId:rows", rows);
       maxId = rows[0].maxId;
       console.log("maxId", maxId);
-    }else if (sourceSystem==="CW" && type==="INTRACOMPANY"){
+    } else if (sourceSystem === "CW" && type === "INTRACOMPANY") {
       const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
       console.log("maxIdQuery", maxIdQuery);
       const [rows] = await connections.execute(maxIdQuery);

@@ -14,7 +14,7 @@ let userConfig = "";
 
 let totalCountPerLoop = 5;
 const today = getCustomDate();
-const apDbNamePrev = "dw_uat.";
+const apDbNamePrev = process.env.DATABASE_NAME;
 const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "OL";
 
@@ -252,7 +252,7 @@ async function putVendor(connections, vendorData, vendor_id) {
     console.log("valueStr", valueStr);
     console.log("updateStr", updateStr);
 
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_vendors (${tableStr})
+    const upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updateStr};`;
     console.log("query", upsertQuery);

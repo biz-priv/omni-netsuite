@@ -10,6 +10,7 @@ const moment = require("moment");
 let userConfig = "";
 let connections = "";
 
+const dbname = process.env.DATABASE_NAME;
 const source_system = "OL";
 const today = moment().format("DD/MM/yyyy");
 const fromDate = moment().subtract(3, "d").format("DD/MM/yyyy");
@@ -153,9 +154,9 @@ async function insertToDB(item) {
     const keyValuePairs = updateStr.split(',');
     const filteredKeyValuePairs = keyValuePairs.filter(pair => !pair.includes('internal_id'));
     const updatedUpdateStr = filteredKeyValuePairs.join(',');
-    // const upsertQuery = `INSERT INTO dw_uat.netsuit_paid_invoices (${tableStr})
+    // const upsertQuery = `INSERT INTO ${dbname}netsuit_paid_invoices (${tableStr})
     //                     VALUES (${valueStr});`;
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_paid_invoices (${tableStr})
+    const upsertQuery = `INSERT INTO ${dbname}netsuit_paid_invoices (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updatedUpdateStr};`;
     console.log("upsertQuery",upsertQuery);

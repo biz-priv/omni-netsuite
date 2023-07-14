@@ -16,7 +16,7 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 let userConfig = "";
 let connections = "";
 
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "OL";
 let totalCountPerLoop = 20;
@@ -298,22 +298,17 @@ function getAuthorizationHeader(options) {
 function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
-      const invTypeEndpoiont =
+      const endpoiont =
         singleItem.invoice_type == "IN"
-          ? "customdeploy_mfc_rl_mcleod_inv"
-          : "customdeploy_mfc_rl_mcleod_cm";
+          ? process.env.NETSUIT_RESTLET_INV_URL
+          : process.env.NETSUIT_RESTLET_CM_URL;
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        url: endpoiont,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);

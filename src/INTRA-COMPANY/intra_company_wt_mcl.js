@@ -21,7 +21,7 @@ const totalCountPerLoop = 15;
 
 // mcl-ar => wt-ap
 const source_system = "OL";
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;;
 const arDbName = arDbNamePrev + "interface_ar_intracompany";
 const apDbName = arDbNamePrev + "interface_ap_intracompany";
 
@@ -187,9 +187,9 @@ async function makeJsonPayload(data) {
   try {
     const bgs = getBusinessSegment(process.env.STAGE);
     const acc_internal_ids = {
-      40017: 3023,// prod:2630
-      71200: 3030,// prod:2629
-      40010: 323, // prod:323
+      40017: 2630,// prod:2630 dev:3023
+      71200: 2629,// prod:2629 dev: 3030
+      40010: 323, // prod:323 dev:323
     };
 
     /**
@@ -274,12 +274,7 @@ function createInvoice(payload) {
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod_intra&deploy=customdeploy_mfc_rl_mcleod_intra`,
+        url: process.env.NETSUIT_INTRACOMPANY_URL,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);

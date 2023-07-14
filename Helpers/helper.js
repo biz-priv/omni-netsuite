@@ -3,6 +3,7 @@ const moment = require("moment");
 const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
 const lambda = new AWS.Lambda();
+const dbname = process.env.DATABASE_NAME;
 
 /**
  * Config for Netsuite
@@ -84,18 +85,18 @@ function getConfig(source_system, env) {
 function getConnection(env) {
   try {
     // DEV/PROD
-    const dbUser = env.USER;
-    const dbPassword = env.PASS;
-    const dbHost = env.HOST;
-    const dbPort = env.PORT;
-    const dbName = env.DBNAME;
-
-    //LOCAl test
-    // const dbUser = "bceuser1";
-    // const dbPassword = "BizCloudExp1";
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    // const dbUser = env.USER;
+    // const dbPassword = env.PASS;
+    // const dbHost = env.HOST;
     // const dbPort = env.PORT;
     // const dbName = env.DBNAME;
+
+   // LOCAl test
+    const dbUser = "bceuser1";
+    const dbPassword = "BizCloudExp1";
+    const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
+    const dbPort = env.PORT;
+    const dbName = env.DBNAME;
 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
@@ -109,9 +110,9 @@ async function getConnectionToRds(env) {
   try {
     const dbUser = env.db_username;
     const dbPassword = env.db_password;
-    const dbHost = env.db_host
-    // const dbHost =
-    //   "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
+    // const dbHost = env.db_host
+    const dbHost =
+      "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
     const dbPort = env.db_port;
     const dbName = env.db_name;
     const connection = await mysql.createConnection({
@@ -330,7 +331,7 @@ async function createIntracompanyFailedRecords(connections,source_system, item, 
     });
     tableStr = objKyes.join(",");
 
-    const query = `INSERT INTO dw_uat.interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    const query = `INSERT INTO ${dbname}interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
     console.log("query", query);
     await connections.query(query);
   } catch (error) {
@@ -390,8 +391,8 @@ function sendDevNotification(
       });
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "abdul.rashed@bizcloudexperts.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        // to: "abdul.rashed@bizcloudexperts.com",
         subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>

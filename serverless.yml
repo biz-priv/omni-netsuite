@@ -33,7 +33,13 @@ provider:
     db_name: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/name}
     db_host: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/host~true}
     db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port}
+    DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
     NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
+    NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
+    NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
+    NETSUIT_RESTLET_VB_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorbill/apiEndpoint}
+    NETSUIT_RESTLET_VC_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorcredit/apiEndpoint}
+    NETSUIT_INTRACOMPANY_URL: ${ssm:/omni-dw/${self:provider.stage}/intracompany/apiEndpoint}
     NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
     NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
     NETSUIT_AR_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerSecret}

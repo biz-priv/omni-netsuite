@@ -13,7 +13,7 @@ let userConfig = "";
 let totalCountPerLoop = 5;
 const today = getCustomDate();
 
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "WT";
 
@@ -270,7 +270,7 @@ async function putCustomer(connections, customerData, customer_id) {
     console.log("valueStr", valueStr);
     console.log("updateStr", updateStr);
 
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_customer (${tableStr})
+    const upsertQuery = `INSERT INTO ${arDbNamePrev}netsuit_customer (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updateStr};`;
     console.log("query", upsertQuery);

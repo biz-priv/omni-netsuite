@@ -16,7 +16,7 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 let userConfig = "";
 let connections = "";
 
-const apDbNamePrev = "dw_uat.";
+const apDbNamePrev = process.env.DATABASE_NAME;
 const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "OL";
 
@@ -521,22 +521,17 @@ function getAuthorizationHeader(options) {
 function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
-      const invTypeEndpoiont =
+      const endpoiont =
         singleItem.invoice_type == "IN"
-          ? "customdeploy_mfc_rl_mcleod_vb"
-          : "customdeploy_mfc_rl_mcleod_vc";
+        ? process.env.NETSUIT_RESTLET_VB_URL
+        : process.env.NETSUIT_RESTLET_VC_URL;
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        url: endpoiont,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);

@@ -16,7 +16,7 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 let userConfig = "";
 let connections = "";
 
-const apDbNamePrev = "dw_uat.";
+const apDbNamePrev = process.env.DATABASE_NAME;
 const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "WT";
 
@@ -437,7 +437,7 @@ async function makeJsonPayload(data) {
           department: hardcode.department.line ?? "",
           class:
             hardcode.class.line[
-              e.business_segment.split(":")[1].trim().toLowerCase()
+            e.business_segment.split(":")[1].trim().toLowerCase()
             ],
           location: {
             refName: e.handling_stn ?? "",
@@ -462,13 +462,13 @@ async function makeJsonPayload(data) {
     return payload;
   } catch (error) {
     console.log("error payload", error);
-    // await sendDevNotification(
-    //   source_system,
-    //   "AP",
-    //   "netsuite_ap_wt payload error",
-    //   data[0],
-    //   error
-    // );
+    await sendDevNotification(
+      source_system,
+      "AP",
+      "netsuite_ap_wt payload error",
+      data[0],
+      error
+    );
     throw {
       customError: true,
       msg: "Unable to make payload",
@@ -509,22 +509,17 @@ function getAuthorizationHeader(options) {
 function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
-      const invTypeEndpoiont =
+      const endpoiont =
         singleItem.invoice_type == "IN"
-          ? "customdeploy_mfc_rl_mcleod_vb"
-          : "customdeploy_mfc_rl_mcleod_vc";
+          ? process.env.NETSUIT_RESTLET_VB_URL
+          : process.env.NETSUIT_RESTLET_VC_URL;
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        url: endpoiont,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -644,7 +639,7 @@ function makeLineItemsJsonPayload(invoiceId, data) {
           department: hardcode.department.line ?? "",
           class:
             hardcode.class.line[
-              e.business_segment.split(":")[1].trim().toLowerCase()
+            e.business_segment.split(":")[1].trim().toLowerCase()
             ],
           location: {
             refName: e.handling_stn ?? "",
@@ -682,22 +677,17 @@ function makeLineItemsJsonPayload(invoiceId, data) {
 function createInvoiceAndUpdateLineItems(invoiceId, data) {
   return new Promise((resolve, reject) => {
     try {
-      const invTypeEndpoiont =
+      const endpoiont =
         data[0].invoice_type == "IN"
-          ? "customdeploy_mfc_rl_mcleod_vb"
-          : "customdeploy_mfc_rl_mcleod_vc";
+          ? process.env.NETSUIT_RESTLET_VB_URL
+          : process.env.NETSUIT_RESTLET_VC_URL;
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        url: endpoiont,
         method: "PUT",
       };
       const authHeader = getAuthorizationHeader(options);
