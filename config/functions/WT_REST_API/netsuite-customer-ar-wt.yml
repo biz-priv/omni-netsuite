@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/WT_REST_API/netsuite_customer_ar_wt.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-customer-ar-wt-restlet-${self:provider.stage}
+  description: Netsuite customer AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/WT_REST_API/netsuite_customer_ar_wt.js
+      - Helpers/**
+  environment:
+    NETSUITE_AR_WT_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-ar-wt-restlet-state-machine-${self:provider.stage}
+    NETSUITE_AR_WT_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-customer-ar-wt-restlet-state-machine-${self:provider.stage}

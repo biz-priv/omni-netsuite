@@ -14,6 +14,7 @@ const {
   sendDevNotification,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
+const { log } = require("console");
 
 let userConfig = "";
 let connections = "";
@@ -47,11 +48,14 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const orderData = await getDataGroupBy(connections);
+    console.log("orderData",orderData);
+    
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
     console.log("orderData", orderData.length);
     currentCount = orderData.length;
 
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
+    console.log("invoiceDataList",invoiceDataList);
 
     /**
      * 5 simultaneous process
@@ -130,11 +134,13 @@ async function mainProcess(item, invoiceDataList) {
       dataList,
       customerData
     );
+    console.log("xmlPayload",xmlPayload);
 
     /**
      * create Netsuit Invoice
      */
     const invoiceId = await createInvoice(xmlPayload, singleItem.invoice_type);
+    console.log("invoiceId",invoiceId);  
 
     /**
      * update invoice id
@@ -236,6 +242,7 @@ async function makeJsonToXml(payload, data, customerData) {
      */
     const auth = getOAuthKeys(userConfig);
     const singleItem = data[0];
+    console.log('singleItem',singleItem.unique_ref_nbr);
     const hardcode = getHardcodeData(
       singleItem.intercompany == "Y" ? true : false
     );
@@ -389,6 +396,12 @@ async function makeJsonToXml(payload, data, customerData) {
         "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
         value: singleItem?.service_level ?? "",
       },
+      {
+        "@internalId": "1734", 
+        "@xsi:type": "StringCustomFieldRef",
+        "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+        value: singleItem?.unique_ref_nbr ?? "",
+      },
     ];
 
     /**
@@ -406,6 +419,7 @@ async function makeJsonToXml(payload, data, customerData) {
     const doc = create(payload);
     return doc.end({ prettyPrint: true });
   } catch (error) {
+    console.log("error",error);
     await sendDevNotification(
       source_system,
       "AR",
@@ -469,6 +483,7 @@ async function createInvoice(soapPayload, type) {
       };
     }
   } catch (error) {
+    console.log("error",error);
     if (error.hasOwnProperty("customError")) {
       throw error;
     } else {

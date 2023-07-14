@@ -1,13 +1,16 @@
 ---
 stateMachine:
-  name: netsuite-intera-company-wt-mcl-state-machine-${self:provider.stage}
+  name: netsuite-customer-ar-wt-restlet-state-machine-${self:provider.stage}
+  events:
+    - schedule: 
+        rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
   definition:
-    Comment: "State machine to update netsuite intercompany invoices"
+    Comment: "State machine to update netsuit customer AR WT restlet internal details"
     StartAt: PublishEvents
     States:
       PublishEvents:
         Type: Task
-        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:netsuite-intera-company-wt-mcl-${self:provider.stage}"
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-customer-ar-wt-restlet-${self:provider.stage}"
         Next: EndChoice
       EndChoice:
         Type: Choice

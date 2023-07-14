@@ -92,6 +92,16 @@ functions:
   netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
   netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
 
+  netsuite-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ar-wt.yml):function}
+  netsuite-customer-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-customer-ar-wt.yml):function}
+  netsuite-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ap-wt.yml):function}
+  netsuite-vendor-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-vendor-ap-wt.yml):function}
+
+  # netsuite-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ar-cw.yml):function}
+  # netsuite-customer-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-customer-ar-cw.yml):function}
+  # netsuite-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ap-cw.yml):function}
+  # netsuite-vendor-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-vendor-ap-cw.yml):function}
+
   netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
   netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
   netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
@@ -118,7 +128,7 @@ functions:
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
   #intra company fn
-  intera-company-wt-mcl: ${file(config/functions/INTRA-COMPANY/intera-company-wt-mcl.yml):function}
+  intra-company-wt-mcl: ${file(config/functions/INTRA-COMPANY/intra-company-wt-mcl.yml):function}
 
   #report fn
   invoice-report: ${file(config/functions/invoice-report.yml):function}
@@ -133,10 +143,20 @@ stepFunctions:
     netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
     netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
+    netsuite-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ar-wt-state-machine.yml):stateMachine}
+    netsuite-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ap-wt-state-machine.yml):stateMachine}
+    netsuite-customer-ar-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
+
     netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
     netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
     netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+
+    # netsuite-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ap-cw-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
 
     netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
     netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
@@ -156,4 +176,4 @@ stepFunctions:
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
 
-    intera-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intera-company-wt-mcl-state-machine.yml):stateMachine}
+    intra-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intra-company-wt-mcl-state-machine.yml):stateMachine}

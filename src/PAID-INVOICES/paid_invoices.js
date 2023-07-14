@@ -2,7 +2,6 @@ const AWS = require("aws-sdk");
 const axios = require("axios");
 const {
   getConfig,
-  getCustomDate,
   getConnectionToRds,
   getAuthorizationHeader,
 } = require("../../Helpers/helper");
@@ -13,11 +12,12 @@ let connections = "";
 
 const source_system = "OL";
 const today = moment().format("DD/MM/yyyy");
-// const fromDate = moment().subtract(30, "d").format("DD/MM/yyyy");
-// const toDate = today;
+const fromDate = moment().subtract(3, "d").format("DD/MM/yyyy");
+const toDate = today;
+const createdDate= moment().format("YYYY-MM-DD HH:mm:ss");
 
-const fromDate = "05/01/2022";
-const toDate = "05/02/2022";
+// const fromDate = "07/01/2023";
+// const toDate = "07/01/2023";
 // 05/01/2022
 //05/02/2022
 
@@ -34,14 +34,14 @@ module.exports.handler = async (event, context, callback) => {
     const perLoop = 100;
     for (let index = 0; index < (data.length + 1) / perLoop; index++) {
       let newArray = data.slice(index * perLoop, index * perLoop + perLoop);
-
       await Promise.all(
         newArray.map(async (item) => {
-          return await insertToDB({ ...item, created_at: today });
+          return await insertToDB({ ...item, created_at: createdDate });
         })
       );
       console.log("exectuted", perLoop, perLoop * (index + 1));
     }
+    return "Success"
   } catch (error) {
     console.log("error", error);
   }
@@ -56,12 +56,7 @@ function getPaidInvoiceData() {
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=845&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
+        url: `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=724&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
         method: "GET",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -115,34 +110,55 @@ function getPaidInvoiceData() {
 
 async function insertToDB(item) {
   try {
-    // console.log(item);
+    console.log(item);
+    const itemData = item;
+    const formatData= {
+      internal_id: itemData.internalid,
+      type: itemData.type,
+      date_created: itemData.datecreated,
+      transaction_no: itemData.tranid,
+      amount: itemData.amount,
+      company_name: itemData.custbody_riv_entity_cpnyname.replace(/'/g, "`"),
+      shipment: itemData.custbody9,
+      due_date: itemData.duedate,
+      source_system: itemData.custbody_source_system,
+      paying_transaction: itemData.payingtransaction,
+      amount_remaining: itemData.amountremaining,
+      load_create_date: itemData.created_at
+    }
+
+    // console.log("formatData", JSON.stringify(formatData));
 
     let tableStr = "";
     let valueStr = "";
     let updateStr = "";
 
-    let objKyes = Object.keys(item);
+    let objKyes = Object.keys(formatData);
     objKyes.map((e, i) => {
       if (i > 0) {
         valueStr += ",";
         updateStr += e != "customer_id" ? "," : "";
       }
       if (e != "customer_id") {
-        updateStr += e + "='" + item[e] + "'";
+        updateStr += e + "='" + formatData[e] + "'";
       }
-      valueStr += "'" + item[e] + "'";
+      valueStr += "'" + formatData[e] + "'";
     });
     tableStr = objKyes.join(",");
 
-    // console.log("tableStr", tableStr);
-    // console.log("valueStr", valueStr);
-    // console.log("updateStr", updateStr);
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_paid_invoices (${tableStr})
-                        VALUES (${valueStr});`;
+    console.log("tableStr", tableStr);
+    console.log("valueStr", valueStr);
+    console.log("updateStr", updateStr);
+    
+    const keyValuePairs = updateStr.split(',');
+    const filteredKeyValuePairs = keyValuePairs.filter(pair => !pair.includes('internal_id'));
+    const updatedUpdateStr = filteredKeyValuePairs.join(',');
     // const upsertQuery = `INSERT INTO dw_uat.netsuit_paid_invoices (${tableStr})
-    //                     VALUES (${valueStr}) ON DUPLICATE KEY
-    //                     UPDATE ${updateStr};`;
-
+    //                     VALUES (${valueStr});`;
+    const upsertQuery = `INSERT INTO dw_uat.netsuit_paid_invoices (${tableStr})
+                        VALUES (${valueStr}) ON DUPLICATE KEY
+                        UPDATE ${updatedUpdateStr};`;
+    console.log("upsertQuery",upsertQuery);
     await connections.execute(upsertQuery);
   } catch (error) {
     console.log("error", error);
