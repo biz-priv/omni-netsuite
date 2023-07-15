@@ -4,7 +4,7 @@ function:
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ar-wt-restlet-${self:provider.stage}
-  description: WT Netsuite AR api service - ${self:provider.stage}
+  description: WT Netsuite AR restlet api service - ${self:provider.stage}
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
