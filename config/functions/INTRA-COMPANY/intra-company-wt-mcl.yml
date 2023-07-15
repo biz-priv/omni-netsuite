@@ -4,7 +4,7 @@ function:
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: netsuite-intra-company-wt-mcl-${self:provider.stage}
-  description: Netsuite netsuite-intra-company-wt-mcl api service - ${self:provider.stage}
+  description: Netsuite netsuite-intra-company-wt-mcl  api service - ${self:provider.stage}
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
