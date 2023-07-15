@@ -3,6 +3,7 @@ const moment = require("moment");
 const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
 const lambda = new AWS.Lambda();
+const dbname = process.env.DATABASE_NAME;
 
 /**
  * Config for Netsuite
@@ -83,16 +84,17 @@ function getConfig(source_system, env) {
  */
 function getConnection(env) {
   try {
+
     const dbUser = env.USER;
     const dbPassword = env.PASS;
     const dbHost = env.HOST;
-    // const dbHost = "omni-dw-prod.cnimhrgrtodg.us-east-1.redshift.amazonaws.com";
     const dbPort = env.PORT;
     const dbName = env.DBNAME;
-
+ 
     const connectionString = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
     return connectionString;
   } catch (error) {
+    console.info("connection error:-  ", error);
     throw "DB Connection Error";
   }
 }
@@ -101,9 +103,7 @@ async function getConnectionToRds(env) {
   try {
     const dbUser = env.db_username;
     const dbPassword = env.db_password;
-    // const dbHost = env.db_host
-    const dbHost =
-      "db-replication-instance-1.csqnwcsrz7o6.us-east-1.rds.amazonaws.com";
+    const dbHost = env.db_host
     const dbPort = env.db_port;
     const dbName = env.db_name;
     const connection = await mysql.createConnection({
@@ -164,7 +164,6 @@ async function createARFailedRecords(
       is_report_sent: "N",
       current_dt: moment().format("YYYY-MM-DD"),
     };
-    // console.log("formatData", formatData);
 
     let tableStr = "";
     let valueStr = "";
@@ -179,14 +178,13 @@ async function createARFailedRecords(
 
     const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
     const query = `INSERT INTO ${dbPrev}interface_ar_api_logs (${tableStr}) VALUES (${valueStr});`;
-    // console.log("query", query);
     if (dbType === "redshift") {
       await connections.query(query);
     } else {
       await connections.execute(query);
     }
   } catch (error) {
-    console.log("createARFailedRecords:error", error);
+    console.info("createARFailedRecords:error", error);
   }
 }
 
@@ -233,7 +231,6 @@ async function createAPFailedRecords(
       is_report_sent: "N",
       current_dt: moment().format("YYYY-MM-DD"),
     };
-    // console.log("formatData", formatData);
 
     let tableStr = "";
     let valueStr = "";
@@ -248,14 +245,13 @@ async function createAPFailedRecords(
 
     const dbPrev = apDbNamePrev != null ? apDbNamePrev : "";
     const query = `INSERT INTO ${dbPrev}interface_ap_api_logs (${tableStr}) VALUES (${valueStr});`;
-    // console.log("query", query);
     if (dbType === "redshift") {
       await connections.query(query);
     } else {
       await connections.execute(query);
     }
   } catch (error) {
-    console.log("createAPFailedRecords:error", error);
+    console.info("createAPFailedRecords:error", error);
   }
 }
 
@@ -274,7 +270,6 @@ async function createIntercompanyFailedRecords(connections, item, error) {
       is_report_sent: "N",
       current_dt: moment().format("YYYY-MM-DD"),
     };
-    console.log("formatData", formatData);
 
     let tableStr = "";
     let valueStr = "";
@@ -288,10 +283,42 @@ async function createIntercompanyFailedRecords(connections, item, error) {
     tableStr = objKyes.join(",");
 
     const query = `INSERT INTO interface_intercompany_api_logs (${tableStr}) VALUES (${valueStr});`;
-    console.log("query", query);
     await connections.query(query);
   } catch (error) {
-    console.log("createIntercompanyFailedRecords:error", error);
+    console.info("createIntercompanyFailedRecords:error", error);
+  }
+}
+
+/**
+ * handle error logs Intera-company
+ */
+async function createIntracompanyFailedRecords(connections,source_system, item, error) {
+  try {
+    const formatData = {
+      source_system: source_system,
+      invoice_nbr: item?.[0].invoice_nbr,
+      housebill_nbr: item?.[0].housebill_nbr,
+      error_msg: error.msg.replace(/"/g, "`"),
+      response: error.response,
+      is_report_sent: "N",
+      current_dt: moment().format("YYYY-MM-DD"),
+    };
+
+    let tableStr = "";
+    let valueStr = "";
+    let objKyes = Object.keys(formatData);
+    objKyes.map((e, i) => {
+      if (i > 0) {
+        valueStr += ",";
+      }
+      valueStr += "'" + formatData[e] + "'";
+    });
+    tableStr = objKyes.join(",");
+
+    const query = `INSERT INTO ${dbname}interface_intracompany_api_logs (${tableStr}) VALUES (${valueStr});`;
+    await connections.query(query);
+  } catch (error) {
+    console.info("createIntercompanyFailedRecords:error", error);
   }
 }
 
@@ -300,8 +327,6 @@ async function createIntercompanyFailedRecords(connections, item, error) {
  */
 function triggerReportLambda(functionName, payloadData) {
   return new Promise((resolve, reject) => {
-    console.log("functionName", functionName);
-    console.log("payloadData", payloadData);
     try {
       lambda.invoke(
         {
@@ -310,18 +335,18 @@ function triggerReportLambda(functionName, payloadData) {
         },
         function (error, data) {
           if (error) {
-            console.log("error: unable to send report", error);
+            console.info("error: unable to send report", error);
             resolve("failed");
           }
           if (data.Payload) {
-            console.log(data.Payload);
+            console.info(data.Payload);
             resolve("success");
           }
         }
       );
     } catch (error) {
-      console.log("error:triggerReportLambda", error);
-      console.log("unable to send report");
+      console.info("error:triggerReportLambda", error);
+      console.info("unable to send report");
       resolve("failed");
     }
   });
@@ -347,8 +372,7 @@ function sendDevNotification(
       });
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        to: "abdul.rashed@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
         subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>
@@ -384,6 +408,38 @@ function sendDevNotification(
   });
 }
 
+function getAuthorizationHeader(options) {
+  const crypto = require("crypto");
+  const OAuth = require("oauth-1.0a");
+
+  const oauth = OAuth({
+    consumer: {
+      key: options.consumer_key,
+      secret: options.consumer_secret_key,
+    },
+    realm: options.realm,
+    signature_method: "HMAC-SHA256",
+    hash_function(base_string, key) {
+      return crypto
+        .createHmac("sha256", key)
+        .update(base_string)
+        .digest("base64");
+    },
+  });
+  return oauth.toHeader(
+    oauth.authorize(
+      {
+        url: options.url,
+        method: options.method,
+      },
+      {
+        key: options.token,
+        secret: options.token_secret,
+      }
+    )
+  );
+}
+
 module.exports = {
   getConfig,
   getConnection,
@@ -393,4 +449,6 @@ module.exports = {
   createIntercompanyFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  createIntracompanyFailedRecords,
+  getAuthorizationHeader,
 };

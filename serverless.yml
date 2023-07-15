@@ -33,7 +33,13 @@ provider:
     db_name: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/name}
     db_host: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/host~true}
     db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port}
+    DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
     NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
+    NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
+    NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
+    NETSUIT_RESTLET_VB_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorbill/apiEndpoint}
+    NETSUIT_RESTLET_VC_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorcredit/apiEndpoint}
+    NETSUIT_INTRACOMPANY_URL: ${ssm:/omni-dw/${self:provider.stage}/intracompany/apiEndpoint}
     NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
     NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
     NETSUIT_AR_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerSecret}
@@ -92,6 +98,16 @@ functions:
   netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
   netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
 
+  netsuite-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ar-wt.yml):function}
+  netsuite-customer-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-customer-ar-wt.yml):function}
+  netsuite-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ap-wt.yml):function}
+  netsuite-vendor-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-vendor-ap-wt.yml):function}
+
+  # netsuite-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ar-cw.yml):function}
+  # netsuite-customer-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-customer-ar-cw.yml):function}
+  # netsuite-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ap-cw.yml):function}
+  # netsuite-vendor-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-vendor-ap-cw.yml):function}
+
   netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
   netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
   netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
@@ -112,12 +128,19 @@ functions:
   # netsuite-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-ap-mcl.yml):function}
   # netsuite-vendor-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-vendor-ap-mcl.yml):function}
 
+  #intar company fn
   netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
   netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
+  #intra company fn
+  intra-company-wt-mcl: ${file(config/functions/INTRA-COMPANY/intra-company-wt-mcl.yml):function}
+
+  #report fn
   invoice-report: ${file(config/functions/invoice-report.yml):function}
   # mckesson-shipments-report: ${file(config/functions/mckesson-shipments-report.yml):function}
+
+  netsuite-paid-invoices: ${file(config/functions/PAID-INVOICES/paid-invoices.yml):function}
 
 stepFunctions:
   stateMachines:
@@ -126,10 +149,20 @@ stepFunctions:
     netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
     netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
+    netsuite-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ar-wt-state-machine.yml):stateMachine}
+    netsuite-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ap-wt-state-machine.yml):stateMachine}
+    netsuite-customer-ar-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    netsuite-vendor-ap-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
+
     netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
     netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
     netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
     netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+
+    # netsuite-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ap-cw-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
 
     netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
     netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
@@ -148,3 +181,5 @@ stepFunctions:
 
     netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
     netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
+
+    intra-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intra-company-wt-mcl-state-machine.yml):stateMachine}

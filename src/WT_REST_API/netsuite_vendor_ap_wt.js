@@ -14,7 +14,7 @@ let userConfig = "";
 
 let totalCountPerLoop = 5;
 const today = getCustomDate();
-const apDbNamePrev = "dw_uat.";
+const apDbNamePrev = process.env.DATABASE_NAME;
 const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "WT";
 
@@ -41,24 +41,23 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const vendorList = await getVendorData(connections);
-    console.log("vendorList", vendorList.length);
+    console.info("vendorList", vendorList.length);
     currentCount = vendorList.length;
 
     for (let i = 0; i < vendorList.length; i++) {
       const vendor_id = vendorList[i].vendor_id;
-      console.log("vendor_id", vendor_id);
+      console.info("vendor_id", vendor_id);
       try {
         /**
          * get vendor from netsuit
          */
         const vendorData = await getVendor(vendor_id);
-        console.log("vendorData", vendorData);
 
         /**
          * Update vendor details into DB
          */
         await putVendor(connections, vendorData, vendor_id);
-        console.log("count", i + 1);
+        console.info("count", i + 1);
       } catch (error) {
         let singleItem = "";
         try {
@@ -101,10 +100,8 @@ module.exports.handler = async (event, context, callback) => {
     try {
       await startNetsuitInvoiceStep();
     } catch (error) {}
-    dbc.end();
     return { hasMoreData };
   } else {
-    dbc.end();
     return { hasMoreData };
   }
 };
@@ -114,18 +111,17 @@ async function getVendorData(connections) {
     const query = `SELECT distinct vendor_id FROM ${apDbName}
                     where ((vendor_internal_id is null and processed_date is null) or
                             (vendor_internal_id is null and processed_date < '${today}'))
-                    and source_system = '${source_system}' 
+                    and source_system = '${source_system}' and vendor_id is not null
                     limit ${totalCountPerLoop + 1}`;
-    console.log("query", query);
+    console.info("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found";
     }
     return result;
   } catch (error) {
-    console.log(error, "error");
+    console.error(error, "error");
     throw "getVendorData: No data found.";
   }
 }
@@ -135,10 +131,9 @@ async function getDataByVendorId(connections, vendor_id) {
     const query = `select * from ${apDbName} 
                     where source_system = '${source_system}' and vendor_id = '${vendor_id}' 
                     limit 1`;
-    console.log("query", query);
+    console.info("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
-    console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
@@ -173,7 +168,7 @@ function getVendor(entityId) {
         }
       })
       .catch((err) => {
-        console.log("err", err);
+        console.error("err", err);
         reject({
           customError: true,
           msg: `Vendor not found. (vendor_id: ${entityId})`,
@@ -229,7 +224,6 @@ async function putVendor(connections, vendorData, vendor_id) {
 
       created_at: moment().format("YYYY-MM-DD"),
     };
-    console.log("formatData", JSON.stringify(formatData));
 
     let tableStr = "";
     let valueStr = "";
@@ -248,14 +242,10 @@ async function putVendor(connections, vendorData, vendor_id) {
     });
     tableStr = objKyes.join(",");
 
-    console.log("tableStr", tableStr);
-    console.log("valueStr", valueStr);
-    console.log("updateStr", updateStr);
-
-    const upsertQuery = `INSERT INTO dw_uat.netsuit_vendors (${tableStr})
+    const upsertQuery = `INSERT INTO ${apDbNamePrev}netsuit_vendors (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updateStr};`;
-    console.log("query", upsertQuery);
+    console.info("upsertQuery", upsertQuery);
     await connections.execute(upsertQuery);
 
     const updateQuery = `UPDATE  ${apDbName} SET
@@ -263,10 +253,10 @@ async function putVendor(connections, vendorData, vendor_id) {
                     vendor_internal_id = '${vendor_internal_id}', 
                     processed_date = '${today}' 
                     WHERE vendor_id = '${vendor_id}' and source_system = '${source_system}' and vendor_internal_id is null;`;
-    console.log("updateQuery", updateQuery);
+    console.info("updateQuery", updateQuery);
     await connections.execute(updateQuery);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     throw "Vendor Update Failed";
   }
 }
@@ -307,14 +297,14 @@ async function checkOldProcessIsRunning() {
           maxResults: 2,
         },
         (err, data) => {
-          console.log(" vendorArn listExecutions data", data);
+          console.info(" vendorArn listExecutions data", data);
           const venExcList = data.executions;
           if (
             err === null &&
             venExcList.length == 2 &&
             venExcList[1].status === status
           ) {
-            console.log("vendorArn running");
+            console.info("vendorArn running");
             resolve(true);
           } else {
             stepfunctions.listExecutions(
@@ -324,14 +314,14 @@ async function checkOldProcessIsRunning() {
                 maxResults: 1,
               },
               (err, data) => {
-                console.log(" wtApArn listExecutions data", data);
+                console.info(" wtApArn listExecutions data", data);
                 const wtapExcList = data.executions;
                 if (
                   err === null &&
                   wtapExcList.length > 0 &&
                   wtapExcList[0].status === status
                 ) {
-                  console.log("wtApArn running");
+                  console.info("wtApArn running");
                   resolve(true);
                 } else {
                   resolve(false);
@@ -357,10 +347,10 @@ async function startNetsuitInvoiceStep() {
       const stepfunctions = new AWS.StepFunctions();
       stepfunctions.startExecution(params, (err, data) => {
         if (err) {
-          console.log("Netsuit AP api trigger failed");
+          console.error("Netsuit AP api trigger failed");
           resolve(false);
         } else {
-          console.log("Netsuit AP started");
+          console.info("Netsuit AP started");
           resolve(true);
         }
       });

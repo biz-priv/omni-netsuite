@@ -2,8 +2,6 @@ const AWS = require("aws-sdk");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 const axios = require("axios");
-// const pgp = require("pg-promise");
-// const dbc = pgp({ capSQL: true });
 const {
   getConfig,
   getConnectionToRds,
@@ -16,7 +14,7 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 let userConfig = "";
 let connections = "";
 
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "OL";
 let totalCountPerLoop = 20;
@@ -40,13 +38,13 @@ module.exports.handler = async (event, context, callback) => {
      * Get data from db
      */
     const orderData = await getDataGroupBy(connections);
-    console.log("orderData", orderData.length, orderData[0]);
+    console.info("orderData", orderData.length);
     const invoiceIDs = orderData.map((a) => "'" + a.invoice_nbr + "'");
-    console.log("invoiceIDs", invoiceIDs);
+    console.info("invoiceIDs", invoiceIDs);
 
     currentCount = orderData.length;
     const invoiceDataList = await getInvoiceNbrData(connections, invoiceIDs);
-    console.log("invoiceDataList", invoiceDataList.length);
+    console.info("invoiceDataList", invoiceDataList.length);
 
     /**
      * 5 simultaneous process
@@ -67,7 +65,6 @@ module.exports.handler = async (event, context, callback) => {
       queryData = [...queryData, ...data];
     }
 
-    console.log("queryData", queryData);
     await updateInvoiceId(connections, queryData);
 
     if (currentCount > totalCountPerLoop) {
@@ -76,10 +73,8 @@ module.exports.handler = async (event, context, callback) => {
       await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
       hasMoreData = "false";
     }
-    // dbc.end();
     return { hasMoreData };
   } catch (error) {
-    // dbc.end();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
     return { hasMoreData: "false" };
   }
@@ -105,7 +100,6 @@ async function mainProcess(item, invoiceDataList) {
     });
 
     singleItem = dataList[0];
-    // console.log("singleItem", singleItem);
 
     /**
      * Make Json payload
@@ -116,7 +110,7 @@ async function mainProcess(item, invoiceDataList) {
      * create Netsuit Invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
-    console.log("invoiceId", invoiceId);
+    console.info("invoiceId", invoiceId);
 
     /**
      * update invoice id
@@ -124,7 +118,7 @@ async function mainProcess(item, invoiceDataList) {
     const getQuery = getUpdateQuery(singleItem, invoiceId);
     return getQuery;
   } catch (error) {
-    console.log("error:process", error);
+    console.error("error:process", error);
     if (error.hasOwnProperty("customError")) {
       let getQuery = "";
       try {
@@ -159,7 +153,7 @@ async function getDataGroupBy(connections) {
                   and source_system = '${source_system}' and invoice_nbr is not null
                   limit ${totalCountPerLoop + 1}`;
 
-    console.log("query", query);
+    console.info("query", query);
     const [rows] = await connections.execute(query);
     const result = rows;
     if (!result || result.length == 0) {
@@ -175,17 +169,16 @@ async function getInvoiceNbrData(connections, invoice_nbr) {
   try {
     const query = `select * from ${arDbName} where source_system = '${source_system}' 
     and invoice_nbr in (${invoice_nbr.join(",")})`;
-    console.log("query", query);
+    console.info("query", query);
 
     const executeQuery = await connections.execute(query);
     const result = executeQuery[0];
-    console.log("result", result);
     if (!result || result.length == 0) {
       throw "No data found.";
     }
     return result;
   } catch (error) {
-    console.log("error");
+    console.error("error");
     throw "No data found.";
   }
 }
@@ -222,6 +215,7 @@ async function makeJsonPayload(data) {
       custbody18: singleItem.finalized_date ?? "",
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
+      custbody25: singleItem.zip_code ?? "",
       item: data.map((e) => {
         return {
           // custcol_mfc_line_unique_key:"",
@@ -246,10 +240,9 @@ async function makeJsonPayload(data) {
       }),
     };
 
-    console.log("payload", JSON.stringify(payload));
     return payload;
   } catch (error) {
-    console.log("error payload", error);
+    console.error("error payload", error);
     await sendDevNotification(
       source_system,
       "AR",
@@ -297,22 +290,17 @@ function getAuthorizationHeader(options) {
 function createInvoice(payload, singleItem) {
   return new Promise((resolve, reject) => {
     try {
-      const invTypeEndpoiont =
+      const endpoiont =
         singleItem.invoice_type == "IN"
-          ? "customdeploy_mfc_rl_mcleod_inv"
-          : "customdeploy_mfc_rl_mcleod_cm";
+          ? process.env.NETSUIT_RESTLET_INV_URL
+          : process.env.NETSUIT_RESTLET_CM_URL;
       const options = {
         consumer_key: userConfig.token.consumer_key,
         consumer_secret_key: userConfig.token.consumer_secret,
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://${userConfig.account
-          .toLowerCase()
-          .split("_")
-          .join(
-            "-"
-          )}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoiont}`,
+        url: endpoiont,
         method: "POST",
       };
       const authHeader = getAuthorizationHeader(options);
@@ -327,13 +315,11 @@ function createInvoice(payload, singleItem) {
         },
         data: JSON.stringify(payload),
       };
-      console.log("configApi", configApi);
 
       axios
         .request(configApi)
         .then((response) => {
-          console.log("response", response.status);
-          console.log(JSON.stringify(response.data));
+          console.info(JSON.stringify(response.data));
           if (response.status === 200 && response.data.status === "Success") {
             resolve(response.data.id);
           } else {
@@ -346,8 +332,7 @@ function createInvoice(payload, singleItem) {
           }
         })
         .catch((error) => {
-          console.log(error.response.status);
-          console.log(error.response.data);
+          console.error(error.response.data);
           reject({
             customError: true,
             msg: error.response.data.reason.replace(/'/g, "`"),
@@ -356,7 +341,7 @@ function createInvoice(payload, singleItem) {
           });
         });
     } catch (error) {
-      console.log("error:createInvoice:main:catch", error);
+      console.error("error:createInvoice:main:catch", error);
       reject({
         customError: true,
         msg: "Netsuit AR Api Failed",
@@ -368,7 +353,6 @@ function createInvoice(payload, singleItem) {
 
 function getUpdateQuery(item, invoiceId, isSuccess = true) {
   try {
-    console.log("invoice_nbr ", item.invoice_nbr, invoiceId);
     let query = `UPDATE ${arDbName} `;
     if (isSuccess) {
       query += ` SET internal_id = '${invoiceId}', processed = 'P', `;
@@ -378,10 +362,10 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
     query += `processed_date = '${today}' 
               WHERE source_system = '${source_system}' and invoice_nbr = '${item.invoice_nbr}' 
               and invoice_type = '${item.invoice_type}' and file_nbr = '${item.file_nbr}' ;`;
-    console.log("query", query);
+    console.info("query", query);
     return query;
   } catch (error) {
-    console.log("error:getUpdateQuery", error, item, invoiceId);
+    console.error("error:getUpdateQuery", error, item, invoiceId);
     return "";
   }
 }
@@ -392,7 +376,7 @@ async function updateInvoiceId(connections, query) {
     try {
       await connections.execute(element);
     } catch (error) {
-      console.log("error:updateInvoiceId", error);
+      console.error("error:updateInvoiceId", error);
       await sendDevNotification(
         source_system,
         "AR",
@@ -406,13 +390,13 @@ async function updateInvoiceId(connections, query) {
 
 function getHardcodeData() {
   const data = {
-    source_system: "6",
+    source_system: "5",//dev:"6" prod:"5"
     class: {
       head: "9",
       line: getBusinessSegment(process.env.STAGE),
     },
     department: { head: "15", line: "1" },
-    location: { head: "88", line: "88" },
+    location: { head: "404", line: "404" },//dev:"289" prod:"404"
   };
   return data;
 }

@@ -8,13 +8,11 @@ const {
   sendDevNotification,
   getConnectionToRds,
 } = require("../Helpers/helper");
+const dbname = process.env.DATABASE_NAME;
 const mailList = {
   WT: {
-    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
   },
   CW: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -29,15 +27,18 @@ const mailList = {
     AP: process.env.NETSUIT_AP_TR_ERROR_EMAIL_TO,
   },
   OL: {
-    // AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-    // AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
-    AR: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
-    AP: "cedric.carter@morganfranklin.com,bsugg@omnilogistics.com,matt.garriga@morgan-franklin.com,tmella@omnilogistics.com,dschneir@omnilogistics.com,priyanka@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
+    AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    AP: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
   },
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
     TR:
-      process.env.NETSUIT_AP_ERROR_EMAIL_TO + ",natalief.hkg@trinityworld.com",
+      process.env.NETSUIT_AP_ERROR_EMAIL_TO ,
+  },
+  INTRACOMPANY: {
+    WT: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+    CW: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+
   },
 };
 
@@ -47,7 +48,7 @@ module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
     reportType = "";
   try {
-    console.log(event);
+    console.info(event);
     let connections = "";
 
     const eventData = event.invPayload.split("_");
@@ -55,6 +56,9 @@ module.exports.handler = async (event, context, callback) => {
     reportType = eventData[1];
 
     if (REST_SS.includes(sourceSystem)) {
+      connections = await getConnectionToRds(process.env);
+    }
+    else if (sourceSystem === "CW" && reportType === "INTRACOMPANY") {
       connections = await getConnectionToRds(process.env);
     } else {
       connections = dbc(getConnection(process.env));
@@ -64,13 +68,16 @@ module.exports.handler = async (event, context, callback) => {
       await generateCsvAndMail(connections, sourceSystem, "AR");
     } else if (reportType === "AP") {
       await generateCsvAndMail(connections, sourceSystem, "AP");
-    } else {
+    } else if (reportType === "INTRACOMPANY") {
+      await generateCsvAndMail(connections, sourceSystem, "INTRACOMPANY")
+    }
+    else {
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AP");
       await generateCsvAndMail(connections, sourceSystem, "INTERCOMPANY", "AR");
     }
     return "Success";
   } catch (error) {
-    console.log("error", error);
+    console.error("error", error);
     await sendDevNotification(
       "INVOICE-REPOR-" + sourceSystem,
       reportType,
@@ -86,14 +93,16 @@ async function generateCsvAndMail(
   connections,
   sourceSystem,
   type,
-  intercompanyType = null
+  intercompanyType = null,
+  intracompanyType = null
 ) {
   try {
     const data = await getReportData(
       connections,
       sourceSystem,
       type,
-      intercompanyType
+      intercompanyType,
+      intracompanyType
     );
     if (!data || data.length == 0) return;
     /**
@@ -102,31 +111,30 @@ async function generateCsvAndMail(
     const fields = Object.keys(data[0]);
     const opts = { fields };
     const csv = parse(data, opts);
-
     /**
      * send mail
      */
-    const filename = `Netsuite-${sourceSystem}-${type}-${
-      process.env.STAGE
-    }-report-${moment().format("DD-MM-YYYY")}.csv`;
-    await sendMail(filename, csv, sourceSystem, type, intercompanyType);
+    const filename = `Netsuite-${sourceSystem}-${type}-${process.env.STAGE
+      }-report-${moment().format("DD-MM-YYYY")}.csv`;
+    await sendMail(filename, csv, sourceSystem, type, intercompanyType, intracompanyType);
 
     /**
      * Update rows
      */
     const maxId = Math.max(...data.map((e) => e.id));
-    console.log("sourceSystem, type, maxId", sourceSystem, type, maxId);
     if (intercompanyType === null || intercompanyType === "AR") {
       await updateReportData(connections, sourceSystem, type, maxId);
     }
   } catch (error) {
-    console.log("error:generateCsvAndMail", error);
+    console.error("error:generateCsvAndMail", error);
     await sendDevNotification(
       "INVOICE-REPOR-" + sourceSystem,
       "type value:- " +
-        type +
-        "and intercompanyType value:-" +
-        intercompanyType,
+      type +
+      " and intercompanyType value:-" +
+      intercompanyType +
+      " and intracompanyType value:-" +
+      intracompanyType,
       "invoice_report generateCsvAndMail",
       {},
       error
@@ -157,7 +165,7 @@ async function getReportData(
     if (type === "AP") {
       // AP
       const table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ap_api_logs"
+        ? `${dbname}interface_ap_api_logs`
         : "interface_ap_api_logs";
       const queryNonVenErr = `select source_system,error_msg,file_nbr,vendor_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,currency,charge_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,intercompany,id
               from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
@@ -168,7 +176,7 @@ async function getReportData(
         sourceSystem,
         queryNonVenErr
       );
-      console.log("nonVenErrdata", nonVenErrdata.length);
+      console.info("nonVenErrdata", nonVenErrdata.length);
       const queryVenErr = `select vendor_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Vendor not found%'`;
       const querySelectors = `ia.subsidiary, iam.source_system, 'Vendor not found. (vendor_id: '||iam.vendor_id||') Subsidiary: '||ia.subsidiary as error_msg`;
@@ -186,8 +194,8 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
@@ -214,14 +222,14 @@ async function getReportData(
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select dw_uat.interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type, file_nbr;`;
       }
 
-      console.log("mainQuery", mainQuery);
+      console.info("mainQuery", mainQuery);
       const data = await executeQuery(connections, sourceSystem, mainQuery);
-      console.log("data", data.length);
+      console.info("data", data.length);
       if (data && data.length > 0) {
         const formatedData = data.map((e) => ({
           source_system: e?.source_system ?? "",
@@ -253,7 +261,7 @@ async function getReportData(
     } else if (type === "AR") {
       // AR
       const table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ar_api_logs"
+        ? `${dbname}interface_ar_api_logs`
         : "interface_ar_api_logs";
       const queryNonCuErr = `select source_system,error_msg,file_nbr,customer_id,subsidiary,invoice_nbr,invoice_date,housebill_nbr,master_bill_nbr,invoice_type,controlling_stn,charge_cd,curr_cd,total,posted_date,gc_code,tax_code,unique_ref_nbr,internal_ref_nbr,order_ref,ee_invoice,intercompany,id 
               from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N' and 
@@ -263,7 +271,7 @@ async function getReportData(
         sourceSystem,
         queryNonCuErr
       );
-      console.log("nonCuErrdata", nonCuErrdata.length);
+      console.info("nonCuErrdata", nonCuErrdata.length);
 
       const queryCuErr = `select customer_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Customer not found%'`;
@@ -273,8 +281,8 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "WT") {
-        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-                      from dw_uat.interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
+        mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+                      from ${dbname}interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
                       GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
@@ -283,13 +291,13 @@ async function getReportData(
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "OL") {
-        mainQuery = `select dw_uat.interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
-        from dw_uat.interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})
+        mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})
         GROUP BY invoice_nbr, invoice_type, file_nbr;`;
       }
-      console.log("mainQuery", mainQuery);
+      console.info("mainQuery", mainQuery);
       const data = await executeQuery(connections, sourceSystem, mainQuery);
-      console.log("data", data.length);
+      console.info("data", data.length);
       if (data && data.length > 0) {
         const formatedData = data.map((e) => ({
           source_system: e?.source_system ?? "",
@@ -320,7 +328,21 @@ async function getReportData(
       } else {
         return nonCuErrdata;
       }
-    } else {
+    }
+    else if (type === "INTRACOMPANY") {
+      query = `select iial.source_system,iial.invoice_nbr,iial.housebill_nbr,iial.error_msg,iial.response 
+      from ${dbname}interface_intracompany_api_logs iial where is_report_sent ='N' and source_system = '${sourceSystem}'`
+      console.info("query:getReportData", query);
+      if (sourceSystem === "CW") {
+        const data = await executeQuery(connections, sourceSystem, query);
+        console.info("query:data", data[0].length);
+        return data[0];
+      }
+      const data = await executeQuery(connections, sourceSystem, query);
+      console.info("query:data", data, data.length);
+      return data;
+    }
+    else {
       // INTERCOMPANY
       if (sourceSystem === "CW") {
         if (intercompanyType === "AP") {
@@ -362,9 +384,9 @@ async function getReportData(
         }
       }
 
-      console.log("query:getReportData", query);
+      console.info("query:getReportData", query);
       const data = await executeQuery(connections, sourceSystem, query);
-      console.log("query:data", data.length);
+      console.info("query:data", data.length);
       if (data && data.length > 0) {
         return data.map((e) => ({
           source_system: e.source_system,
@@ -376,7 +398,7 @@ async function getReportData(
       }
     }
   } catch (error) {
-    console.log("error:getReportData", error);
+    console.error("error:getReportData", error);
     return [];
   }
 }
@@ -386,30 +408,37 @@ async function updateReportData(connections, sourceSystem, type, maxId) {
     let table = "";
     if (type === "AP") {
       table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ap_api_logs"
+        ? `${dbname}interface_ap_api_logs`
         : "interface_ap_api_logs";
     } else if (type === "AR") {
       table = REST_SS.includes(sourceSystem)
-        ? "dw_uat.interface_ar_api_logs"
+        ? `${dbname}interface_ar_api_logs`
         : "interface_ar_api_logs";
-    } else {
+    }
+    else if (type === "INTRACOMPANY") {
+      table = `${dbname}interface_intracompany_api_logs`
+    }
+    else {
       table = "interface_intercompany_api_logs";
     }
 
     if (REST_SS.includes(sourceSystem)) {
       const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
       const [rows] = await connections.execute(maxIdQuery);
-      console.log("maxId:rows", rows);
+      maxId = rows[0].maxId;
+    } else if (sourceSystem === "CW" && type === "INTRACOMPANY") {
+      const maxIdQuery = `select max(id) as maxId from ${table} where source_system = '${sourceSystem}' and is_report_sent ='N'`;
+      const [rows] = await connections.execute(maxIdQuery);
       maxId = rows[0].maxId;
     }
     const query = `Update ${table} set 
                     is_report_sent ='P', 
                     report_sent_time = '${moment().format("YYYY-MM-DD H:m:s")}' 
                     where source_system = '${sourceSystem}' and is_report_sent ='N' and id <= ${maxId}`;
-    console.log("query", query);
+    console.info("query", query);
     return await executeQuery(connections, sourceSystem, query);
   } catch (error) {
-    console.log("error:updateReportData", error);
+    console.error("error:updateReportData", error);
     throw error;
   }
 }
@@ -419,7 +448,8 @@ function sendMail(
   content,
   sourceSystem,
   type,
-  intercompanyType = null
+  intercompanyType = null,
+  intracompanyType = null
 ) {
   return new Promise((resolve, reject) => {
     try {
@@ -432,15 +462,12 @@ function sendMail(
           pass: process.env.NETSUIT_AR_ERROR_EMAIL_PASS,
         },
       });
-      const title = `Netsuite ${sourceSystem} ${type} ${
-        intercompanyType ? intercompanyType : ""
-      } Report ${process.env.STAGE.toUpperCase()}`;
-
+      const title = `Netsuite ${sourceSystem} ${type} ${intercompanyType ? intercompanyType : "" || intracompanyType ? intracompanyType : ""
+        } Report ${process.env.STAGE.toUpperCase()}`;
       const message = {
         from: `${title} <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        // to: "abdul.rashed@bizcloudexperts.com,iqbal.layek@bizcloudexperts.com",
         to:
-          type === "INTERCOMPANY"
+          type === "INTERCOMPANY" || type === "INTRACOMPANY"
             ? mailList[type][sourceSystem]
             : mailList[sourceSystem][type],
         subject: title,
@@ -469,7 +496,7 @@ function sendMail(
         }
       });
     } catch (error) {
-      console.log("mail:error", error);
+      console.error("mail:error", error);
       resolve(true);
     }
   });

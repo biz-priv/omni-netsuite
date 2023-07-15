@@ -1,6 +1,6 @@
 ---
 function:
-  handler: src/WT_REST_API/netsuite_customer_ar_wt.handler
+  handler: src/WT/netsuite_customer_ar_wt.handler
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-customer-ar-wt-${self:provider.stage}
@@ -10,7 +10,7 @@ function:
   timeout: 900
   package:
     include:
-      - src/WT_REST_API/netsuite_customer_ar_wt.js
+      - src/WT/netsuite_customer_ar_wt.js
       - Helpers/**
   environment:
     NETSUITE_AR_WT_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-wt-state-machine-${self:provider.stage}
