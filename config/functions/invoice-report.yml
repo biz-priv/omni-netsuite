@@ -4,7 +4,7 @@ function:
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-invoice-report-${self:provider.stage}
-  description: Netsuite Invoice Report service - ${self:provider.stage}
+  description: Netsuite Invoice  Report service - ${self:provider.stage}
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900

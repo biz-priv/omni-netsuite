@@ -4,7 +4,7 @@ function:
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: ${self:service}-netsuite-ap-mcl-${self:provider.stage}
-  description: MCL Netsuite AP api service - ${self:provider.stage}
+  description: MCL Netsuite  AP api service - ${self:provider.stage}
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
