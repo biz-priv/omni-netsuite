@@ -35,11 +35,6 @@ provider:
     db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port}
     DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
     NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
-    NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
-    NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
-    NETSUIT_RESTLET_VB_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorbill/apiEndpoint}
-    NETSUIT_RESTLET_VC_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorcredit/apiEndpoint}
-    NETSUIT_INTRACOMPANY_URL: ${ssm:/omni-dw/${self:provider.stage}/intracompany/apiEndpoint}
     NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
     NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
     NETSUIT_AR_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerSecret}
@@ -51,23 +46,18 @@ provider:
     NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
     NETSUIT_TR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyTR}
     NETSUIT_TR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretTR}
-
     NETSUIT_MCL_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerKey}
     NETSUIT_MCL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerSecret}
     NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL}
     NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL}
 
-    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
+    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath} 
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
     NETSUIT_AR_ERROR_EMAIL_USER: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/user}
     NETSUIT_AR_ERROR_EMAIL_PASS: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/pass}
     NETSUIT_AR_ERROR_EMAIL_FROM: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/from}
     NETSUIT_AR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/to}
-    NETSUIT_AP_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/errorEmail/to}
-    NETSUIT_AP_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/dynamo/errorTable}
-    NETSUIT_AR_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/TR/errorEmail/to}
-    NETSUIT_AP_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/TR/errorEmail/to}
     NETSUIT_INVOICE_REPORT: ${self:service}-invoice-report-${self:provider.stage}
 
 plugins:

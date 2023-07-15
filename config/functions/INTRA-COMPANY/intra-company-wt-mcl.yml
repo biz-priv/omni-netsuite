@@ -4,7 +4,7 @@ function:
   layers:
     - { Ref: CommonNetsuiteLibsLambdaLayer }
   name: netsuite-intra-company-wt-mcl-${self:provider.stage}
-  description: Netsuite netsuite-intra-company-wt-mcl api service - ${self:provider.stage}
+  description: Netsuite  netsuite-intra-company-wt-mcl  api service - ${self:provider.stage}
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
@@ -14,4 +14,6 @@ function:
       - Helpers/**
   environment:
     NETSUITE_INTERCOMPANY_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuit/intercompany/url}
+    DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
+    NETSUIT_INTRACOMPANY_URL: ${ssm:/omni-dw/${self:provider.stage}/intracompany/apiEndpoint}
     NETSUITE_INTRACOMPANY_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-intra-company-wt-mcl-state-machine-${self:provider.stage}
