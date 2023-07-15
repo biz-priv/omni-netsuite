@@ -8,6 +8,15 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  environment:
+    NETSUIT_AR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/to}
+    NETSUIT_AP_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/errorEmail/to}
+    NETSUIT_AR_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/TR/errorEmail/to}
+    NETSUIT_AP_TR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAP/TR/errorEmail/to}
+    NETSUIT_AR_ERROR_EMAIL_USER: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/user}
+    NETSUIT_AR_ERROR_EMAIL_PASS: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/pass}
+    NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
+    NETSUIT_AR_ERROR_EMAIL_FROM: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/from}
   package:
     include:
       - src/invoice_report.js

@@ -8,6 +8,10 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  environment:
+    NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
+    NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
+    DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
   package:
     include:
       - src/WT_REST_API/netsuite_ar_wt.js
