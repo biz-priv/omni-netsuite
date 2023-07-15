@@ -51,7 +51,7 @@ provider:
     NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL}
     NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL}
 
-    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath}
+    NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath} 
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
     NETSUIT_AR_ERROR_EMAIL_HOST: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/host}
     NETSUIT_AR_ERROR_EMAIL_USER: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/user}
