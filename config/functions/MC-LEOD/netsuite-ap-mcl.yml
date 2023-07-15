@@ -1,0 +1,14 @@
+---
+function:
+  handler: src/MC-LEOD/netsuite_ap_mcl.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-ap-mcl-${self:provider.stage}
+  description: MCL Netsuite AP api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/MC-LEOD/netsuite_ap_mcl.js
+      - Helpers/**

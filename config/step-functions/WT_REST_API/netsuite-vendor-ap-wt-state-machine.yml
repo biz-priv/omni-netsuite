@@ -1,0 +1,31 @@
+---
+stateMachine:
+  name: netsuite-vendor-ap-wt-restlet-state-machine-${self:provider.stage}
+  events:
+  #   # - schedule:
+  #   #     rate: cron(0 15 * * ? *) # GMT:- 3:00 pm / CST:- 10:00 am / IST:- 8:30 am
+  #   # - schedule:
+  #   #     rate: cron(0 20 * * ? *) # GMT:- 8:00 pm / CST:- 03:00 pm / IST:- 1:30 am
+  #   # - schedule:
+  #   #     rate: cron(0 1 * * ? *) # GMT:- 1:00 am / CST:- 08:00 pm / IST:- 6:30 am
+    - schedule:
+        rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
+  definition:
+    Comment: "State machine to update netsuit vendor AP WT restlet internal ids"
+    StartAt: PublishEvents
+    States:
+      PublishEvents:
+        Type: Task
+        Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-netsuite-vendor-ap-wt-restlet-${self:provider.stage}"
+        Next: EndChoice
+      EndChoice:
+        Type: Choice
+        Choices:
+          - Variable: $.hasMoreData
+            StringEquals: "false"
+            Next: SuccessState
+          - Variable: $.hasMoreData
+            StringEquals: "true"
+            Next: PublishEvents
+      SuccessState:
+        Type: Succeed

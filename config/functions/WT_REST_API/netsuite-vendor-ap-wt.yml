@@ -1,0 +1,17 @@
+---
+function:
+  handler: src/WT_REST_API/netsuite_vendor_ap_wt.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-vendor-ap-wt-restlet-${self:provider.stage}
+  description: WT Netsuite AP vendor AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/WT_REST_API/netsuite_vendor_ap_wt.js
+      - Helpers/**
+  environment:
+    NETSUITE_AP_WT_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-ap-wt-restlet-state-machine-${self:provider.stage}
+    NETSUITE_AP_WT_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-vendor-ap-wt-restlet-state-machine-${self:provider.stage}

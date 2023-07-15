@@ -1,9 +1,10 @@
 .serverless
 node_modules/
 yarn.lock
+package-lock.json
 Events
 doc
 lambdaLayer/lib/nodejs/yarn.lock
+lambdaLayer/lib/nodejs/package-lock.json
 .DS_Store
 doc.txt
-test.js

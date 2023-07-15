@@ -1,0 +1,14 @@
+---
+function:
+  handler: src/WT_REST_API/netsuite_ar_wt.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-netsuite-ar-wt-restlet-${self:provider.stage}
+  description: WT Netsuite AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/WT_REST_API/netsuite_ar_wt.js
+      - Helpers/**
