@@ -151,7 +151,7 @@ async function getVendor(entityId) {
       token: userConfig.token.token_key,
       token_secret: userConfig.token.token_secret,
       realm: userConfig.account,
-      url: `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=1124&deploy=2&custscript_mfc_entity_eid=${entityId}`,
+      url: `${process.env.NETSUIT_BASE_URL}/app/site/hosting/restlet.nl?script=1124&deploy=2&custscript_mfc_entity_eid=${entityId}`,
       method: "GET",
     };
     const authHeader = await getAuthorizationHeader(options);
@@ -164,7 +164,6 @@ async function getVendor(entityId) {
         ...authHeader,
       },
     };
-
     const response =  await axios.request(configApi);
     console.info("response", response.status);
     const recordList = response.data[0];  
