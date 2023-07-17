@@ -32,8 +32,9 @@ provider:
     db_password: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/password~true}
     db_name: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/name~true}
     db_host: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/host~true}
-    db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port}
+    db_port: ${ssm:/omni-mcleod-finance/${self:provider.stage}/db/port~true}
     DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
+    NETSUIT_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuite/baseUrl}
     NETSUIT_AR_API_ENDPOINT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/apiEndpoint}
     NETSUIT_AR_ACCOUNT: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/account}
     NETSUIT_AR_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/consumerKey}
@@ -46,10 +47,10 @@ provider:
     NETSUIT_M1_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretM1}
     NETSUIT_TR_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenKeyTR}
     NETSUIT_TR_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/tokenSecretTR}
-    NETSUIT_MCL_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerKey}
-    NETSUIT_MCL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerSecret}
-    NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL}
-    NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL}
+    NETSUIT_MCL_CONSUMER_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerKey~true}
+    NETSUIT_MCL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/consumerSecret~true}
+    NETSUIT_MCL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenKeyMCL~true}
+    NETSUIT_MCL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitMCL/authConfig/tokenSecretMCL~true}
 
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath} 
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
