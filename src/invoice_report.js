@@ -275,7 +275,7 @@ async function getReportData(
 
       const queryCuErr = `select customer_id from ${table} where source_system = '${sourceSystem}' 
                           and is_report_sent ='N' and error_msg LIKE '%Customer not found%'`;
-      const querySelectors = `subsidiary, source_system, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg`;
+      const querySelectors = `subsidiary, source_system,  'Customer not found. (customer_id: '||customer_id||') Subsidiary: '||subsidiary as error_msg`;
       let mainQuery = "";
       if (sourceSystem == "TR") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
@@ -286,7 +286,7 @@ async function getReportData(
                       GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
         mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
-        from interface_ar_cw where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
+        from interface_ar_cw where  processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "M1") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
