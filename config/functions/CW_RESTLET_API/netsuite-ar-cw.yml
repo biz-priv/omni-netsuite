@@ -1,0 +1,19 @@
+---
+function:
+  handler: src/CW_RESTLET_API/netsuite_ar_cw.handler
+  layers:
+    - { Ref: CommonNetsuiteLibsLambdaLayer }
+  name: ${self:service}-ar-cw-restlet-${self:provider.stage}
+  description: CW Restlet Netsuite AR api service - ${self:provider.stage}
+  runtime: nodejs14.x
+  memorySize: 2048
+  timeout: 900
+  package:
+    include:
+      - src/CW_RESTLET_API/netsuite_ar_cw.js
+      - Helpers/**
+  environment:
+    # NETSUITE_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-cw-state-machine-${self:provider.stage}
+    NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
+    NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
+    DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}

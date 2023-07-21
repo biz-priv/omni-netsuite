@@ -42,7 +42,7 @@ const mailList = {
   },
 };
 
-const REST_SS = ["OL", "WT"];
+const REST_SS = ["OL", "WT","CW"];
 
 module.exports.handler = async (event, context, callback) => {
   let sourceSystem = "",
@@ -198,17 +198,9 @@ async function getReportData(
         from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type;`;
       } else if (sourceSystem == "CW") {
-        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
-        FROM interface_ap_master_cw iam
-        LEFT JOIN interface_ap_cw ia ON 
-        iam.invoice_nbr = ia.invoice_nbr and 
-        iam.invoice_type = ia.invoice_type and 
-        iam.vendor_id = ia.vendor_id and 
-        iam.gc_code = ia.gc_code and 
-        iam.source_system = ia.source_system and 
-        iam.file_nbr = ia.file_nbr
-        where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})  
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system;`;
+        mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
+        GROUP BY invoice_nbr, vendor_id, invoice_type, gc_code, subsidiary, source_system;`;
       } else if (sourceSystem == "M1") {
         mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type,${querySelectors}
         FROM interface_ap_master iam

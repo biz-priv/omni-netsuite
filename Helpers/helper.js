@@ -178,6 +178,7 @@ async function createARFailedRecords(
 
     const dbPrev = arDbNamePrev != null ? arDbNamePrev : "";
     const query = `INSERT INTO ${dbPrev}interface_ar_api_logs (${tableStr}) VALUES (${valueStr});`;
+    console.log("query",query);
     if (dbType === "redshift") {
       await connections.query(query);
     } else {
@@ -373,7 +374,7 @@ function sendDevNotification(
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
         to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
-        subject: `Netsuite DEV Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
+        subject: `Netsuite ${process.env.STAGE.toUpperCase()} Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>
         <html lang="en">
