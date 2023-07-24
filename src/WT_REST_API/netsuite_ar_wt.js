@@ -194,7 +194,11 @@ async function makeJsonPayload(data) {
      */
     const payload = {
       custbody_mfc_omni_unique_key:
-        singleItem.invoice_nbr + "-" + singleItem.invoice_type, //invoice_nbr, invoice_type
+        singleItem.invoice_nbr +
+        "-" +
+        singleItem.customer_id +
+        "-" +
+        singleItem.invoice_type, //invoice_nbr,customer_id, invoice_type
       tranid: singleItem.invoice_nbr ?? "",
       trandate: singleItem.invoice_date
         ? dateFormat(singleItem.invoice_date)
@@ -224,7 +228,7 @@ async function makeJsonPayload(data) {
           department: hardcode.department.line ?? "",
           class:
             hardcode.class.line[
-              e.business_segment.split(":")[1].trim().toLowerCase()
+            e.business_segment.split(":")[1].trim().toLowerCase()
             ],
           location: {
             refName: e.handling_stn ?? "",
