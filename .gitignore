@@ -8,3 +8,4 @@ lambdaLayer/lib/nodejs/yarn.lock
 lambdaLayer/lib/nodejs/package-lock.json
 .DS_Store
 doc.txt
+test.js

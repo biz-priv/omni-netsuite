@@ -12,8 +12,8 @@ let connections = "";
 
 const dbname = process.env.DATABASE_NAME;
 const source_system = "OL";
-const today = moment().format("DD/MM/yyyy");
-const fromDate = moment().subtract(3, "d").format("DD/MM/yyyy");
+const today = moment().format("MM/DD/yyyy");
+const fromDate = moment().subtract(3, "d").format("MM/DD/yyyy");
 const toDate = today;
 const createdDate= moment().format("YYYY-MM-DD HH:mm:ss");
 
@@ -110,16 +110,17 @@ async function insertToDB(item) {
     const formatData= {
       internal_id: itemData.internalid,
       type: itemData.type,
-      date_created: itemData.datecreated,
+      date_created: moment(itemData.datecreated,'MM/DD/YYYY hh:mm a').format('YYYY-MM-DD HH:mm:ss'),
       transaction_no: itemData.tranid,
       amount: itemData.amount,
       company_name: itemData.custbody_riv_entity_cpnyname.replace(/'/g, "`"),
       shipment: itemData.custbody9,
-      due_date: itemData.duedate,
+      due_date: moment(itemData.duedate,'MM/DD/YYYY').format('YYYY-MM-DD'),
       source_system: itemData.custbody_source_system,
       paying_transaction: itemData.payingtransaction,
       amount_remaining: itemData.amountremaining,
-      load_create_date: itemData.created_at
+      load_create_date: itemData.created_at,
+      load_update_date :itemData.created_at,
     }
 
 
@@ -141,13 +142,13 @@ async function insertToDB(item) {
     tableStr = objKyes.join(",");
     
     const keyValuePairs = updateStr.split(',');
-    const filteredKeyValuePairs = keyValuePairs.filter(pair => !pair.includes('internal_id'));
+    const filteredKeyValuePairs = keyValuePairs.filter(pair => !pair.includes('internal_id') & !pair.includes('load_create_date') );
     const updatedUpdateStr = filteredKeyValuePairs.join(',');
   
     const upsertQuery = `INSERT INTO ${dbname}netsuit_paid_invoices (${tableStr})
                         VALUES (${valueStr}) ON DUPLICATE KEY
                         UPDATE ${updatedUpdateStr};`;
-    console.info("upsertQuery",upsertQuery);
+    // console.info("upsertQuery",upsertQuery);
     await connections.execute(upsertQuery);
   } catch (error) {
     console.error("error", error);

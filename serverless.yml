@@ -94,8 +94,8 @@ functions:
   netsuite-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ap-wt.yml):function}
   netsuite-vendor-ap-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-vendor-ap-wt.yml):function}
 
-  # netsuite-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ar-cw.yml):function}
-  # netsuite-customer-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-customer-ar-cw.yml):function}
+  netsuite-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ar-cw.yml):function}
+  netsuite-customer-ar-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-customer-ar-cw.yml):function}
   netsuite-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ap-cw.yml):function}
   netsuite-vendor-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-vendor-ap-cw.yml):function}
 

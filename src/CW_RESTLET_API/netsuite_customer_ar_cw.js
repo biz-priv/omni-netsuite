@@ -13,18 +13,18 @@ let userConfig = "";
 let totalCountPerLoop = 5;
 const today = getCustomDate();
 
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "CW";
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
-  // const checkIsRunning = await checkOldProcessIsRunning();
-  // if (checkIsRunning) {
-  //   return {
-  //     hasMoreData: "false",
-  //   };
-  // }
+  const checkIsRunning = await checkOldProcessIsRunning();
+  if (checkIsRunning) {
+    return {
+      hasMoreData: "false",
+    };
+  }
   let hasMoreData = "false";
   let currentCount = 0;
   totalCountPerLoop = event.hasOwnProperty("totalCountPerLoop")

@@ -277,8 +277,9 @@ async function getReportData(
                       from ${dbname}interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
                       GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
-        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
-        from interface_ar_cw where  processed ='F' and customer_id in (${queryCuErr})`;
+        mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
+        from ${dbname}interface_ar where source_system = 'CW' and processed ='F' and customer_id in (${queryCuErr})
+        GROUP BY invoice_nbr, invoice_type, gc_code, subsidiary`;
       } else if (sourceSystem == "M1") {
         mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;

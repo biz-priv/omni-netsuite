@@ -16,7 +16,7 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 let userConfig = "";
 let connections = "";
 
-const arDbNamePrev = "dw_uat.";
+const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "CW";
 let totalCountPerLoop = 20;
@@ -74,14 +74,12 @@ module.exports.handler = async (event, context, callback) => {
     if (currentCount > totalCountPerLoop) {
       hasMoreData = "true";
     } else {
-      // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "CW_AR");
+      await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "CW_AR");
       hasMoreData = "false";
     }
-    dbc.end();
     return { hasMoreData };
   } catch (error) {
-    dbc.end();
-    // await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "CW_AR");
+    await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "CW_AR");
     return { hasMoreData: "false" };
   }
 };
@@ -113,7 +111,7 @@ async function mainProcess(item, invoiceDataList) {
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-    
+
 
     /**
      * create Netsuit Invoice
@@ -162,7 +160,7 @@ async function getDataGroupBy(connections) {
     and ((intercompany='Y' and pairing_available_flag ='Y') or intercompany='N')
     order by invoice_nbr,customer_id,invoice_type, gc_code
     limit ${totalCountPerLoop + 1}`;
-                 
+
 
     console.info("query", query);
     const [rows] = await connections.execute(query);
@@ -172,7 +170,7 @@ async function getDataGroupBy(connections) {
     }
     return result;
   } catch (error) {
-    console.log("error",error);
+    console.log("error", error);
     throw "No data found.";
   }
 }
@@ -207,7 +205,13 @@ async function makeJsonPayload(data) {
      */
     const payload = {
       custbody_mfc_omni_unique_key:
-        singleItem.invoice_nbr + "-" + singleItem.invoice_type, //invoice_nbr, invoice_type
+        singleItem.invoice_nbr +
+        "-" + 
+        singleItem.customer_id +
+        "-" +
+        singleItem.invoice_type+
+        "-"+
+        singleItem.gc_code, //invoice_nbr,customer_id, invoice_type,gc_code
       tranid: singleItem.invoice_nbr ?? "",
       trandate: singleItem.invoice_date
         ? dateFormat(singleItem.invoice_date)
@@ -238,7 +242,7 @@ async function makeJsonPayload(data) {
           department: hardcode.department.line ?? "",
           class:
             hardcode.class.line[
-              e.business_segment.split(":")[1].trim().toLowerCase()
+            e.business_segment.split(":")[1].trim().toLowerCase()
             ],
           location: {
             refName: e.handling_stn ?? "",
@@ -377,10 +381,10 @@ function getAuthorizationHeader(options) {
 
 async function createInvoice(payload, singleItem) {
   try {
-    const invTypeEndpoint =
-      singleItem.invoice_type == 'IN'
-        ? 'customdeploy_mfc_rl_mcleod_inv'
-        : 'customdeploy_mfc_rl_mcleod_cm';
+    const endpoiont =
+        singleItem.invoice_type == "IN"
+          ? process.env.NETSUIT_RESTLET_INV_URL
+          : process.env.NETSUIT_RESTLET_CM_URL;
 
     const options = {
       consumer_key: userConfig.token.consumer_key,
@@ -388,10 +392,7 @@ async function createInvoice(payload, singleItem) {
       token: userConfig.token.token_key,
       token_secret: userConfig.token.token_secret,
       realm: userConfig.account,
-      url: `https://${userConfig.account
-        .toLowerCase()
-        .split('_')
-        .join('-')}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=customscript_mfc_rl_mcleod&deploy=${invTypeEndpoint}`,
+      url: endpoiont,
       method: 'POST',
     };
 
@@ -423,7 +424,7 @@ async function createInvoice(payload, singleItem) {
       };
     }
   } catch (error) {
-    console.log("createInvoice:error",error);
+    console.log("createInvoice:error", error);
     if (error.response) {
       throw {
         customError: true,
@@ -497,8 +498,8 @@ function getHardcodeData(isIntercompany = false) {
   };
   const departmentType = isIntercompany ? "intercompany" : "default";
   return {
-  ...data,
-  department: data.department[departmentType],
+    ...data,
+    department: data.department[departmentType],
   }
 }
 
