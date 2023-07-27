@@ -13,5 +13,5 @@ function:
       - src/CW_RESTLET_API/netsuite_customer_ar_cw.js
       - Helpers/**
   environment:
-    # NETSUITE_AR_CW_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-ar-cw-restlet-state-machine-${self:provider.stage}
-    # NETSUITE_AR_CW_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-customer-ar-cw-restlet-state-machine-${self:provider.stage}
+    NETSUITE_AR_CW_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-ar-cw-restlet-state-machine-${self:provider.stage}
+    NETSUITE_AR_CW_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-customer-ar-cw-restlet-state-machine-${self:provider.stage}
