@@ -372,7 +372,7 @@ function sendDevNotification(
       });
       const message = {
         from: `Netsuite <${process.env.NETSUIT_AR_ERROR_EMAIL_FROM}>`,
-        to: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
+        to: process.env.NETSUIT_PAYLOAD_ERROR_EMAIL_TO,
         subject: `Netsuite ${process.env.STAGE.toUpperCase()} Error ${sourceSystem} - ${invType} - ${process.env.STAGE.toUpperCase()}`,
         html: `
         <!DOCTYPE html>
