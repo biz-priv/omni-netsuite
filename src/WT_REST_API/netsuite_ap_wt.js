@@ -436,7 +436,7 @@ async function makeJsonPayload(data) {
       }),
     };
     if (singleItem.invoice_type == "IN") {
-      payload.approvalStatus = "2";
+      payload.approvalstatus = "2";
     }
 
     return payload;
