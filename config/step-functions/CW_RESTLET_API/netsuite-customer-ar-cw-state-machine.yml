@@ -19,7 +19,7 @@ stateMachine:
       EndChoice:
         Type: Choice
         Choices:
-          - Variable: $.hasMoreData
+          - Variable: $.hasMoreData 
             StringEquals: "false"
             Next: SuccessState
           - Variable: $.hasMoreData
