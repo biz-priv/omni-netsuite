@@ -307,7 +307,7 @@ async function createInvoice(payload, singleItem) {
       method: 'POST',
     };
 
-    const authHeader = await getAuthorizationHeader(options);
+    const authHeader =  getAuthorizationHeader(options);
 
     const configApi = {
       method: options.method,
