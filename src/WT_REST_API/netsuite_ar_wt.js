@@ -329,7 +329,7 @@ async function createInvoice(payload, singleItem) {
         customError: true,
         msg: response.data.reason.replace(/'/g, '`'),
         payload: JSON.stringify(payload),
-        response: JSON.stringify(response.data).replace(/'/g, '`'),
+        response: response.data,
       };
     }
   } catch (error) {
@@ -339,7 +339,7 @@ async function createInvoice(payload, singleItem) {
         customError: true,
         msg: error.msg.replace(/'/g, '`'),
         payload: error.payload,
-        response: error.response.replace(/'/g, '`'),
+        response: JSON.stringify(error.response).replace(/'/g, '`'),
       };
     } else {
       throw {
