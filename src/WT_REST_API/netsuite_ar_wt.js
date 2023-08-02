@@ -333,7 +333,7 @@ async function createInvoice(payload, singleItem) {
       };
     }
   } catch (error) {
-    console.log("createInvoice:error", error);
+    console.error("createInvoice:error", error);
     if (error?.response?.reason) {
       throw {
         customError: true,
