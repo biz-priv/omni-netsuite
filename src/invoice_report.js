@@ -33,7 +33,7 @@ const mailList = {
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
     TR:
-      process.env.NETSUIT_AP_ERROR_EMAIL_TO ,
+      process.env.NETSUIT_AP_ERROR_EMAIL_TO,
   },
   INTRACOMPANY: {
     WT: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -182,7 +182,7 @@ async function getReportData(
       const querySelectors = `ia.subsidiary, iam.source_system, 'Vendor not found. (vendor_id: '||iam.vendor_id||') Subsidiary: '||ia.subsidiary as error_msg`;
       let mainQuery = "";
       if (sourceSystem == "TR") {
-        mainQuery = ` SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors}
+        mainQuery = ` SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type,ia.finalizedby, ia.gc_code, ${querySelectors}
         FROM interface_ap_master iam
         LEFT JOIN interface_ap ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
@@ -192,13 +192,13 @@ async function getReportData(
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr 
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr}) 
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system`;
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code,ia.finalizedby, ia.subsidiary, iam.source_system`;
       } else if (sourceSystem == "WT") {
         mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
         from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
         GROUP BY invoice_nbr, vendor_id, invoice_type;`;
       } else if (sourceSystem == "CW") {
-        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type, ia.gc_code, ${querySelectors} 
+        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc,ia.finalizedby,iam.invoice_type, ia.gc_code, ${querySelectors} 
         FROM interface_ap_master_cw iam
         LEFT JOIN interface_ap_cw ia ON 
         iam.invoice_nbr = ia.invoice_nbr and 
@@ -208,9 +208,9 @@ async function getReportData(
         iam.source_system = ia.source_system and 
         iam.file_nbr = ia.file_nbr
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})  
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.gc_code, ia.subsidiary, iam.source_system;`;
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type,ia.finalizedby,ia.gc_code, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "M1") {
-        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc, iam.invoice_type,${querySelectors}
+        mainQuery = `SELECT iam.invoice_nbr, iam.vendor_id, count(ia.*) as tc,ia.finalizedby, iam.invoice_type,${querySelectors}
         FROM interface_ap_master iam
         LEFT JOIN interface_ap ia ON
         iam.invoice_nbr = ia.invoice_nbr and
@@ -220,7 +220,7 @@ async function getReportData(
         iam.source_system = ia.source_system and
         iam.file_nbr = ia.file_nbr
         where iam.source_system = '${sourceSystem}' and iam.processed ='F' and iam.vendor_id in (${queryVenErr})
-        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type, ia.subsidiary, iam.source_system;`;
+        GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type,ia.finalizedby, ia.subsidiary, iam.source_system;`;
       } else if (sourceSystem == "OL") {
         mainQuery = `select ${dbname}interface_ap.*, CONCAT('Vendor not found. (vendor_id: ', CAST(vendor_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
         from ${dbname}interface_ap where source_system = '${sourceSystem}' and processed ='F' and vendor_id in (${queryVenErr})
@@ -238,6 +238,7 @@ async function getReportData(
           vendor_id: e?.vendor_id ?? "",
           subsidiary: e?.subsidiary ?? "",
           invoice_nbr: e?.invoice_nbr ?? "",
+          finalizedby: e?.finalizedby ?? "",
           invoice_date: e?.invoice_date ?? "",
           housebill_nbr: e?.housebill_nbr ?? "",
           master_bill_nbr: e?.master_bill_nbr ?? "",
@@ -278,17 +279,17 @@ async function getReportData(
       const querySelectors = `subsidiary, source_system,  'Customer not found. (customer_id: '||customer_id||') Subsidiary: '||subsidiary as error_msg`;
       let mainQuery = "";
       if (sourceSystem == "TR") {
-        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
+        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type,finalized_by,gc_code, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "WT") {
         mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
                       from ${dbname}interface_ar where source_system = 'WT' and processed ='F' and customer_id in (${queryCuErr})
                       GROUP BY invoice_nbr, invoice_type;`;
       } else if (sourceSystem == "CW") {
-        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type, gc_code, ${querySelectors}
+        mainQuery = `select distinct invoice_nbr,customer_id,invoice_type,finalized_by,gc_code, ${querySelectors}
         from interface_ar_cw where  processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "M1") {
-        mainQuery = `select distinct invoice_nbr,invoice_type, ${querySelectors}
+        mainQuery = `select distinct invoice_nbr,invoice_type,finalized_by, ${querySelectors}
         from interface_ar where source_system = '${sourceSystem}' and processed ='F' and customer_id in (${queryCuErr})`;
       } else if (sourceSystem == "OL") {
         mainQuery = `select ${dbname}interface_ar.*, CONCAT('Customer not found. (customer_id: ', CAST(customer_id AS CHAR), ') Subsidiary: ', subsidiary) AS error_msg
@@ -307,6 +308,7 @@ async function getReportData(
           subsidiary: e?.subsidiary ?? "",
           invoice_nbr: e?.invoice_nbr ?? "",
           invoice_date: e?.invoice_date ?? "",
+          finalized_by: e?.finalized_by ?? "",
           housebill_nbr: e?.housebill_nbr ?? "",
           master_bill_nbr: e?.master_bill_nbr ?? "",
           invoice_type: e?.invoice_type ?? "",
