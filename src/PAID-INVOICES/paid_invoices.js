@@ -53,7 +53,7 @@ function getPaidInvoiceData() {
         token: userConfig.token.token_key,
         token_secret: userConfig.token.token_secret,
         realm: userConfig.account,
-        url: `https://1238234.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script=724&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
+        url: `${process.env.NETSUIT_BASE_URL}/app/site/hosting/restlet.nl?script=724&deploy=1&custscript_mfc_date_from=${fromDate}&custscript_mfc_date_to=${toDate}`,
         method: "GET",
       };
       const authHeader = getAuthorizationHeader(options);

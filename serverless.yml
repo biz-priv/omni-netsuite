@@ -59,6 +59,7 @@ provider:
     NETSUIT_AR_ERROR_EMAIL_PASS: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/pass}
     NETSUIT_AR_ERROR_EMAIL_FROM: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/from}
     NETSUIT_AR_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/errorEmail/to}
+    NETSUIT_PAYLOAD_ERROR_EMAIL_TO: ${ssm:/omni-dw/${self:provider.stage}/errorEmail/to}
     NETSUIT_INVOICE_REPORT: ${self:service}-invoice-report-${self:provider.stage}
 
 plugins:
