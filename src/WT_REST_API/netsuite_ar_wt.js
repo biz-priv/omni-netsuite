@@ -344,7 +344,7 @@ async function createInvoice(payload, singleItem) {
     } else {
       throw {
         customError: true,
-        msg: 'Netsuite Bad Gateway Error',
+        msg: 'Netsuite AR API Failed',
         response: '',
       };
     }

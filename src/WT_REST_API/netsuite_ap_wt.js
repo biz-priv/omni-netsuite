@@ -486,68 +486,65 @@ function getAuthorizationHeader(options) {
   );
 }
 
-function createInvoice(payload, singleItem) {
-  return new Promise((resolve, reject) => {
-    try {
-      const endpoiont =
-        singleItem.invoice_type == "IN"
-          ? process.env.NETSUIT_RESTLET_VB_URL
-          : process.env.NETSUIT_RESTLET_VC_URL;
-      const options = {
-        consumer_key: userConfig.token.consumer_key,
-        consumer_secret_key: userConfig.token.consumer_secret,
-        token: userConfig.token.token_key,
-        token_secret: userConfig.token.token_secret,
-        realm: userConfig.account,
-        url: endpoiont,
-        method: "POST",
-      };
-      const authHeader = getAuthorizationHeader(options);
+async function createInvoice(payload, singleItem) {
+  try {
+    const endpoiont =
+      singleItem.invoice_type == "IN"
+        ? process.env.NETSUIT_RESTLET_VB_URL
+        : process.env.NETSUIT_RESTLET_VC_URL;
 
-      const configApi = {
-        method: options.method,
-        maxBodyLength: Infinity,
-        url: options.url,
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeader,
-        },
-        data: JSON.stringify(payload),
-      };
+    const options = {
+      consumer_key: userConfig.token.consumer_key,
+      consumer_secret_key: userConfig.token.consumer_secret,
+      token: userConfig.token.token_key,
+      token_secret: userConfig.token.token_secret,
+      realm: userConfig.account,
+      url: endpoiont,
+      method: 'POST',
+    };
 
-      axios
-        .request(configApi)
-        .then((response) => {
-          console.info(JSON.stringify(response.data));
-          if (response.status === 200 && response.data.status === "Success") {
-            resolve(response.data.id);
-          } else {
-            reject({
-              customError: true,
-              msg: response.data.reason.replace(/'/g, "`"),
-              payload: JSON.stringify(payload),
-              response: JSON.stringify(response.data).replace(/'/g, "`"),
-            });
-          }
-        })
-        .catch((error) => {
-          console.error(error.response.data);
-          reject({
-            customError: true,
-            msg: error.response.data.reason.replace(/'/g, "`"),
-            payload: JSON.stringify(payload),
-            response: JSON.stringify(error.response.data).replace(/'/g, "`"),
-          });
-        });
-    } catch (error) {
-      console.error("error:createInvoice:main:catch", error);
-      reject({
+    const authHeader = getAuthorizationHeader(options);
+
+    const configApi = {
+      method: options.method,
+      maxBodyLength: Infinity,
+      url: options.url,
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeader,
+      },
+      data: JSON.stringify(payload),
+    };
+
+    const response = await axios.request(configApi);
+
+    if (response.status === 200 && response.data.status === 'Success') {
+      return response.data.id;
+    } else {
+      throw {
         customError: true,
-        msg: "Netsuit AP Api Failed",
-        response: "",
-      });
+        msg: response.data.reason.replace(/'/g, '`'),
+        payload: JSON.stringify(payload),
+        response: response.data,
+      };
     }
-  });
+  } catch (error) {
+    console.error("error:createInvoice:main:catch", error);
+    if (error?.response?.reason) {
+      throw {
+        customError: true,
+        msg: error.msg.replace(/'/g, '`'),
+        payload: error.payload,
+        response: JSON.stringify(error.response).replace(/'/g, '`'),
+      };
+    } else {
+      throw {
+        customError: true,
+        msg: 'Netsuit AP API Failed',
+        response: '',
+      };
+    }
+  }
 }
 
 
@@ -680,7 +677,7 @@ function getUpdateQuery(item, invoiceId, isSuccess = true) {
                       invoice_nbr = '${item.invoice_nbr}' and 
                       invoice_type = '${item.invoice_type}'and 
                       vendor_id = '${item.vendor_id}'`;
-    console.info("query",query)
+    console.info("query", query)
     return query;
   } catch (error) {
     return "";
