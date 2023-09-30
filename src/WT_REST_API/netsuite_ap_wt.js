@@ -432,9 +432,16 @@ async function makeJsonPayload(data) {
           custcol4: e.ref_nbr ?? "",
           custcol_riv_consol_nbr: e.consol_nbr ?? "",
           custcol_finalizedby: e.finalizedby ?? "",
+          custbody20: e.actual_weight ?? "",
+          custbody19: e.dest_zip ?? "",
+          custbody18: e.dest_state ?? "",
+          custbody17: e.dest_country ?? "",
+          custcol_miles_distance: e.miles ?? "",
+          custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
       }),
     };
+
     if (singleItem.invoice_type == "IN") {
       payload.approvalstatus = "2";
     }

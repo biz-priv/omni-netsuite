@@ -240,6 +240,12 @@ async function makeJsonPayload(data) {
             refName: e.controlling_stn ?? "",
           },
           custcol1: e.ready_date ? e.ready_date.toISOString() : "",
+          custbody20: e.actual_weight ?? "",
+          custbody19: e.dest_zip ?? "",
+          custbody18: e.dest_state ?? "",
+          custbody17: e.dest_country ?? "",
+          custcol_miles_distance: e.miles ?? "",
+          custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
       }),
     };
@@ -307,7 +313,7 @@ async function createInvoice(payload, singleItem) {
       method: 'POST',
     };
 
-    const authHeader =  getAuthorizationHeader(options);
+    const authHeader = getAuthorizationHeader(options);
 
     const configApi = {
       method: options.method,

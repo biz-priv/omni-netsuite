@@ -339,6 +339,42 @@ async function makeJsonToXml(payload, data, customerData) {
               "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
               value: dateFormat(e.ready_date),
             },
+            {
+              "@internalId": "4041",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.actual_weight ?? "",
+            },
+            {
+              "@internalId": "4040",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.dest_zip ?? "",
+            },
+            {
+              "@internalId": "4039",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.dest_state ?? "",
+            },
+            {
+              "@internalId": "4038",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.dest_country ?? "",
+            },
+            {
+              "@internalId": "3042",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.miles ?? "",
+            },
+            {
+              "@internalId": "3041",
+              "@xsi:type": "StringCustomFieldRef",
+              "@xmlns": "urn:core_2021_2.platform.webservices.netsuite.com",
+              value: e.chargeable_weight ?? "",
+            },
           ],
         },
       };
