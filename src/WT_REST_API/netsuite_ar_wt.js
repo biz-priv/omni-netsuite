@@ -149,10 +149,10 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr, invoice_type FROM ${arDbName} where
-                  ((internal_id is null and processed is null and customer_internal_id is not null) or
-                  (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
-                  and source_system = '${source_system}' and invoice_nbr is not null
-                  limit ${totalCountPerLoop + 1}`;
+    ((internal_id is null and processed is null and customer_internal_id is not null) or
+    (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
+    and source_system = '${source_system}' and invoice_nbr is not null
+    limit ${totalCountPerLoop + 1}`;
 
     console.info("query", query);
     const [rows] = await connections.execute(query);
@@ -207,6 +207,7 @@ async function makeJsonPayload(data) {
       class: hardcode.class.head,
       location: hardcode.location.head,
       custbody_source_system: hardcode.source_system,
+      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       entity: singleItem.customer_internal_id ?? "",
       subsidiary: singleItem.subsidiary ?? "",
       currency: singleItem.currency_internal_id ?? "",
@@ -217,7 +218,7 @@ async function makeJsonPayload(data) {
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
       custbody25: singleItem.zip_code ?? "",
-      custbody27: singleItem.rfiemail ?? "",//dev :custbody29
+      custbody29: singleItem.rfiemail ?? "",//dev :custbody29 prod: custbody27
       item: data.map((e) => {
         return {
           // custcol_mfc_line_unique_key:"",
@@ -240,10 +241,10 @@ async function makeJsonPayload(data) {
             refName: e.controlling_stn ?? "",
           },
           custcol1: e.ready_date ? e.ready_date.toISOString() : "",
-          custbody20: e.actual_weight ?? "",
-          custbody19: e.dest_zip ?? "",
-          custbody18: e.dest_state ?? "",
-          custbody17: e.dest_country ?? "",
+          custcol20: e.actual_weight ?? "",
+          custcol19: e.dest_zip ?? "",
+          custcol18: e.dest_state ?? "",
+          custcol17: e.dest_country ?? "",
           custcol_miles_distance: e.miles ?? "",
           custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
