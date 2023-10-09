@@ -190,9 +190,8 @@ async function putVendor(connections, vendorData, vendor_id) {
     const vendor_internal_id = vendorData.internalid;
 
     const formatData = {
-      vendor_internal_id: vendorData?.internalid ?? "",
-      vendor_id: vendorData?.externalid ?? "",
-      
+      vendor_internal_id: vendorData?.internalid_value ?? "",
+      vendor_id: vendorData?.entityid_value ?? "",
     };
 
     let tableStr = "";
