@@ -187,7 +187,7 @@ async function getVendor(entityId) {
 
 async function putVendor(connections, vendorData, vendor_id) {
   try {
-    const vendor_internal_id = vendorData.internalid;
+    const vendor_internal_id = vendorData.internalid_value;
 
     const formatData = {
       vendor_internal_id: vendorData?.internalid_value ?? "",
