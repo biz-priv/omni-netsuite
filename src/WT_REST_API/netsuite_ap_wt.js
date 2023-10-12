@@ -10,6 +10,7 @@ const {
   createAPFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -762,12 +763,4 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
-}
-
-function setDelay(sec) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve(true);
-    }, sec * 500);
-  });
 }

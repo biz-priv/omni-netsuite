@@ -10,6 +10,7 @@ const {
   createARFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -437,10 +438,3 @@ function getCustomDate() {
   return `${ye}-${mo}-${da}`;
 }
 
-function setDelay(sec) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve(true);
-    }, sec * 500);
-  });
-}
