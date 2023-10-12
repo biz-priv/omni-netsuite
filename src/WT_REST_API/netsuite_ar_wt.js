@@ -106,17 +106,17 @@ async function mainProcess(item, invoiceDataList) {
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-
-    /**
-     * delay for half second
-     */
-    await setDelay(1);
-
+    
     /**
      * create Netsuit Invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
     console.info("invoiceId", invoiceId);
+
+    /**
+     * delay for half second
+     */
+    await setDelay(1);
 
     /**
      * update invoice id

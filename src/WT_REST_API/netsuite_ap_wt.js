@@ -286,14 +286,14 @@ async function mainProcess(item, invoiceDataList) {
     const jsonPayload = await makeJsonPayload(dataList);
 
     /**
-     * delay for half second
-     */
-    await setDelay(1);
-
-    /**
      * create invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
+
+    /**
+     * delay for half second
+     */
+    await setDelay(1);
 
     if (queryOperator == ">") {
       queryInvoiceId = invoiceId.toString();
