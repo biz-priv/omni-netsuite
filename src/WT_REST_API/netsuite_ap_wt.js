@@ -289,7 +289,7 @@ async function mainProcess(item, invoiceDataList) {
      * delay for half second
      */
     await setDelay(1);
-    
+
     /**
      * create invoice
      */
@@ -765,7 +765,7 @@ function getCustomDate() {
 }
 
 function setDelay(sec) {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve(true);
     }, sec * 500);

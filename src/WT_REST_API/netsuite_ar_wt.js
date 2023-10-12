@@ -438,7 +438,7 @@ function getCustomDate() {
 }
 
 function setDelay(sec) {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve(true);
     }, sec * 500);
