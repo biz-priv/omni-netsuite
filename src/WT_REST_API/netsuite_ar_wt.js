@@ -10,6 +10,7 @@ const {
   createARFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -50,7 +51,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * 5 simultaneous process
      */
-    const perLoop = 5;
+    const perLoop = 3;
     let queryData = [];
     for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
       let newArray = orderData.slice(
@@ -58,12 +59,15 @@ module.exports.handler = async (event, context, callback) => {
         index * perLoop + perLoop
       );
 
+      await setDelay(1);
+
       const data = await Promise.all(
         newArray.map(async (item) => {
           return await mainProcess(item, invoiceDataList);
         })
       );
       queryData = [...queryData, ...data];
+      
     }
 
     await updateInvoiceId(connections, queryData);
