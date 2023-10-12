@@ -51,7 +51,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * 5 simultaneous process
      */
-    const perLoop = 15;
+    const perLoop = 5;
     let queryData = [];
     for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
       let newArray = orderData.slice(
@@ -102,11 +102,6 @@ async function mainProcess(item, invoiceDataList) {
     });
 
     singleItem = dataList[0];
-
-    /**
-     * delay for half second
-     */
-    await setDelay(1);
 
     /**
      * Make Json payload
