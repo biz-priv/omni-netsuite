@@ -286,6 +286,11 @@ async function mainProcess(item, invoiceDataList) {
     const jsonPayload = await makeJsonPayload(dataList);
 
     /**
+     * delay for half second
+     */
+    await setDelay(1);
+    
+    /**
      * create invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
@@ -757,4 +762,12 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
+}
+
+function setDelay(sec) {
+  return new Promise(async (resolve, reject) => {
+    setTimeout(() => {
+      resolve(true);
+    }, sec * 500);
+  });
 }
