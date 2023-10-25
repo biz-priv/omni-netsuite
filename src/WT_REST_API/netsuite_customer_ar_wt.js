@@ -171,7 +171,7 @@ async function getcustomer(entityId) {
 
     console.info("response", response.status);
     const recordList = response.data[0];
-    if (recordList && recordList.internalid) {
+    if (recordList && recordList.internal_id_value) {
       const record = recordList;
       return record;
     } else {
