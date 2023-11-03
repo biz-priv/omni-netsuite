@@ -10,6 +10,7 @@ const {
   createARFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -50,7 +51,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * 5 simultaneous process
      */
-    const perLoop = 15;
+    const perLoop = 3;
     let queryData = [];
     for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
       let newArray = orderData.slice(
@@ -58,12 +59,15 @@ module.exports.handler = async (event, context, callback) => {
         index * perLoop + perLoop
       );
 
+      await setDelay(1);
+
       const data = await Promise.all(
         newArray.map(async (item) => {
           return await mainProcess(item, invoiceDataList);
         })
       );
       queryData = [...queryData, ...data];
+      
     }
 
     await updateInvoiceId(connections, queryData);
@@ -106,7 +110,7 @@ async function mainProcess(item, invoiceDataList) {
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-
+    
     /**
      * create Netsuit Invoice
      */
@@ -431,3 +435,4 @@ function getCustomDate() {
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
 }
+

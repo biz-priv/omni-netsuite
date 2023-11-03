@@ -10,6 +10,7 @@ const {
   createAPFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -222,15 +223,16 @@ module.exports.handler = async (event, context, callback) => {
         };
       }
       /**
-       * 15 simultaneous process
+       * 3 simultaneous process
        */
-      const perLoop = 15;
+      const perLoop = 3;
       let queryData = [];
       for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
         let newArray = orderData.slice(
           index * perLoop,
           index * perLoop + perLoop
         );
+        await setDelay(1);
         const data = await Promise.all(
           newArray.map(async (item) => {
             return await mainProcess(item, invoiceDataList);
@@ -289,6 +291,7 @@ async function mainProcess(item, invoiceDataList) {
      * create invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
+
 
     if (queryOperator == ">") {
       queryInvoiceId = invoiceId.toString();
