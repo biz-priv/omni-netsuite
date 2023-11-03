@@ -440,6 +440,14 @@ function getAuthorizationHeader(options) {
   );
 }
 
+function setDelay(sec) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(true);
+    }, sec * 500);
+  });
+}
+
 module.exports = {
   getConfig,
   getConnection,
@@ -451,4 +459,5 @@ module.exports = {
   sendDevNotification,
   createIntracompanyFailedRecords,
   getAuthorizationHeader,
+  setDelay
 };
