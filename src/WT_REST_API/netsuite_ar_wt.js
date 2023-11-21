@@ -211,6 +211,7 @@ async function makeJsonPayload(data) {
       subsidiary: singleItem.subsidiary ?? "",
       currency: singleItem.currency_internal_id ?? "",
       otherrefnum: singleItem.customer_po ?? "",
+      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
       custbody18: singleItem.finalized_date ?? "",
@@ -240,6 +241,12 @@ async function makeJsonPayload(data) {
             refName: e.controlling_stn ?? "",
           },
           custcol1: e.ready_date ? e.ready_date.toISOString() : "",
+          custcol_actual_weight: e.actual_weight ?? "",
+          custcol_destination_on_zip: e.dest_zip ?? "",
+          custcol_destination_on_state: e.dest_state ?? "",
+          custcol_destination_on_country: e.dest_country ?? "",
+          custcol_miles_distance: e.miles ?? "",
+          custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
       }),
     };

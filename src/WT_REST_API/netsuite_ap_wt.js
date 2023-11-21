@@ -337,7 +337,8 @@ async function getDataGroupBy(connections) {
                     FROM ${apDbName} 
                     WHERE  ((internal_id is null and processed is null and vendor_internal_id is not null) or
                     (vendor_internal_id is not null and processed ='F' and processed_date < '${today}'))
-                    and source_system = '${source_system}' and invoice_nbr != ''
+                    and source_system = '${source_system}' and invoice_nbr != '' and 
+                    ((intercompany='Y' and pairing_available_flag ='Y') OR intercompany='N')
                     GROUP BY invoice_nbr, vendor_id, invoice_type
                     having tc ${queryOperator} ${lineItemPerProcess} 
                     limit ${totalCountPerLoop + 1}`;
@@ -401,6 +402,7 @@ async function makeJsonPayload(data) {
       class: hardcode.class.head,
       department: hardcode.department.head,
       location: hardcode.location.head,
+      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       custbody9: singleItem.file_nbr ?? "",
       custbody17: singleItem.email ?? "",
       custbody_source_system: hardcode.source_system,
@@ -432,6 +434,12 @@ async function makeJsonPayload(data) {
           custcol4: e.ref_nbr ?? "",
           custcol_riv_consol_nbr: e.consol_nbr ?? "",
           custcol_finalizedby: e.finalizedby ?? "",
+          custcol_actual_weight: e.actual_weight ?? "",
+          custcol_destination_on_zip: e.dest_zip ?? "",
+          custcol_destination_on_state: e.dest_state ?? "",
+          custcol_destination_on_country: e.dest_country ?? "",
+          custcol_miles_distance: e.miles ?? "",
+          custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
       }),
     };
