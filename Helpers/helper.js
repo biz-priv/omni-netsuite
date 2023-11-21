@@ -14,14 +14,14 @@ const dbname = process.env.DATABASE_NAME;
 function getConfig(source_system, env) {
   const data = {
     WT: {
-      account: env.NETSUIT_AR_ACCOUNT,
+      account: "1238234_SB1",
       apiVersion: "2021_2",
       accountSpecificUrl: true,
       token: {
-        consumer_key: env.NETSUIT_AR_CONSUMER_KEY,
-        consumer_secret: env.NETSUIT_AR_CONSUMER_SECRET,
-        token_key: env.NETSUIT_AR_TOKEN_KEY,
-        token_secret: env.NETSUIT_AR_TOKEN_SECRET,
+        consumer_key: env.NETSUIT_LL_CONSUMER_KEY,
+        consumer_secret: env.NETSUIT_LL_CONSUMER_SECRET,
+        token_key: env.NETSUIT_LL_TOKEN_KEY,
+        token_secret: env.NETSUIT_LL_TOKEN_SECRET,
       },
       wsdlPath: env.NETSUIT_AR_WDSLPATH,
     },
