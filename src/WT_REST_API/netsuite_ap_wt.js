@@ -447,6 +447,10 @@ async function makeJsonPayload(data) {
       payload.approvalstatus = "2";
     }
 
+    if(singleItem.intercompany == "Y"){
+      payload.custbody1 = hardcode.custbody1.head
+    }
+
     return payload;
   } catch (error) {
     console.error("error payload", error);
@@ -727,6 +731,7 @@ function getHardcodeData(isIntercompany = false) {
       intercompany: { head: "15", line: "1" },
     },
     location: { head: "18", line: "EXT ID: Take from DB" },
+    custbody1: { head: "9" },
   };
   const departmentType = isIntercompany ? "intercompany" : "default";
   return {
