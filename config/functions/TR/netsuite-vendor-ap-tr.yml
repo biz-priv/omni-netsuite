@@ -15,3 +15,5 @@ function:
   environment:
     NETSUITE_AP_TR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ap-tr-state-machine-${self:provider.stage}
     NETSUITE_AP_TR_VENDOR_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-tr-state-machine-${self:provider.stage}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    REGION: ${self:provider.region}

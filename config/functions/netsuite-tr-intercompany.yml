@@ -15,3 +15,5 @@ function:
   environment:
     NETSUITE_INTERCOMPANY_BASE_URL: ${ssm:/omni-dw/${self:provider.stage}/netsuit/intercompany/url}
     NETSUITE_TR_INTERCOMPANY_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-tr-intercompany-state-machine-${self:provider.stage}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    REGION: ${self:provider.region}

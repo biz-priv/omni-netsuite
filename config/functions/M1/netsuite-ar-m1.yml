@@ -14,3 +14,5 @@ function:
       - Helpers/**
   environment:
     NETSUITE_VENDOR_M1_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-vendor-ap-m1-state-machine-${self:provider.stage}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    REGION: ${self:provider.region}

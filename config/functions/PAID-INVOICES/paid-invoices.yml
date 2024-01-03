@@ -11,6 +11,9 @@ function:
   events:
     - schedule: 
         rate: cron(30 9 * * ? *) #  UTC:- 9:30 AM / 3:00 pm IST
+  environment:
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    REGION: ${self:provider.region}
   package:
     include:
       - src/PAID-INVOICES/paid_invoices.js

@@ -12,6 +12,8 @@ function:
     NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
     NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
     DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+    REGION: ${self:provider.region}
   package:
     include:
       - src/MC-LEOD/netsuite_ar_mcl.js
