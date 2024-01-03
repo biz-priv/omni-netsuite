@@ -1,4 +1,6 @@
 const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const axios = require("axios");
 const {
   getConfig,
@@ -93,6 +95,11 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "false";
     }
   } catch (error) {
+    const params = {
+			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     hasMoreData = "false";
   }
 
