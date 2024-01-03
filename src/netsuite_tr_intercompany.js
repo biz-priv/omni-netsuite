@@ -4,6 +4,9 @@ const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true, noLocking: false });
+const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const nodemailer = require("nodemailer");
 const {
   getConnection,
@@ -68,6 +71,11 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   } catch (error) {
     dbc.end();
+    const params = {
+			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await triggerReportLambda(
       process.env.NETSUIT_INVOICE_REPORT,
       "TR_INTERCOMPANY"

@@ -4,6 +4,9 @@ const { parse } = require("json2csv");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const { getConnection } = require("../Helpers/helper");
+const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 
 module.exports.handler = async (event, context, callback) => {
   try {
@@ -31,6 +34,11 @@ module.exports.handler = async (event, context, callback) => {
 
     return "completed";
   } catch (error) {
+    const params = {
+			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     return "Failed";
   }
 };
