@@ -1,4 +1,6 @@
 const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const axios = require("axios");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
@@ -75,6 +77,11 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   } catch (error) {
     console.error("error:handler", error);
+    const params = {
+			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await Promise.all(payload_source_system.map(async (e) => {
       await triggerReportLambda(
         process.env.NETSUIT_INVOICE_REPORT,
