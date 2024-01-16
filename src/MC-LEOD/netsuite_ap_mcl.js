@@ -261,7 +261,7 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.error("error", error);
     const params = {
-			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			Message: `Error in ${context.functionName}, Error: ${error.Message}`,
 			TopicArn: SNS_TOPIC_ARN,
 		};
     await sns.publish(params).promise();

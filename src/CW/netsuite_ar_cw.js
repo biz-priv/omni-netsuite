@@ -89,7 +89,7 @@ module.exports.handler = async (event, context, callback) => {
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "CW_AR");
     await startNextStep();
     const params = {
-			Message: `Error in ${functionName}, Error: ${error.Message}`,
+			Message: `Error in ${context.functionName}, Error: ${error.Message}`,
 			TopicArn: SNS_TOPIC_ARN,
 		};
     await sns.publish(params).promise();
