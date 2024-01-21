@@ -55,6 +55,7 @@ provider:
     NETSUIT_LL_CONSUMER_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitLL/authConfig/consumerSecretLL}
     NETSUIT_LL_TOKEN_KEY: ${ssm:/omni-dw/${self:provider.stage}/netsuitLL/authConfig/tokenKeyLL}
     NETSUIT_LL_TOKEN_SECRET: ${ssm:/omni-dw/${self:provider.stage}/netsuitLL/authConfig/tokenSecretLL}
+    NS_BASE_URL: ${ssm:/${self:service}/${self:provider.stage}/netsuiteBaseUrl}
 
     NETSUIT_AR_WDSLPATH: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/authConfig/wdslPath} 
     NETSUIT_AR_ERROR_TABLE: ${ssm:/omni-dw/${self:provider.stage}/netsuitAR/dynamo/errorTable}
