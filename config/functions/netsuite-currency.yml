@@ -12,3 +12,6 @@ function:
     include:
       - src/netsuite_currency.js
       - Helpers/**
+  environment:
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}

@@ -15,3 +15,5 @@ function:
   environment:
     NETSUITE_AR_WT_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-ar-wt-state-machine-${self:provider.stage}
     NETSUITE_AR_WT_CUSTOMER_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:${self:service}-netsuite-customer-ar-wt-state-machine-${self:provider.stage}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}

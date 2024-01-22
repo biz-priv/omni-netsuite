@@ -11,3 +11,6 @@ function:
   package:
     include:
       - src/mckesson_shipments_report.js
+  environment:
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}

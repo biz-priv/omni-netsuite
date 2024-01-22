@@ -17,3 +17,6 @@ function:
     DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
     NETSUIT_INTRACOMPANY_URL: ${ssm:/omni-dw/${self:provider.stage}/intracompany/apiEndpoint}
     NETSUITE_INTRACOMPANY_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-intra-company-wt-mcl-state-machine-${self:provider.stage}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}
+

@@ -12,3 +12,6 @@ function:
     include:
       - src/M1/netsuite_ap_m1.js
       - Helpers/**
+  environment:
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}
