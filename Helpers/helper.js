@@ -14,7 +14,7 @@ const dbname = process.env.DATABASE_NAME;
 function getConfig(source_system, env) {
   const data = {
     WT: {
-      account: "1238234_SB1",
+      account: env.NETSUIT_AR_ACCOUNT,
       apiVersion: "2021_2",
       accountSpecificUrl: true,
       token: {
