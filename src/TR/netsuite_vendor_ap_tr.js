@@ -12,7 +12,8 @@ const {
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
 const Search = NetSuite.Search;
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 let userConfig = "";
 
 let totalCountPerLoop = 5;
@@ -99,6 +100,11 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "false";
     }
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     hasMoreData = "false";
   }
   if (hasMoreData == "false") {

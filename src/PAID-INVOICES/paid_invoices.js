@@ -16,7 +16,8 @@ const today = moment().format("MM/DD/yyyy");
 const fromDate = moment().subtract(3, "d").format("MM/DD/yyyy");
 const toDate = today;
 const createdDate= moment().format("YYYY-MM-DD HH:mm:ss");
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 
 module.exports.handler = async (event, context, callback) => {
   try {
@@ -40,6 +41,11 @@ module.exports.handler = async (event, context, callback) => {
     }
     return "Success"
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     console.error("error", error);
   }
 };

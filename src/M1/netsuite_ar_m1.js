@@ -22,6 +22,8 @@ const arDbName = "interface_ar";
 const source_system = "M1";
 let totalCountPerLoop = 20;
 const today = getCustomDate();
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -76,6 +78,11 @@ module.exports.handler = async (event, context, callback) => {
     dbc.end();
     return { hasMoreData };
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     dbc.end();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "M1_AR");
     await startM1APNextStep();

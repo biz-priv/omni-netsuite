@@ -9,6 +9,9 @@ const {
   getConnectionToRds,
 } = require("../Helpers/helper");
 const dbname = process.env.DATABASE_NAME;
+const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const mailList = {
   WT: {
     AR: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
@@ -78,6 +81,11 @@ module.exports.handler = async (event, context, callback) => {
     return "Success";
   } catch (error) {
     console.error("error", error);
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await sendDevNotification(
       "INVOICE-REPOR-" + sourceSystem,
       reportType,

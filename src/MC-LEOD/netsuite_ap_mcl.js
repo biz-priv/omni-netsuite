@@ -17,7 +17,8 @@ let connections = "";
 const apDbNamePrev = process.env.DATABASE_NAME;
 const apDbName = apDbNamePrev + "interface_ap";
 const source_system = "OL";
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const today = getCustomDate();
 const lineItemPerProcess = 500;
 let totalCountPerLoop = 20;
@@ -258,6 +259,11 @@ module.exports.handler = async (event, context, callback) => {
     }
   } catch (error) {
     console.error("error", error);
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AP");
     return { hasMoreData: "false" };
   }

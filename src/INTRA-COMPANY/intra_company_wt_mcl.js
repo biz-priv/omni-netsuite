@@ -12,7 +12,8 @@ const {
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
 const payload_source_system = ["CW", "WT"]
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 let userConfig = "";
 let connections = "";
 
@@ -75,6 +76,11 @@ module.exports.handler = async (event, context, callback) => {
     return { hasMoreData };
   } catch (error) {
     console.error("error:handler", error);
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await Promise.all(payload_source_system.map(async (e) => {
       await triggerReportLambda(
         process.env.NETSUIT_INVOICE_REPORT,

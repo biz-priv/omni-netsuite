@@ -29,6 +29,8 @@ let queryInvoiceId = null;
 let queryInvoiceNbr = null;
 let queryVendorId = null;
 const source_system = "M1";
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
@@ -235,6 +237,11 @@ module.exports.handler = async (event, context, callback) => {
   } catch (error) {
     console.log("error", error);
     dbc.end();
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "M1_AP");
     return { hasMoreData: "false" };
   }

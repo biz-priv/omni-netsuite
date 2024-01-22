@@ -13,7 +13,8 @@ const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
 let userConfig = "";
 let connections = "";
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "OL";
@@ -75,6 +76,11 @@ module.exports.handler = async (event, context, callback) => {
     }
     return { hasMoreData };
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
     return { hasMoreData: "false" };
   }

@@ -17,7 +17,8 @@ const today = getCustomDate();
 const arDbNamePrev = process.env.DATABASE_NAME;
 const arDbName = arDbNamePrev + "interface_ar";
 const source_system = "OL";
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 module.exports.handler = async (event, context, callback) => {
   userConfig = getConfig(source_system, process.env);
   const checkIsRunning = await checkOldProcessIsRunning();
@@ -95,6 +96,11 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "false";
     }
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     hasMoreData = "false";
   }
 

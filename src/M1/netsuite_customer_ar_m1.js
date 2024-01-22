@@ -17,7 +17,8 @@ let userConfig = "";
 
 let totalCountPerLoop = 5;
 const today = getCustomDate();
-
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const arDbName = "interface_ar";
 const source_system = "M1";
 module.exports.handler = async (event, context, callback) => {
@@ -89,6 +90,11 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "false";
     }
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     hasMoreData = "false";
   }
 

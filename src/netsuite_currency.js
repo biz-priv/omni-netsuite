@@ -5,6 +5,9 @@ const NetSuite = require("node-suitetalk");
 const { getConnection } = require("../Helpers/helper");
 const Configuration = NetSuite.Configuration;
 const Service = NetSuite.Service;
+const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 
 const userConfig = {
   account: process.env.NETSUIT_AR_ACCOUNT,
@@ -34,6 +37,11 @@ module.exports.handler = async (event, context, callback) => {
     await loadCurrency(connections, internalId);
     return "completed";
   } catch (error) {
+    const params = {
+			Message: `Error in ${context.functionName}, Error: ${error.message}`,
+			TopicArn: SNS_TOPIC_ARN,
+		};
+    await sns.publish(params).promise();
     return "Failed";
   }
 };
