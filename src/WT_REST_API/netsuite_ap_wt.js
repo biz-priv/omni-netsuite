@@ -10,6 +10,7 @@ const {
   createAPFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -222,15 +223,16 @@ module.exports.handler = async (event, context, callback) => {
         };
       }
       /**
-       * 15 simultaneous process
+       * 3 simultaneous process
        */
-      const perLoop = 15;
+      const perLoop = 3;
       let queryData = [];
       for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
         let newArray = orderData.slice(
           index * perLoop,
           index * perLoop + perLoop
         );
+        await setDelay(1);
         const data = await Promise.all(
           newArray.map(async (item) => {
             return await mainProcess(item, invoiceDataList);
@@ -289,6 +291,7 @@ async function mainProcess(item, invoiceDataList) {
      * create invoice
      */
     const invoiceId = await createInvoice(jsonPayload, singleItem);
+
 
     if (queryOperator == ">") {
       queryInvoiceId = invoiceId.toString();
@@ -402,10 +405,10 @@ async function makeJsonPayload(data) {
       class: hardcode.class.head,
       department: hardcode.department.head,
       location: hardcode.location.head,
-      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       custbody9: singleItem.file_nbr ?? "",
       custbody17: singleItem.email ?? "",
       custbody_source_system: hardcode.source_system,
+      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       custbody_omni_po_hawb: singleItem.housebill_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
@@ -434,15 +437,16 @@ async function makeJsonPayload(data) {
           custcol4: e.ref_nbr ?? "",
           custcol_riv_consol_nbr: e.consol_nbr ?? "",
           custcol_finalizedby: e.finalizedby ?? "",
-          custcol_actual_weight: e.actual_weight ?? "",
-          custcol_destination_on_zip: e.dest_zip ?? "",
-          custcol_destination_on_state: e.dest_state ?? "",
-          custcol_destination_on_country: e.dest_country ?? "",
+          custcol_actual_weight: e.actual_weight ?? "",//dev: custcol20  prod: custcol_actual_weight
+          custcol_destination_on_zip: e.dest_zip ?? "",//dev: custcol19 prod: custcol_destination_on_zip
+          custcol_destination_on_state: e.dest_state ?? "",//dev: custcol18 prod: custcol_destination_on_state
+          custcol_destination_on_country: e.dest_country ?? "",//dev: custcol17 prod: custcol_destination_on_country
           custcol_miles_distance: e.miles ?? "",
           custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
       }),
     };
+
     if (singleItem.invoice_type == "IN") {
       payload.approvalstatus = "2";
     }

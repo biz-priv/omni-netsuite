@@ -266,7 +266,7 @@ async function createIntercompanyFailedRecords(connections, item, error) {
       file_nbr: item.file_nbr,
       ar_internal_id: item.ar_internal_id,
       ap_internal_id: item.ap_internal_id,
-      error_msg: error.data.error.message,
+      error_msg: error.data.message,
       is_report_sent: "N",
       current_dt: moment().format("YYYY-MM-DD"),
     };
@@ -440,6 +440,14 @@ function getAuthorizationHeader(options) {
   );
 }
 
+function setDelay(sec) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(true);
+    }, sec * 500);
+  });
+}
+
 module.exports = {
   getConfig,
   getConnection,
@@ -451,4 +459,5 @@ module.exports = {
   sendDevNotification,
   createIntracompanyFailedRecords,
   getAuthorizationHeader,
+  setDelay
 };
