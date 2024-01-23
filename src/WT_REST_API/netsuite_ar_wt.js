@@ -10,6 +10,7 @@ const {
   createARFailedRecords,
   triggerReportLambda,
   sendDevNotification,
+  setDelay,
 } = require("../../Helpers/helper");
 const { getBusinessSegment } = require("../../Helpers/businessSegmentHelper");
 
@@ -50,7 +51,7 @@ module.exports.handler = async (event, context, callback) => {
     /**
      * 5 simultaneous process
      */
-    const perLoop = 15;
+    const perLoop = 3;
     let queryData = [];
     for (let index = 0; index < (orderData.length + 1) / perLoop; index++) {
       let newArray = orderData.slice(
@@ -58,12 +59,15 @@ module.exports.handler = async (event, context, callback) => {
         index * perLoop + perLoop
       );
 
+      await setDelay(1);
+
       const data = await Promise.all(
         newArray.map(async (item) => {
           return await mainProcess(item, invoiceDataList);
         })
       );
       queryData = [...queryData, ...data];
+      
     }
 
     await updateInvoiceId(connections, queryData);
@@ -106,7 +110,7 @@ async function mainProcess(item, invoiceDataList) {
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-
+    
     /**
      * create Netsuit Invoice
      */
@@ -149,10 +153,10 @@ async function mainProcess(item, invoiceDataList) {
 async function getDataGroupBy(connections) {
   try {
     const query = `SELECT distinct invoice_nbr, invoice_type FROM ${arDbName} where
-                  ((internal_id is null and processed is null and customer_internal_id is not null) or
-                  (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
-                  and source_system = '${source_system}' and invoice_nbr is not null
-                  limit ${totalCountPerLoop + 1}`;
+    ((internal_id is null and processed is null and customer_internal_id is not null) or
+    (customer_internal_id is not null and processed ='F' and processed_date < '${today}'))
+    and source_system = '${source_system}' and invoice_nbr is not null
+    limit ${totalCountPerLoop + 1}`;
 
     console.info("query", query);
     const [rows] = await connections.execute(query);
@@ -207,18 +211,18 @@ async function makeJsonPayload(data) {
       class: hardcode.class.head,
       location: hardcode.location.head,
       custbody_source_system: hardcode.source_system,
+      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       entity: singleItem.customer_internal_id ?? "",
       subsidiary: singleItem.subsidiary ?? "",
       currency: singleItem.currency_internal_id ?? "",
       otherrefnum: singleItem.customer_po ?? "",
-      custbodymfc_tmsinvoice: singleItem.invoice_nbr ?? "",
       custbody_mode: singleItem?.mode_name ?? "",
       custbody_service_level: singleItem?.service_level ?? "",
       custbody18: singleItem.finalized_date ?? "",
       custbody9: singleItem.housebill_nbr ?? "",
       custbody17: singleItem.email ?? "",
       custbody25: singleItem.zip_code ?? "",
-      custbody27: singleItem.rfiemail ?? "",//dev :custbody29
+      custbody27: singleItem.rfiemail ?? "",//dev :custbody29 prod: custbody27
       item: data.map((e) => {
         return {
           // custcol_mfc_line_unique_key:"",
@@ -241,10 +245,10 @@ async function makeJsonPayload(data) {
             refName: e.controlling_stn ?? "",
           },
           custcol1: e.ready_date ? e.ready_date.toISOString() : "",
-          custcol_actual_weight: e.actual_weight ?? "",
-          custcol_destination_on_zip: e.dest_zip ?? "",
-          custcol_destination_on_state: e.dest_state ?? "",
-          custcol_destination_on_country: e.dest_country ?? "",
+          custcol_actual_weight: e.actual_weight ?? "",//dev: custcol20  prod: custcol_actual_weight
+          custcol_destination_on_zip: e.dest_zip ?? "",//dev: custcol19 prod: custcol_destination_on_zip
+          custcol_destination_on_state: e.dest_state ?? "",//dev: custcol18 prod: custcol_destination_on_state
+          custcol_destination_on_country: e.dest_country ?? "",//dev: custcol17 prod: custcol_destination_on_country
           custcol_miles_distance: e.miles ?? "",
           custcol_chargeable_weight: e.chargeable_weight ?? "",
         };
@@ -314,7 +318,7 @@ async function createInvoice(payload, singleItem) {
       method: 'POST',
     };
 
-    const authHeader =  getAuthorizationHeader(options);
+    const authHeader = getAuthorizationHeader(options);
 
     const configApi = {
       method: options.method,
