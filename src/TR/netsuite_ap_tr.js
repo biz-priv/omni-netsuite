@@ -374,7 +374,7 @@ async function getDataGroupBy(connections) {
 
 async function getInvoiceNbrData(connections, invoice_nbr, isBigData = false) {
   try {
-    let query = `SELECT ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
+    let query = `SELECT distinct ia.*, iam.vendor_internal_id ,iam.currency_internal_id  FROM interface_ap ia 
       left join interface_ap_master iam on 
       ia.invoice_nbr = iam.invoice_nbr and
       ia.invoice_type = iam.invoice_type and 

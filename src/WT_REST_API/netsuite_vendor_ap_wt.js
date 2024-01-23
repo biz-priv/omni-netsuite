@@ -167,7 +167,7 @@ async function getVendor(entityId) {
     const response =  await axios.request(configApi);
     console.info("response", response.status);
     const recordList = response.data[0];  
-    if (recordList && recordList.internalid) {
+    if (recordList && recordList.internalid_value) {
       const record = recordList;
       return record;
     } else {
@@ -187,12 +187,11 @@ async function getVendor(entityId) {
 
 async function putVendor(connections, vendorData, vendor_id) {
   try {
-    const vendor_internal_id = vendorData.internalid;
+    const vendor_internal_id = vendorData.internalid_value;
 
     const formatData = {
-      vendor_internal_id: vendorData?.internalid ?? "",
-      vendor_id: vendorData?.externalid ?? "",
-      
+      vendor_internal_id: vendorData?.internalid_value ?? "",
+      vendor_id: vendorData?.entityid_value ?? "",
     };
 
     let tableStr = "";

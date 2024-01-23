@@ -171,7 +171,7 @@ async function getcustomer(entityId) {
 
     console.info("response", response.status);
     const recordList = response.data[0];
-    if (recordList && recordList.internalid) {
+    if (recordList && recordList.internal_id_value) {
       const record = recordList;
       return record;
     } else {
@@ -191,11 +191,11 @@ async function getcustomer(entityId) {
 
 async function putCustomer(connections, customerData, customer_id) {
   try {
-    const customer_internal_id = customerData.internalid;
+    const customer_internal_id = customerData.internal_id_value;
 
     const formatData = {
-      customer_internal_id: customerData?.internalid ?? "",
-      customer_id: customerData?.entityid ?? "",
+      customer_internal_id: customerData?.internal_id_value ?? "",
+      customer_id: customerData?.entityId_value ?? "",
     };
 
     let tableStr = "";
