@@ -395,7 +395,6 @@ async function makeJsonPayload(data) {
      * head level details
      */
     const payload = {
-      custbodytmsdebtorcreditorid: singleItem.bill_to_nbr ?? "",
       custbody_mfc_omni_unique_key:
         singleItem.invoice_nbr +
         "-" +
