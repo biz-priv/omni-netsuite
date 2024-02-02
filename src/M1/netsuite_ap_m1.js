@@ -336,7 +336,7 @@ async function getDataGroupBy(connections) {
                 OR (iam.vendor_internal_id !='' and iam.processed ='F' and iam.processed_date < '${today}')
               )
               and iam.source_system = '${source_system}' and iam.invoice_nbr != '' and 
-              ((ia.intercompany='Y' and ia.pairing_available_flag ='Y') OR ia.intercompany='N') 
+              ((iam.intercompany='Y' and iam.pairing_available_flag ='Y') OR iam.intercompany='N') 
         GROUP BY iam.invoice_nbr, iam.vendor_id, iam.invoice_type
         having tc ${queryOperator} ${lineItemPerProcess} limit ${
       totalCountPerLoop + 1
