@@ -33,7 +33,7 @@ const mailList = {
   INTERCOMPANY: {
     CW: process.env.NETSUIT_AP_ERROR_EMAIL_TO,
     TR:
-      process.env.NETSUIT_AP_ERROR_EMAIL_TO,
+      process.env.NETSUIT_INTERCOMPANY_ERROR_EMAIL_TO,
   },
   INTRACOMPANY: {
     WT: process.env.NETSUIT_AR_ERROR_EMAIL_TO,
