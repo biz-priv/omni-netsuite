@@ -192,7 +192,7 @@ async function createInterCompanyInvoice(item) {
       "Content-Type": "application/json",
     };
     const res = await axios.get(url, { headers });
-    if (res.data == "success") {
+    if (res.data.status == "Success") {
       return true;
     } else {
       throw {
