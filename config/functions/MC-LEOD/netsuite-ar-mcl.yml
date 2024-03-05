@@ -12,6 +12,7 @@ function:
     NETSUIT_RESTLET_INV_URL: ${ssm:/omni-dw/${self:provider.stage}/invoice/apiEndpoint}
     NETSUIT_RESTLET_CM_URL: ${ssm:/omni-dw/${self:provider.stage}/creditmemo/apiEndpoint}
     DATABASE_NAME: ${ssm:/omni-dw/${self:provider.stage}/databaseName}
+    NETSUITE_INTRACOMPANY_STEP_ARN: arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:netsuite-intra-company-wt-mcl-state-machine-${self:provider.stage}
   package:
     include:
       - src/MC-LEOD/netsuite_ar_mcl.js
