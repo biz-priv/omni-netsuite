@@ -3,7 +3,7 @@ stateMachine:
   name: ${self:service}-netsuite-customer-ar-mcl-state-machine-${self:provider.stage}
   events:
     - schedule:
-        rate: cron(30 9 * * ? *) #  UTC:- 9:300 AM / 3:00 pm CST
+        rate: cron(30 10 * * ? *) #  UTC:- 9:300 AM / 4:00 am IST
   definition:
     Comment: "State machine to update netsuit customer AR mcl internal details"
     StartAt: PublishEvents

@@ -71,11 +71,13 @@ module.exports.handler = async (event, context, callback) => {
       hasMoreData = "true";
     } else {
       await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
+      await startNextStep();
       hasMoreData = "false";
     }
     return { hasMoreData };
   } catch (error) {
     await triggerReportLambda(process.env.NETSUIT_INVOICE_REPORT, "OL_AR");
+    await startNextStep();
     return { hasMoreData: "false" };
   }
 };
@@ -424,4 +426,30 @@ function getCustomDate() {
   let mo = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   let da = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
   return `${ye}-${mo}-${da}`;
+}
+
+async function startNextStep() {
+  try {
+    const params = {
+      stateMachineArn: process.env.NETSUITE_INTRACOMPANY_STEP_ARN,
+      input: JSON.stringify({}),
+    };
+    const stepfunctions = new AWS.StepFunctions();
+    const data = await new Promise((resolve, reject) => {
+      stepfunctions.startExecution(params, (err, data) => {
+        if (err) {
+          console.error("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN trigger failed");
+          reject(err);
+        } else {
+          console.info("Netsuit NETSUITE_INTERCOMPANY_STEP_ARN started");
+          resolve(data);
+        }
+      });
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error in startNextStep:", error);
+    return false;
+  }
 }
