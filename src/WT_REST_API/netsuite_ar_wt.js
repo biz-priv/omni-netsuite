@@ -110,7 +110,7 @@ async function mainProcess(item, invoiceDataList) {
      * Make Json payload
      */
     const jsonPayload = await makeJsonPayload(dataList);
-    
+    console.info(jsonPayload)
     /**
      * create Netsuit Invoice
      */
