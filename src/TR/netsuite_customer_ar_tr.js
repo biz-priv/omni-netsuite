@@ -1,3 +1,10 @@
+/*
+* File: src\TR\netsuite_customer_ar_tr.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-05-03
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });

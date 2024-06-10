@@ -1,3 +1,10 @@
+/*
+* File: src\netsuite_currency.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2022-06-22
+* Confidential and Proprietary
+*/
 const pgp = require("pg-promise");
 const dbc = pgp({ capSQL: true });
 const { Record } = require("node-suitetalk");

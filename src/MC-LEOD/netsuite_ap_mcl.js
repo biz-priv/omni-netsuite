@@ -1,3 +1,10 @@
+/*
+* File: src\MC-LEOD\netsuite_ap_mcl.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-07-15
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");

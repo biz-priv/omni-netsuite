@@ -1,3 +1,10 @@
+/*
+* File: src\MC-LEOD\netsuite_vendor_ap_mcl.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-07-18
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const axios = require("axios");
 const {

@@ -1,3 +1,10 @@
+/*
+* File: src\INTRA-COMPANY\intra_company_wt_mcl.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-07-15
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const axios = require("axios");
 const crypto = require("crypto");
