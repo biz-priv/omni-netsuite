@@ -1,3 +1,10 @@
+/*
+* File: Helpers\helper.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-11-03
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const moment = require("moment");
 const mysql = require("mysql2/promise");

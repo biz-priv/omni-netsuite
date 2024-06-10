@@ -1,3 +1,10 @@
+/*
+* File: src\invoice_report.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-08-03
+* Confidential and Proprietary
+*/
 const nodemailer = require("nodemailer");
 const moment = require("moment");
 const { parse } = require("json2csv");

@@ -1,3 +1,10 @@
+/*
+* File: src\netsuite_intercompany.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-05-03
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const axios = require("axios");
 const crypto = require("crypto");

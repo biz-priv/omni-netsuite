@@ -1,3 +1,10 @@
+/*
+* File: src\WT\netsuite_ap_wt.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-05-03
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const { create, convert } = require("xmlbuilder2");
 const crypto = require("crypto");

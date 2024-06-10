@@ -1,3 +1,10 @@
+/*
+* File: src\WT_REST_API\netsuite_vendor_ap_wt.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2024-01-23
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const axios = require("axios");
 const {

@@ -1,3 +1,10 @@
+/*
+* File: src\mckesson_shipments_report.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2022-07-04
+* Confidential and Proprietary
+*/
 const nodemailer = require("nodemailer");
 const moment = require("moment");
 const { parse } = require("json2csv");

@@ -1,3 +1,10 @@
+/*
+* File: src\PAID-INVOICES\paid_invoices.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-07-28
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const axios = require("axios");
 const {

@@ -1,3 +1,10 @@
+/*
+* File: src\M1\netsuite_vendor_ap_m1.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-05-03
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const nodemailer = require("nodemailer");
 const pgp = require("pg-promise");

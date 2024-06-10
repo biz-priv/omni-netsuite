@@ -1,3 +1,10 @@
+/*
+* File: Helpers\businessSegmentHelper.js
+* Project: Omni-netsuite
+* Author: Bizcloud Experts
+* Date: 2023-03-15
+* Confidential and Proprietary
+*/
 function getBusinessSegment(env) {
   const data = {
     DEV: {
