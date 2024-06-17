@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: ap-m1
   package:
     include:
       - src/M1/netsuite_ap_m1.js

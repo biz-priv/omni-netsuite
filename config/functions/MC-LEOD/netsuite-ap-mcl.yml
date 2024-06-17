@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: ap-mcl
   environment:
     NETSUIT_RESTLET_VB_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorbill/apiEndpoint}
     NETSUIT_RESTLET_VC_URL: ${ssm:/omni-dw/${self:provider.stage}/vendorcredit/apiEndpoint}

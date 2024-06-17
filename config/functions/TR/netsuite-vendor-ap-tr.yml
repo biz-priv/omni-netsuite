@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: vendor-ap-tr
   package:
     include:
       - src/TR/netsuite_vendor_ap_tr.js
