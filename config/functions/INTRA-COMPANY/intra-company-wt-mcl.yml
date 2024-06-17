@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: intra-company-wt-mcl
   package:
     include:
       - src/INTRA-COMPANY/intra_company_wt_mcl.js

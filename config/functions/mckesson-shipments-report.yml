@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: netsuite-report 
   package:
     include:
       - src/mckesson_shipments_report.js

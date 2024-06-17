@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: tr-intercompany
   package:
     include:
       - src/netsuite_tr_intercompany.js

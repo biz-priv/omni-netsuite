@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: customer-ar-cw
   package:
     include:
       - src/CW/netsuite_customer_ar_cw.js

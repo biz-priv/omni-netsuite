@@ -8,6 +8,8 @@ function:
   runtime: nodejs14.x
   memorySize: 2048
   timeout: 900
+  tags:
+    Name: customer-ar-wt 
   package:
     include:
       - src/WT/netsuite_customer_ar_wt.js
