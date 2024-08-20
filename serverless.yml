@@ -90,10 +90,10 @@ layers:
       - nodejs14.x
 
 functions:
-  netsuite-ar-wt: ${file(config/functions/WT/netsuite-ar-wt.yml):function}
-  netsuite-customer-ar-wt: ${file(config/functions/WT/netsuite-customer-ar-wt.yml):function}
-  netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
-  netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
+  # netsuite-ar-wt: ${file(config/functions/WT/netsuite-ar-wt.yml):function}
+  # netsuite-customer-ar-wt: ${file(config/functions/WT/netsuite-customer-ar-wt.yml):function}
+  # netsuite-ap-wt: ${file(config/functions/WT/netsuite-ap-wt.yml):function}
+  # netsuite-vendor-ap-wt: ${file(config/functions/WT/netsuite-vendor-ap-wt.yml):function}
 
   netsuite-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-ar-wt.yml):function}
   netsuite-customer-ar-wt-restlet: ${file(config/functions/WT_REST_API/netsuite-customer-ar-wt.yml):function}
@@ -105,20 +105,20 @@ functions:
   # netsuite-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-ap-cw.yml):function}
   # netsuite-vendor-ap-cw-restlet: ${file(config/functions/CW_RESTLET_API/netsuite-vendor-ap-cw.yml):function}
 
-  netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
-  netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
-  netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
-  netsuite-vendor-ap-cw: ${file(config/functions/CW/netsuite-vendor-ap-cw.yml):function}
+  # netsuite-ar-cw: ${file(config/functions/CW/netsuite-ar-cw.yml):function}
+  # netsuite-customer-ar-cw: ${file(config/functions/CW/netsuite-customer-ar-cw.yml):function}
+  # netsuite-ap-cw: ${file(config/functions/CW/netsuite-ap-cw.yml):function}
+  # netsuite-vendor-ap-cw: ${file(config/functions/CW/netsuite-vendor-ap-cw.yml):function}
 
-  netsuite-ar-m1: ${file(config/functions/M1/netsuite-ar-m1.yml):function}
-  netsuite-customer-ar-m1: ${file(config/functions/M1/netsuite-customer-ar-m1.yml):function}
-  netsuite-ap-m1: ${file(config/functions/M1/netsuite-ap-m1.yml):function}
-  netsuite-vendor-ap-m1: ${file(config/functions/M1/netsuite-vendor-ap-m1.yml):function}
+  # netsuite-ar-m1: ${file(config/functions/M1/netsuite-ar-m1.yml):function}
+  # netsuite-customer-ar-m1: ${file(config/functions/M1/netsuite-customer-ar-m1.yml):function}
+  # netsuite-ap-m1: ${file(config/functions/M1/netsuite-ap-m1.yml):function}
+  # netsuite-vendor-ap-m1: ${file(config/functions/M1/netsuite-vendor-ap-m1.yml):function}
 
-  netsuite-ar-tr: ${file(config/functions/TR/netsuite-ar-tr.yml):function}
-  netsuite-customer-ar-tr: ${file(config/functions/TR/netsuite-customer-ar-tr.yml):function}
-  netsuite-ap-tr: ${file(config/functions/TR/netsuite-ap-tr.yml):function}
-  netsuite-vendor-ap-tr: ${file(config/functions/TR/netsuite-vendor-ap-tr.yml):function}
+  # netsuite-ar-tr: ${file(config/functions/TR/netsuite-ar-tr.yml):function}
+  # netsuite-customer-ar-tr: ${file(config/functions/TR/netsuite-customer-ar-tr.yml):function}
+  # netsuite-ap-tr: ${file(config/functions/TR/netsuite-ap-tr.yml):function}
+  # netsuite-vendor-ap-tr: ${file(config/functions/TR/netsuite-vendor-ap-tr.yml):function}
 
   netsuite-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-ar-mcl.yml):function}
   netsuite-customer-ar-mcl: ${file(config/functions/MC-LEOD/netsuite-customer-ar-mcl.yml):function}
@@ -126,8 +126,8 @@ functions:
   # netsuite-vendor-ap-mcl: ${file(config/functions/MC-LEOD/netsuite-vendor-ap-mcl.yml):function}
 
   #intar company fn
-  netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
-  netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
+  # netsuite-intercompany: ${file(config/functions/netsuite-intercompany.yml):function}
+  # netsuite-tr-intercompany: ${file(config/functions/netsuite-tr-intercompany.yml):function}
   netsuite-currency: ${file(config/functions/netsuite-currency.yml):function}
 
   #intra company fn
@@ -141,42 +141,42 @@ functions:
 
 stepFunctions:
   stateMachines:
-    netsuite-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-ar-wt-state-machine.yml):stateMachine}
-    netsuite-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-ap-wt-state-machine.yml):stateMachine}
-    netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
-    netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
+    # netsuite-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-ar-wt-state-machine.yml):stateMachine}
+    # netsuite-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-ap-wt-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-wt-state-machine: ${file(config/step-functions/WT/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-wt-state-machine: ${file(config/step-functions/WT/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
     netsuite-ar-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ar-wt-state-machine.yml):stateMachine}
     netsuite-ap-wt-restlet-state-machine: ${file(config/step-functions/WT_REST_API/netsuite-ap-wt-state-machine.yml):stateMachine}
     netsuite-customer-ar-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-customer-ar-wt-state-machine.yml):stateMachine}
     netsuite-vendor-ap-wt-restlet: ${file(config/step-functions/WT_REST_API/netsuite-vendor-ap-wt-state-machine.yml):stateMachine}
 
-    netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
-    netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
-    netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
-    netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
+    # netsuite-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-ap-cw-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-cw-state-machine: ${file(config/step-functions/CW/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-cw-state-machine: ${file(config/step-functions/CW/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
 
     # netsuite-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ar-cw-state-machine.yml):stateMachine}
     # netsuite-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-ap-cw-state-machine.yml):stateMachine}
     # netsuite-customer-ar-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-customer-ar-cw-state-machine.yml):stateMachine}
     # netsuite-vendor-ap-cw-restlet-state-machine: ${file(config/step-functions/CW_RESTLET_API/netsuite-vendor-ap-cw-state-machine.yml):stateMachine}
 
-    netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
-    netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
-    netsuite-customer-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-customer-ar-m1-state-machine.yml):stateMachine}
-    netsuite-vendor-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-vendor-ap-m1-state-machine.yml):stateMachine}
+    # netsuite-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-ar-m1-state-machine.yml):stateMachine}
+    # netsuite-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-ap-m1-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-m1-state-machine: ${file(config/step-functions/M1/netsuite-customer-ar-m1-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-m1-state-machine: ${file(config/step-functions/M1/netsuite-vendor-ap-m1-state-machine.yml):stateMachine}
 
-    netsuite-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-ar-tr-state-machine.yml):stateMachine}
-    netsuite-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-ap-tr-state-machine.yml):stateMachine}
-    netsuite-customer-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-customer-ar-tr-state-machine.yml):stateMachine}
-    netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
+    # netsuite-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-ar-tr-state-machine.yml):stateMachine}
+    # netsuite-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-ap-tr-state-machine.yml):stateMachine}
+    # netsuite-customer-ar-tr-state-machine: ${file(config/step-functions/TR/netsuite-customer-ar-tr-state-machine.yml):stateMachine}
+    # netsuite-vendor-ap-tr-state-machine: ${file(config/step-functions/TR/netsuite-vendor-ap-tr-state-machine.yml):stateMachine}
 
     netsuite-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ar-mcl-state-machine.yml):stateMachine}
     netsuite-customer-ar-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-customer-ar-mcl-state-machine.yml):stateMachine}
     # netsuite-vendor-ap-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-vendor-ap-mcl-state-machine.yml):stateMachine}
     # netsuite-ap-mcl-state-machine: ${file(config/step-functions/MC-LEOD/netsuite-ap-mcl-state-machine.yml):stateMachine}
 
-    netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
-    netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
+    # netsuite-intercompany-state-machine: ${file(config/step-functions/netsuite-intercompany-state-machine.yml):stateMachine}
+    # netsuite-tr-intercompany-state-machine: ${file(config/step-functions/netsuite-tr-intercompany-state-machine.yml):stateMachine}
 
     intra-company-wt-mcl-state-machine: ${file(config/step-functions/INTRA-COMPANY/intra-company-wt-mcl-state-machine.yml):stateMachine}
